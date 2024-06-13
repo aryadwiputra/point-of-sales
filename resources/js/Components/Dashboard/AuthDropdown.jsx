@@ -53,7 +53,7 @@ export default function AuthDropdown({ auth, isMobile }) {
             {isMobile === false ?
                 <Menu className='relative z-10' as="div">
                     <Menu.Button className='flex items-center rounded-full'>
-                        <img src={auth.user.avatar} alt={auth.user.name} className='w-10 h-10 rounded-full' />
+                        <img src={auth.user.avatar ? auth.user.avatar : "https://ui-avatars.com/api/?name=" + auth.user.name} alt={auth.user.name} className='w-10 h-10 rounded-full' />
                     </Menu.Button>
                     <Transition
                         enter="transition duration-100 ease-out"

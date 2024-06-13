@@ -19,7 +19,7 @@ export default function Sidebar({ sidebarOpen }) {
                         </div>
                     </div>
                     <div className="w-full p-3 flex items-center gap-4 border-b border-t dark:bg-gray-950/50 dark:border-gray-900">
-                        <img src={auth.user.avatar} className="w-12 h-12 rounded-full" />
+                        <img src={auth.user.avatar ? auth.user.avatar : "https://ui-avatars.com/api/?name=" + auth.user.name} className="w-12 h-12 rounded-full" />
                         <div className="flex flex-col gap-0.5">
                             <div className="text-sm font-semibold capitalize text-gray-700 dark:text-gray-50">
                                 {auth.user.name}
