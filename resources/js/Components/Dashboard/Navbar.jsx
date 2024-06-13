@@ -17,6 +17,8 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
     const filter_sublinks = links.filter((item) => item.hasOwnProperty('subdetails'));
     const sublinks = filter_sublinks.flatMap((item) => item.subdetails);
 
+    console.log(links)
+
     // define state isMobile
     const [isMobile, setIsMobile] = useState(false);
 
@@ -50,7 +52,7 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                         link.hasOwnProperty('subdetails') ?
                             sublinks.map((sublink, x) => sublink.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={x}>{sublink.title}</span>)
                             :
-                            link.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400 ' key={i}>{link.title}</span>
+                            link.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={i}>{link.title}</span>
                     ))}
                 </div>
             </div>

@@ -19,7 +19,7 @@ Route::get('/', function () {
 
 
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
-    Route::get('/dashboard', function () {
+    Route::get('/', function () {
         return Inertia::render('Dashboard/Index');
     })->middleware(['auth', 'verified'])->name('dashboard');
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
