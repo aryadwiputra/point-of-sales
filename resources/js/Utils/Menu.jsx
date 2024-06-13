@@ -27,14 +27,14 @@ export default function Menu() {
             details: [
                 {
                     title: 'Hak Akses',
-                    href: route('permissions.index'),
+                    // href: route('permissions.index'),
                     active: url.startsWith('/dashboard/permissions') ? true : false,
                     icon: <IconUserBolt size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(['permissions-access']),
                 },
                 {
                     title: 'Akses Group',
-                    href: route('roles.index'),
+                    // href: route('roles.index'),
                     active: url.startsWith('/dashboard/roles') ? true : false,
                     icon: <IconUserShield size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(['roles-access']),
@@ -46,14 +46,14 @@ export default function Menu() {
                     subdetails: [
                         {
                             title: 'Data Pengguna',
-                            href: route('users.index'),
+                            // href: route('users.index'),
                             icon: <IconTable size={20} strokeWidth={1.5} />,
                             active: url === '/users' ? true : false,
                             permissions: hasAnyPermission(['users-access']),
                         },
                         {
                             title: 'Tambah Data Pengguna',
-                            href: route('users.create'),
+                            // href: route('users.create'),
                             icon: <IconCirclePlus size={20} strokeWidth={1.5} />,
                             active: url === '/users/create' ? true : false,
                             permissions: hasAnyPermission(['users-create']),
