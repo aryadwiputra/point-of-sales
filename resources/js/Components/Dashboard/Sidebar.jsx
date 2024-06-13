@@ -66,7 +66,7 @@ export default function Sidebar({ sidebarOpen }) {
                         <IconBrandReact size={20} strokeWidth={1.5} className="sidebar-title" />
                     </div>
                     <div className='w-full px-6 py-3 flex justify-center items-center gap-4 border-b bg-white dark:bg-gray-950/50 dark:border-gray-900'>
-                        <img src={auth.user.avatar} className='w-8 h-8 rounded-full' />
+                        <img src={auth.user.avatar ? auth.user.avatar : "https://ui-avatars.com/api/?name=" + auth.user.name} className='w-8 h-8 rounded-full' />
                     </div>
                     <div className='w-full flex flex-col overflow-y-auto items-center justify-center'>
                         {menuNavigation.map((link, i) => (
