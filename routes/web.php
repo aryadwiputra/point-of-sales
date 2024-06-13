@@ -17,12 +17,11 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-
+Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard/Index');
+    })->middleware(['auth', 'verified'])->name('dashboard');
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     // roles route
     Route::resource('/roles', RoleController::class)->except(['create', 'edit', 'show']);
