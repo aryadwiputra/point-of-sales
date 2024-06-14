@@ -48,11 +48,17 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                     <IconAlignLeft size={18} strokeWidth={1.5} />
                 </button>
                 <div className='flex flex-row items-center gap-1 md:border-l-2 md:border-double md:px-4 dark:border-gray-900'>
-                    {links.map((link, i) => (
+                    {/* {links.map((link, i) => (
                         link.hasOwnProperty('subdetails') ?
                             sublinks.map((sublink, x) => sublink.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={x}>{sublink.title}</span>)
                             :
                             link.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={i}>{link.title}</span>
+                    ))} */}
+                    {links.map((link, i) => (
+                        link.hasOwnProperty('subdetails') ?
+                            sublinks.map((sublink, x) => sublink.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={x}>{sublink.title}</span>)
+                            :
+                            link.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400 ' key={i}>{link.title}</span>
                     ))}
                 </div>
             </div>
