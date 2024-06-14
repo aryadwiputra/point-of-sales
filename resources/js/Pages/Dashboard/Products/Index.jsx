@@ -6,6 +6,7 @@ import { IconCirclePlus, IconDatabaseOff, IconPencilCog, IconTrash } from '@tabl
 import Search from '@/Components/Dashboard/Search'
 import Table from '@/Components/Dashboard/Table'
 import Pagination from '@/Components/Dashboard/Pagination'
+import Barcode from '@/Components/Dashboard/Barcode'
 
 export default function Index({ products }) {
     const { roles, permissions, errors, } = usePage().props;
@@ -51,7 +52,15 @@ export default function Index({ products }) {
                                     <Table.Td className='text-center'>
                                         {++i + (products.current_page - 1) * products.per_page}
                                     </Table.Td>
-                                    <Table.Td>{product.title}</Table.Td>
+                                    <Table.Td>
+                                        <Barcode
+                                            value={product.barcode}
+                                            format={'CODE39'}
+                                            width={2}
+                                            height={20}
+                                            lineColor={'#000'}
+                                        />
+                                    </Table.Td>
                                     <Table.Td>{product.category.name}</Table.Td>
                                     <Table.Td>{product.description}</Table.Td>
                                     <Table.Td>{product.buy_price}</Table.Td>
