@@ -18,8 +18,8 @@ class CategoryController extends Controller
     public function index()
     {
         //get categories
-        $categories = Category::when(request()->q, function ($categories) {
-            $categories = $categories->where('name', 'like', '%' . request()->q . '%');
+        $categories = Category::when(request()->search, function ($categories) {
+            $categories = $categories->where('name', 'like', '%' . request()->search . '%');
         })->latest()->paginate(2);
 
         //return inertia
@@ -49,9 +49,9 @@ class CategoryController extends Controller
         /**
          * validate
          */
-        $this->validate($request, [
-            'image' => 'required|image|mimes:jpeg,jpg,png|max:2000',
-            'name' => 'required|unique:categories',
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'name' => 'required',
             'description' => 'required'
         ]);
 
@@ -67,7 +67,7 @@ class CategoryController extends Controller
         ]);
 
         //redirect
-        return redirect()->route('apps.categories.index');
+        return to_route('categories.index');
     }
 
     /**
@@ -126,7 +126,7 @@ class CategoryController extends Controller
         ]);
 
         //redirect
-        return redirect()->route('apps.categories.index');
+        return to_route('categories.index');
     }
 
     /**
@@ -147,6 +147,6 @@ class CategoryController extends Controller
         $category->delete();
 
         //redirect
-        return redirect()->route('apps.categories.index');
+        return to_route('categories.index');
     }
 }
