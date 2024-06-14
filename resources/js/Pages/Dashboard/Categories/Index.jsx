@@ -10,8 +10,6 @@ import Pagination from '@/Components/Dashboard/Pagination'
 export default function Index({ categories }) {
     const { roles, permissions, errors, } = usePage().props;
 
-    const searchParam = 'search'
-
     return (
         <>
             <Head title='Kategori' />
