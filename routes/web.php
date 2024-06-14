@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Apps\CategoryController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -27,6 +28,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::resource('/roles', RoleController::class)->except(['create', 'edit', 'show']);
     // users route
     Route::resource('/users', UserController::class)->except('show');
+
+    Route::resource('categories', CategoryController::class);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
