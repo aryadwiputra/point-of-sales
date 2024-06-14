@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Apps\CategoryController;
+use App\Http\Controllers\Apps\CustomerController;
 use App\Http\Controllers\Apps\ProductController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
@@ -32,6 +33,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
 
     Route::resource('categories', CategoryController::class);
     Route::resource('products', ProductController::class);
+    Route::resource('customers', CustomerController::class);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

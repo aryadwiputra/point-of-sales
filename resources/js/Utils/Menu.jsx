@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { IconBooks, IconBox, IconCategory, IconChartBarPopular, IconChartInfographic, IconCirclePlus, IconClockHour6, IconFileCertificate, IconFileDescription, IconFolder, IconLayout2, IconSchool, IconTable, IconUserBolt, IconUserShield, IconUserSquare, IconUsers } from '@tabler/icons-react';
+import { IconBooks, IconBox, IconCategory, IconChartBarPopular, IconChartInfographic, IconCirclePlus, IconClockHour6, IconFileCertificate, IconFileDescription, IconFolder, IconLayout2, IconSchool, IconTable, IconUserBolt, IconUserShield, IconUserSquare, IconUsers, IconUsersPlus } from '@tabler/icons-react';
 import hasAnyPermission from './Permission';
 import React from 'react'
 
@@ -35,6 +35,12 @@ export default function Menu() {
                 href: route('products.index'),
                 active: url === '/dashboard/products' ? true : false, // Update comparison here
                 icon: <IconBox size={20} strokeWidth={1.5} />,
+                permissions: hasAnyPermission(['permissions-access']),
+            }, {
+                title: 'Pelanggan',
+                href: route('customers.index'),
+                active: url === '/dashboard/customers' ? true : false, // Update comparison here
+                icon: <IconUsersPlus size={20} strokeWidth={1.5} />,
                 permissions: hasAnyPermission(['permissions-access']),
             },
         ]
