@@ -10,6 +10,8 @@ import Pagination from '@/Components/Dashboard/Pagination'
 export default function Index({ categories }) {
     const { roles, permissions, errors, } = usePage().props;
 
+    const searchParam = 'search'
+
     return (
         <>
             <Head title='Kategori' />
@@ -36,7 +38,8 @@ export default function Index({ categories }) {
                         <tr>
                             <Table.Th className='w-10'>No</Table.Th>
                             <Table.Th className='w-40'>Nama</Table.Th>
-                            <Table.Th className='w-40'>Gambar</Table.Th>
+                            <Table.Th >Deskripsi</Table.Th>
+                            <Table.Th >Gambar</Table.Th>
                             <Table.Th></Table.Th>
                         </tr>
                     </Table.Thead>
@@ -48,6 +51,7 @@ export default function Index({ categories }) {
                                         {++i + (categories.current_page - 1) * categories.per_page}
                                     </Table.Td>
                                     <Table.Td>{category.name}</Table.Td>
+                                    <Table.Td>{category.description}</Table.Td>
                                     <Table.Td>
                                         <img
                                             src={category.image}

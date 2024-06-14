@@ -95,9 +95,8 @@ class CategoryController extends Controller
         /**
          * validate
          */
-        $this->validate($request, [
-            // 'image'    => 'mimes:jpeg,jpg,png|max:2000',
-            'name' => 'required|unique:categories,name,' . $category->id,
+        $request->validate([
+            'name' => 'required',
             'description' => 'required'
         ]);
 
