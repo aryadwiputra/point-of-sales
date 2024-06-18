@@ -9,8 +9,6 @@ export default function Sidebar({ sidebarOpen }) {
     const { auth } = usePage().props;
     const menuNavigation = Menu();
 
-    console.log("menu", menuNavigation);
-
     return (
         <div className={`${sidebarOpen ? 'w-[260px]' : 'w-[100px]'} hidden md:block min-h-screen overflow-y-auto border-r transition-all duration-300 bg-white dark:bg-gray-950 dark:border-gray-900`}>
             {sidebarOpen ? (

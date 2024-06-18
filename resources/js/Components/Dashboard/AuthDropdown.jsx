@@ -106,38 +106,6 @@ export default function AuthDropdown({ auth, isMobile }) {
                             </div>
                         </div>
                         <div className="w-full flex flex-col overflow-y-auto">
-                            {/* {menuNavigation.map((item, index) => (
-                                item.details.some(detail => detail.permissions === true) && (
-                                    <div key={index}>
-                                        <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
-                                            {item.title}
-                                        </div>
-                                        {item.details.map((detail, indexDetail) => (
-                                            detail.permissions === true && (
-                                                detail.hasOwnProperty('subdetails') ? (
-                                                    <LinkItemDropdown
-                                                        key={indexDetail}
-                                                        title={detail.title}
-                                                        icon={detail.icon}
-                                                        data={detail.subdetails}
-                                                        access={detail.permissions}
-                                                        sidebarOpen={sidebarOpen}
-                                                    />
-                                                ) : (
-                                                    <LinkItem
-                                                        key={indexDetail}
-                                                        title={detail.title}
-                                                        icon={detail.icon}
-                                                        href={detail.href}
-                                                        access={detail.permissions}
-                                                        sidebarOpen={sidebarOpen}
-                                                    />
-                                                )
-                                            )
-                                        ))}
-                                    </div>
-                                )
-                            ))} */}
                             {menuNavigation.map((item, index) => (
                                 item.details.some(detail => detail.permissions === true) && (
 
