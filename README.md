@@ -1,63 +1,6 @@
 # Aplikasi Kasir (Point of Sales) 
 Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada sebuah warung atau toko.
 
-
-## 💻 Panduan Instalasi Project
-
-1. **Clone Repository**
-```bash
-git clone https://github.com/bagussatoto/Kasir-Restoran-laravel-8.git 
-```
-
-```
-cd AplikasiKasirRestoran
-composer install
-npm install
-copy .env.example rename->.env
-```
-2. **Buka ```.env``` lalu ubah baris berikut sesuaikan dengan databasemu yang ingin dipakai**
-```
-DB_PORT=3306
-DB_DATABASE=laravel
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-3. **Import Database SQL**
-```
-Project ini tidak menggunakan fitur migration, jadi kita harus mengimport database terlebih dahulu**
-```
-```
-mysql -u root -p
-create database laravel;
-```
-
-4. **Jalankan bash**
-```bash
-php artisan key:generate
-php artisan config:cache
-php artisan storage:link
-php artisan route:clear
-```
-
-5. **Jalankan website**
-```bash
-php artisan serve
-```
-
-## Jika ada pertanyaan silahkan hubungi saya di email :
-
-```
-bagusbudi1308@gmail.com
-```
-
-## Request Fitur Baru dan Pelaporan Bug
-
-Anda dapat meminta fitur baru maupun melaporkan bug melalui menu **issues** yang sudah disediakan oleh GitHub (lihat menu di atas), posting issues baru dan kita akan berdiskusi disana.
-
-## Berkontribusi
-
-Siapapun dapat berkontribusi pada proyek ini mulai dari pemrograman, pembuakan buku manual, sampai dengan mengenalkan produk ini kepada masyarakat Indonesia agar mengurangi kesenjangan pendidikan teknologi dengan cara membuat postingan issue di repository ini.
 ## Tech Stack
 
 - Laravel 11.x
@@ -122,7 +65,10 @@ php artisan route:clear
 ```
 php artisan migrate --seed
 ```
-
+5. **Jalankan nodejs**
+```
+npm run dev
+```
 
 5. **Jalankan website**
 ```bash
