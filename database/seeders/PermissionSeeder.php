@@ -33,5 +33,26 @@ class PermissionSeeder extends Seeder
         Permission::create(['name' => 'permissions-create']);
         Permission::create(['name' => 'permissions-update']);
         Permission::create(['name' => 'permissions-delete']);
+
+        //permission categories
+        Permission::create(['name' => 'categories-access']);
+        Permission::create(['name' => 'categories-create']);
+        Permission::create(['name' => 'categories-edit']);
+        Permission::create(['name' => 'categories-delete']);
+
+        //permission products
+        Permission::create(['name' => 'products-access']);
+        Permission::create(['name' => 'products-create']);
+        Permission::create(['name' => 'products-edit']);
+        Permission::create(['name' => 'products-delete']);
+
+        //permission customers
+        Permission::create(['name' => 'customers-access']);
+        Permission::create(['name' => 'customers-create']);
+        Permission::create(['name' => 'customers-edit']);
+        Permission::create(['name' => 'customers-delete']);
+
+        //permission transactions
+        Permission::create(['name' => 'transactions-access']);
     }
 }

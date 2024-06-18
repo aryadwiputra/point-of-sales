@@ -12,36 +12,24 @@ class RoleSeeder extends Seeder
     /**
      * Run the database seeds.
      */
+    // Refactor the RoleSeeder to improve readability and avoid repetitive code
     public function run(): void
     {
-        // get all permissions data where name like users
-        $user_permissions = Permission::where('name', 'like', '%users%')->get();
+        $this->createRoleWithPermissions('users-access', '%users%');
+        $this->createRoleWithPermissions('roles-access', '%roles%');
+        $this->createRoleWithPermissions('permission-access', '%permissions%');
+        $this->createRoleWithPermissions('categories-access', '%categories%');
+        $this->createRoleWithPermissions('products-access', '%products%');
+        $this->createRoleWithPermissions('customers-access', '%customers%');
+        $this->createRoleWithPermissions('transactions-access', '%transactions%');
 
-        // create new role
-        $user_group = Role::create(['name' => 'users-access']);
-
-        // assign a permissions to a access role
-        $user_group->givePermissionTo($user_permissions);
-
-        // get all permissions data where name like roles
-        $role_permissions = Permission::where('name', 'like', '%roles%')->get();
-
-        // create new role
-        $role_group = Role::create(['name' => 'roles-access']);
-
-        // assign a permissions to a role
-        $role_group->givePermissionTo($role_permissions);
-
-        //  get all permissions data where name like permissions
-        $permission_permissions = Permission::where('name', 'like', '%permissions%')->get();
-
-        // create new role
-        $permission_group = Role::create(['name' => 'permission-access']);
-
-        // assign a permissions to a role
-        $permission_group->givePermissionTo($permission_permissions);
-
-        // create new role
         Role::create(['name' => 'super-admin']);
+    }
+
+    private function createRoleWithPermissions($roleName, $permissionNamePattern)
+    {
+        $permissions = Permission::where('name', 'like', $permissionNamePattern)->get();
+        $role = Role::create(['name' => $roleName]);
+        $role->givePermissionTo($permissions);
     }
 }

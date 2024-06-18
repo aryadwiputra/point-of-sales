@@ -32,5 +32,15 @@ class UserSeeder extends Seeder
 
         // assign a role to user
         $user->assignRole($role);
+
+        $cashier = User::create([
+            'name' => 'Cashier',
+            'email' => 'cashier@gmail.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $transactionsPermission = Permission::where('name', 'transactions-access')->first();
+
+        $cashier->syncPermissions($transactionsPermission);
     }
 }
