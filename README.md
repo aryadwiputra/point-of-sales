@@ -26,9 +26,9 @@ Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada
 |  7  | Manajemen Pelanggan.     |Done|
 |  8  | Print Invoice. |Done|
 |  9  | Laporan Penjualan. |On progress|
-|  8  | Laporan Keuntungan. |On progress|
-|  8  | Riwayat Order. |On progress|
-|  8  | Chart/Grafik Pendapatan. |On progress|
+|  10  | Laporan Keuntungan. |On progress|
+|  11  | Riwayat Order. |On progress|
+|  12  | Chart/Grafik Pendapatan. |On progress|
 
 ------------
 ## 💻 Panduan Instalasi Project
