@@ -65,11 +65,11 @@ export default function AuthDropdown({ auth, isMobile }) {
                     >
                         <Menu.Items className='absolute rounded-lg w-48 border mt-2 py-2 right-0 z-[100] bg-white dark:bg-gray-950 dark:border-gray-900'>
                             <div className='flex flex-col gap-1.5 divide-y divide-gray-100 dark:divide-gray-900'>
-                                <Menu.Item>
+                                {/* <Menu.Item>
                                     <Link href="/apps/profile" className='px-3 py-1.5 text-sm flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'>
                                         <IconUserCog strokeWidth={'1.5'} size={'20'} /> Profile
                                     </Link>
-                                </Menu.Item>
+                                </Menu.Item> */}
                                 <Menu.Item>
                                     <button onClick={logout} className='px-3 py-1.5 text-sm flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'>
                                         <IconLogout strokeWidth={'1.5'} size={'20'} />
@@ -88,7 +88,7 @@ export default function AuthDropdown({ auth, isMobile }) {
                     <div className={`${isToggle ? 'translate-x-0 opacity-100' : '-translate-x-full'} fixed top-0 left-0 z-50 w-[300px] h-full transition-all duration-300 transform border-r bg-white dark:bg-gray-950 dark:border-gray-900`}>
                         <div className="flex justify-center items-center px-6 py-2 h-16">
                             <div className="text-2xl font-bold text-center leading-loose tracking-wider text-gray-900 dark:text-gray-200">
-                                STARTER KIT
+                                KASIR
                             </div>
                         </div>
                         <div className="w-full p-3 flex items-center gap-4 border-b border-t dark:bg-gray-950/50 dark:border-gray-900">
@@ -106,34 +106,69 @@ export default function AuthDropdown({ auth, isMobile }) {
                             </div>
                         </div>
                         <div className="w-full flex flex-col overflow-y-auto">
-                            {menuNavigation.map((item, index) => (
-                                <div key={index}>
-                                    <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
-                                        {item.title}
+                            {/* {menuNavigation.map((item, index) => (
+                                item.details.some(detail => detail.permissions === true) && (
+                                    <div key={index}>
+                                        <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
+                                            {item.title}
+                                        </div>
+                                        {item.details.map((detail, indexDetail) => (
+                                            detail.permissions === true && (
+                                                detail.hasOwnProperty('subdetails') ? (
+                                                    <LinkItemDropdown
+                                                        key={indexDetail}
+                                                        title={detail.title}
+                                                        icon={detail.icon}
+                                                        data={detail.subdetails}
+                                                        access={detail.permissions}
+                                                        sidebarOpen={sidebarOpen}
+                                                    />
+                                                ) : (
+                                                    <LinkItem
+                                                        key={indexDetail}
+                                                        title={detail.title}
+                                                        icon={detail.icon}
+                                                        href={detail.href}
+                                                        access={detail.permissions}
+                                                        sidebarOpen={sidebarOpen}
+                                                    />
+                                                )
+                                            )
+                                        ))}
                                     </div>
-                                    {item.details.map((detail, indexDetail) => (
-                                        detail.hasOwnProperty('subdetails') ?
-                                            <LinkItemDropdown
-                                                key={indexDetail}
-                                                title={detail.title}
-                                                icon={detail.icon}
-                                                data={detail.subdetails}
-                                                access={detail.permissions}
-                                                sidebarOpen={true}
-                                                onClick={() => setIsToggle(!isToggle)}
-                                            />
-                                            :
-                                            <LinkItem
-                                                key={indexDetail}
-                                                title={detail.title}
-                                                icon={detail.icon}
-                                                href={detail.href}
-                                                access={detail.permissions}
-                                                sidebarOpen={true}
-                                                onClick={() => setIsToggle(!isToggle)}
-                                            />
-                                    ))}
-                                </div>
+                                )
+                            ))} */}
+                            {menuNavigation.map((item, index) => (
+                                item.details.some(detail => detail.permissions === true) && (
+
+                                    <div key={index}>
+                                        <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
+                                            {item.title}
+                                        </div>
+                                        {item.details.map((detail, indexDetail) => (
+                                            detail.hasOwnProperty('subdetails') ?
+                                                <LinkItemDropdown
+                                                    key={indexDetail}
+                                                    title={detail.title}
+                                                    icon={detail.icon}
+                                                    data={detail.subdetails}
+                                                    access={detail.permissions}
+                                                    sidebarOpen={true}
+                                                    onClick={() => setIsToggle(!isToggle)}
+                                                />
+                                                :
+                                                <LinkItem
+                                                    key={indexDetail}
+                                                    title={detail.title}
+                                                    icon={detail.icon}
+                                                    href={detail.href}
+                                                    access={detail.permissions}
+                                                    sidebarOpen={true}
+                                                    onClick={() => setIsToggle(!isToggle)}
+                                                />
+                                        ))}
+                                    </div>
+                                )
                             ))}
                         </div>
                     </div>

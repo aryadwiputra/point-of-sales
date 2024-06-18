@@ -9,6 +9,8 @@ export default function Sidebar({ sidebarOpen }) {
     const { auth } = usePage().props;
     const menuNavigation = Menu();
 
+    console.log("menu", menuNavigation);
+
     return (
         <div className={`${sidebarOpen ? 'w-[260px]' : 'w-[100px]'} hidden md:block min-h-screen overflow-y-auto border-r transition-all duration-300 bg-white dark:bg-gray-950 dark:border-gray-900`}>
             {sidebarOpen ? (
@@ -31,32 +33,36 @@ export default function Sidebar({ sidebarOpen }) {
                     </div>
                     <div className="w-full flex flex-col overflow-y-auto">
                         {menuNavigation.map((item, index) => (
-                            <div key={index}>
-                                <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
-                                    {item.title}
+                            item.details.some(detail => detail.permissions === true) && (
+                                <div key={index}>
+                                    <div className="text-gray-500 text-xs py-3 px-4 font-bold uppercase">
+                                        {item.title}
+                                    </div>
+                                    {item.details.map((detail, indexDetail) => (
+                                        detail.permissions === true && (
+                                            detail.hasOwnProperty('subdetails') ? (
+                                                <LinkItemDropdown
+                                                    key={indexDetail}
+                                                    title={detail.title}
+                                                    icon={detail.icon}
+                                                    data={detail.subdetails}
+                                                    access={detail.permissions}
+                                                    sidebarOpen={sidebarOpen}
+                                                />
+                                            ) : (
+                                                <LinkItem
+                                                    key={indexDetail}
+                                                    title={detail.title}
+                                                    icon={detail.icon}
+                                                    href={detail.href}
+                                                    access={detail.permissions}
+                                                    sidebarOpen={sidebarOpen}
+                                                />
+                                            )
+                                        )
+                                    ))}
                                 </div>
-                                {item.details.map((detail, indexDetail) => (
-                                    detail.hasOwnProperty('subdetails') ? (
-                                        <LinkItemDropdown
-                                            key={indexDetail}
-                                            title={detail.title}
-                                            icon={detail.icon}
-                                            data={detail.subdetails}
-                                            access={detail.permissions}
-                                            sidebarOpen={sidebarOpen}
-                                        />
-                                    ) : (
-                                        <LinkItem
-                                            key={indexDetail}
-                                            title={detail.title}
-                                            icon={detail.icon}
-                                            href={detail.href}
-                                            access={detail.permissions}
-                                            sidebarOpen={sidebarOpen}
-                                        />
-                                    )
-                                ))}
-                            </div>
+                            )
                         ))}
                     </div>
                 </>
@@ -70,28 +76,32 @@ export default function Sidebar({ sidebarOpen }) {
                     </div>
                     <div className='w-full flex flex-col overflow-y-auto items-center justify-center'>
                         {menuNavigation.map((link, i) => (
-                            <div className='flex flex-col min-w-full items-center relative' key={i}>
-                                {link.details.map((detail, x) =>
-                                    detail.hasOwnProperty('subdetails') ? (
-                                        <LinkItemDropdown
-                                            sidebarOpen={sidebarOpen}
-                                            key={x}
-                                            title={detail.title}
-                                            data={detail.subdetails}
-                                            icon={detail.icon}
-                                            access={detail.permissions}
-                                        />
-                                    ) : (
-                                        <LinkItem
-                                            sidebarOpen={sidebarOpen}
-                                            key={x}
-                                            access={detail.permissions}
-                                            icon={detail.icon}
-                                            href={detail.href}
-                                        />
-                                    )
-                                )}
-                            </div>
+                            link.details.some(detail => detail.permissions === true) && (
+                                <div className='flex flex-col min-w-full items-center relative' key={i}>
+                                    {link.details.some(detail => detail.permissions === true) && (
+                                        link.details.map((detail, x) =>
+                                            detail.hasOwnProperty('subdetails') ? (
+                                                <LinkItemDropdown
+                                                    sidebarOpen={sidebarOpen}
+                                                    key={x}
+                                                    title={detail.title}
+                                                    data={detail.subdetails}
+                                                    icon={detail.icon}
+                                                    access={detail.permissions}
+                                                />
+                                            ) : (
+                                                <LinkItem
+                                                    sidebarOpen={sidebarOpen}
+                                                    key={x}
+                                                    access={link.permissions}
+                                                    icon={detail.icon}
+                                                    href={detail.href}
+                                                />
+                                            )
+                                        )
+                                    )}
+                                </div>
+                            )
                         ))}
                     </div>
                 </>
