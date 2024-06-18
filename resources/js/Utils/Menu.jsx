@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { IconBooks, IconBox, IconCategory, IconChartBarPopular, IconChartInfographic, IconCirclePlus, IconClockHour6, IconFileCertificate, IconFileDescription, IconFolder, IconLayout2, IconSchool, IconTable, IconUserBolt, IconUserShield, IconUserSquare, IconUsers, IconUsersPlus } from '@tabler/icons-react';
+import { IconBooks, IconBox, IconCategory, IconChartArrowsVertical, IconChartBarPopular, IconChartInfographic, IconCirclePlus, IconClockHour6, IconFileCertificate, IconFileDescription, IconFolder, IconLayout2, IconSchool, IconShoppingCart, IconTable, IconUserBolt, IconUserShield, IconUserSquare, IconUsers, IconUsersPlus } from '@tabler/icons-react';
 import hasAnyPermission from './Permission';
 import React from 'react'
 
@@ -30,17 +30,50 @@ export default function Menu() {
                 active: url === '/dashboard/categories' ? true : false, // Update comparison here
                 icon: <IconFolder size={20} strokeWidth={1.5} />,
                 permissions: hasAnyPermission(['permissions-access']),
-            }, {
+            },
+            {
                 title: 'Produk',
                 href: route('products.index'),
                 active: url === '/dashboard/products' ? true : false, // Update comparison here
                 icon: <IconBox size={20} strokeWidth={1.5} />,
                 permissions: hasAnyPermission(['permissions-access']),
-            }, {
+            },
+            {
                 title: 'Pelanggan',
                 href: route('customers.index'),
                 active: url === '/dashboard/customers' ? true : false, // Update comparison here
                 icon: <IconUsersPlus size={20} strokeWidth={1.5} />,
+                permissions: hasAnyPermission(['permissions-access']),
+            }
+        ]
+    },
+    {
+        title: 'Transaksi',
+        details: [
+            {
+                title: 'Transaksi',
+                href: route('transactions.index'),
+                active: url === '/dashboard/customers' ? true : false, // Update comparison here
+                icon: <IconShoppingCart size={20} strokeWidth={1.5} />,
+                permissions: hasAnyPermission(['permissions-access']),
+            },
+        ]
+    },
+    {
+        title: 'Laporan',
+        details: [
+            {
+                title: 'Laporan Penjualan',
+                href: route('transactions.index'),
+                active: url === '/dashboard/customers' ? true : false, // Update comparison here
+                icon: <IconChartBarPopular size={20} strokeWidth={1.5} />,
+                permissions: hasAnyPermission(['permissions-access']),
+            },
+            {
+                title: 'Laporan Keuntungan',
+                href: route('transactions.index'),
+                active: url === '/dashboard/customers' ? true : false, // Update comparison here
+                icon: <IconChartArrowsVertical size={20} strokeWidth={1.5} />,
                 permissions: hasAnyPermission(['permissions-access']),
             },
         ]
