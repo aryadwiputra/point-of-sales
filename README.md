@@ -1,5 +1,5 @@
 # Aplikasi Kasir (Point of Sales) 
-Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada sebuah warung atau toko.
+Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada sebuah warung atau toko. Secara template, aplikasi ini menggunakan resource dari https://github.com/Raf-Taufiqurrahman/RILT-Starter dengan beberapa modifikasi yang saya lakukan terhadap komponen-komponen untuk mendukung aplikasi kasir.
 
 ## Tech Stack
 
@@ -11,6 +11,7 @@ Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada
 ## Authors
 
 - [Arya Dwi Putra](https://www.github.com/aryadwiputra)
+- [Rafi Taufiqurrahman](https://github.com/Raf-Taufiqurrahman)
 
 
 ## 📌 Fitur
