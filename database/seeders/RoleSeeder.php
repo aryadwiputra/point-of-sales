@@ -22,6 +22,7 @@ class RoleSeeder extends Seeder
         $this->createRoleWithPermissions('products-access', '%products%');
         $this->createRoleWithPermissions('customers-access', '%customers%');
         $this->createRoleWithPermissions('transactions-access', '%transactions%');
+        $this->createRoleWithPermissions('reports-access', '%reports%');
 
         Role::create(['name' => 'super-admin']);
     }
