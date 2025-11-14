@@ -3,8 +3,8 @@ Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada
 
 ## Tech Stack
 
-- Laravel 11.x
-- Inertia
+- Laravel 12
+- Inertia 2
 - React
 - TailwindCSS
 - MySQL
