@@ -72,6 +72,11 @@ Pengujian ini mensimulasikan checkout lengkap: keranjang ➜ transaksi ➜ invoi
 
 Ada bug atau ide fitur? Buat issue supaya kita bisa diskusi bareng.
 
+## Authors
+
+-   [Arya Dwi Putra](https://www.github.com/aryadwiputra)
+-   Aplikasi ini menggunakan resource dari https://github.com/Raf-Taufiqurrahman/RILT-Starter dengan beberapa modifikasi yang saya lakukan terhadap komponen-komponen untuk mendukung aplikasi kasir
+
 ## ⭐ Dukung Proyek Ini
 
 Kalau repositori ini membantumu membangun POS lebih cepat, klik **Star**. Dukungan kecil ini bikin proyek tetap aktif dan membantu developer lain menemukannya. Terima kasih! 🙌
