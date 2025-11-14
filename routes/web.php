@@ -3,6 +3,7 @@
 use App\Http\Controllers\Apps\CategoryController;
 use App\Http\Controllers\Apps\CustomerController;
 use App\Http\Controllers\Apps\ProductController;
+use App\Http\Controllers\Apps\TransactionController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -24,31 +25,53 @@ Route::get('/', function () {
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('/', function () {
         return Inertia::render('Dashboard/Index');
-    })->middleware(['auth', 'verified'])->name('dashboard');
-    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+    })->middleware(['auth', 'verified', 'permission:dashboard-access'])->name('dashboard');
+    Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions-access')->name('permissions.index');
     // roles route
-    Route::resource('/roles', RoleController::class)->except(['create', 'edit', 'show']);
+    Route::resource('/roles', RoleController::class)
+        ->except(['create', 'edit', 'show'])
+        ->middlewareFor('index', 'permission:roles-access')
+        ->middlewareFor('store', 'permission:roles-create')
+        ->middlewareFor('update', 'permission:roles-update')
+        ->middlewareFor('destroy', 'permission:roles-delete');
     // users route
-    Route::resource('/users', UserController::class)->except('show');
+    Route::resource('/users', UserController::class)
+        ->except('show')
+        ->middlewareFor('index', 'permission:users-access')
+        ->middlewareFor(['create', 'store'], 'permission:users-create')
+        ->middlewareFor(['edit', 'update'], 'permission:users-update')
+        ->middlewareFor('destroy', 'permission:users-delete');
 
-    Route::resource('categories', CategoryController::class);
-    Route::resource('products', ProductController::class);
-    Route::resource('customers', CustomerController::class);
+    Route::resource('categories', CategoryController::class)
+        ->middlewareFor(['index', 'show'], 'permission:categories-access')
+        ->middlewareFor(['create', 'store'], 'permission:categories-create')
+        ->middlewareFor(['edit', 'update'], 'permission:categories-edit')
+        ->middlewareFor('destroy', 'permission:categories-delete');
+    Route::resource('products', ProductController::class)
+        ->middlewareFor(['index', 'show'], 'permission:products-access')
+        ->middlewareFor(['create', 'store'], 'permission:products-create')
+        ->middlewareFor(['edit', 'update'], 'permission:products-edit')
+        ->middlewareFor('destroy', 'permission:products-delete');
+    Route::resource('customers', CustomerController::class)
+        ->middlewareFor(['index', 'show'], 'permission:customers-access')
+        ->middlewareFor(['create', 'store'], 'permission:customers-create')
+        ->middlewareFor(['edit', 'update'], 'permission:customers-edit')
+        ->middlewareFor('destroy', 'permission:customers-delete');
     //route transaction
-    Route::get('/transactions', [\App\Http\Controllers\Apps\TransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/transactions', [TransactionController::class, 'index'])->middleware('permission:transactions-access')->name('transactions.index');
 
     //route transaction searchProduct
-    Route::post('/transactions/searchProduct', [\App\Http\Controllers\Apps\TransactionController::class, 'searchProduct'])->name('transactions.searchProduct');
+    Route::post('/transactions/searchProduct', [TransactionController::class, 'searchProduct'])->middleware('permission:transactions-access')->name('transactions.searchProduct');
 
     //route transaction addToCart
-    Route::post('/transactions/addToCart', [\App\Http\Controllers\Apps\TransactionController::class, 'addToCart'])->name('transactions.addToCart');
+    Route::post('/transactions/addToCart', [TransactionController::class, 'addToCart'])->middleware('permission:transactions-access')->name('transactions.addToCart');
 
     //route transaction destroyCart
-    Route::delete('/transactions/{cart_id}/destroyCart', [\App\Http\Controllers\Apps\TransactionController::class, 'destroyCart'])->name('transactions.destroyCart');
+    Route::delete('/transactions/{cart_id}/destroyCart', [TransactionController::class, 'destroyCart'])->middleware('permission:transactions-access')->name('transactions.destroyCart');
 
     //route transaction store
-    Route::post('/transactions/store', [\App\Http\Controllers\Apps\TransactionController::class, 'store'])->name('transactions.store');
-    Route::get('/transactions/{invoice}/print', [\App\Http\Controllers\Apps\TransactionController::class, 'print'])->name('transactions.print');
+    Route::post('/transactions/store', [TransactionController::class, 'store'])->middleware('permission:transactions-access')->name('transactions.store');
+    Route::get('/transactions/{invoice}/print', [TransactionController::class, 'print'])->middleware('permission:transactions-access')->name('transactions.print');
 
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
