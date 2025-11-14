@@ -21,6 +21,7 @@
     },
     "dependencies": {
         "@tabler/icons-react": "^3.5.0",
+        "chart.js": "^4.5.1",
         "jsbarcode": "^3.11.6",
         "react-hot-toast": "^2.4.1",
         "sweetalert2": "^11.11.1"
