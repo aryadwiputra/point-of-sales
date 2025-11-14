@@ -54,5 +54,9 @@ class PermissionSeeder extends Seeder
 
         //permission transactions
         Permission::create(['name' => 'transactions-access']);
+
+        // permission reports
+        Permission::create(['name' => 'reports-access']);
+        Permission::create(['name' => 'profits-access']);
     }
 }

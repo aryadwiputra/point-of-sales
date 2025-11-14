@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Apps;
 
-use Inertia\Inertia;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Models\Transaction;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Inertia\Inertia;
 
 class TransactionController extends Controller
 {
@@ -214,6 +215,46 @@ class TransactionController extends Controller
 
         return Inertia::render('Dashboard/Transactions/Print', [
             'transaction' => $transaction
+        ]);
+    }
+
+    /**
+     * Display transaction history.
+     */
+    public function history(Request $request)
+    {
+        $filters = [
+            'invoice' => $request->input('invoice'),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+        ];
+
+        $query = Transaction::query()
+            ->with(['cashier:id,name', 'customer:id,name'])
+            ->withSum('details as total_items', 'qty')
+            ->withSum('profits as total_profit', 'total')
+            ->orderByDesc('created_at');
+
+        if (!$request->user()->isSuperAdmin()) {
+            $query->where('cashier_id', $request->user()->id);
+        }
+
+        $query
+            ->when($filters['invoice'], function (Builder $builder, $invoice) {
+                $builder->where('invoice', 'like', '%' . $invoice . '%');
+            })
+            ->when($filters['start_date'], function (Builder $builder, $date) {
+                $builder->whereDate('created_at', '>=', $date);
+            })
+            ->when($filters['end_date'], function (Builder $builder, $date) {
+                $builder->whereDate('created_at', '<=', $date);
+            });
+
+        $transactions = $query->paginate(10)->withQueryString();
+
+        return Inertia::render('Dashboard/Transactions/History', [
+            'transactions' => $transactions,
+            'filters' => $filters,
         ]);
     }
 }

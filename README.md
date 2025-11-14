@@ -1,91 +1,81 @@
-# Aplikasi Kasir (Point of Sales) 
-Aplikasi ini dapat digunakan untuk melakukan pencatatan transaksi jual beli pada sebuah warung atau toko. Secara template, aplikasi ini menggunakan resource dari https://github.com/Raf-Taufiqurrahman/RILT-Starter dengan beberapa modifikasi yang saya lakukan terhadap komponen-komponen untuk mendukung aplikasi kasir.
+# Point of Sales – Laravel & Inertia
 
-## Tech Stack
+> Sistem kasir modern dengan alur transaksi cepat, dukungan laporan, dan mode cetak invoice yang rapi. Kalau kamu suka proyek ini, bantu dengan menekan ⭐ di atas – itu sangat membantu visibilitas repositori ini.
 
-- Laravel 12
-- Inertia 2
-- React
-- TailwindCSS
-- MySQL
-## Authors
+![Dashboard Preview](public/media/readme-dashboard.png "Point of Sales Dashboard Preview")
+<sub>_Cuplikan antarmuka kasir. Screenshot tambahan ada di bagian di bawah._</sub>
 
-- [Arya Dwi Putra](https://www.github.com/aryadwiputra)
-- [Rafi Taufiqurrahman](https://github.com/Raf-Taufiqurrahman)
+## ✨ Kenapa Menarik?
 
+-   **Kasir cepat & intuitif** – pencarian barcode, keranjang, ringkasan pembayaran, dan kalkulasi diskon otomatis.
+-   **Invoice siap cetak** – setelah transaksi, kasir bisa melihat preview invoice elegan dan memilih kapan mau mencetaknya.
+-   **Laporan lengkap** – dari penjualan, profit, sampai riwayat transaksi dengan filter multi parameter.
+-   **Akses berbasis role** – integrasi Spatie Permissions bawaan untuk role, user, dan hak akses yang granular.
+-   **Dark mode ready** – UI sudah disiapkan untuk mode gelap/terang tanpa konfigurasi tambahan.
 
-## 📌 Fitur
+## 🔧 Teknologi Inti
 
-| No  | Nama |  Status                                                     |
-|-----|------------------------------------------------------------|------|
-|  1  | Authentikasi Admin.                            |Done|
-|  2  | Manajemen Pengguna.                 |Done|
-|  3  | Manajemen Hak Akses Pengguna.                      | Done|
-|  4  | Manajemen Role Pengguna                          |Done|
-|  5  | Manajemen Kategori.               |Done|
-|  6  | Manajemen Produk.                                    |Done|
-|  7  | Manajemen Pelanggan.     |Done|
-|  8  | Print Invoice. |Done|
-|  9  | Laporan Penjualan. |Done|
-|  10  | Laporan Keuntungan. |On progress|
-|  11  | Riwayat Order. |On progress|
-|  12  | Chart/Grafik Pendapatan. |On progress|
+-   [Laravel 11](https://laravel.com) + [Inertia.js](https://inertiajs.com)
+-   [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com)
+-   [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
+-   [Tabler Icons](https://tabler-icons.io) untuk ikon kasir modern
 
-------------
-## 💻 Panduan Instalasi Project
+## 🚀 Cara Menjalankan
 
-1. **Clone Repository**
 ```bash
-git clone https://github.com/aryadwiputra/point-of-sales 
-```
-2. **Buka terminal, lalu ketik**
-```
+git clone https://github.com/<username>/point-of-sales.git
 cd point-of-sales
-composer install
-npm install
 cp .env.example .env
+composer install && npm install
 php artisan key:generate
-```
-
-3. **Buka ```.env``` lalu ubah baris berikut sesuaikan dengan databasemu yang ingin dipakai**
-```
-DB_PORT=3306
-DB_DATABASE=laravel
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-3. **Jalankan bash**
-```bash
-php artisan config:cache
-php artisan storage:link
-php artisan route:clear
-```
-
-4. **Jalankan migrations dan seeders**
-```
 php artisan migrate --seed
-```
-5. **Jalankan nodejs**
-```
 npm run dev
-```
-
-5. **Jalankan website**
-```bash
 php artisan serve
 ```
 
-## Jika ada pertanyaan silahkan hubungi saya di email :
+> **Tip:** Jalankan `php artisan test` – tersedia feature test baru untuk memastikan alur transaksi & invoice tetap aman.
 
+## 📊 Fitur Utama
+
+-   **Dashboard**: ringkasan kategori, produk, transaksi, pendapatan, dan trend chart.
+-   **Kelola Produk & Stok**: CRUD lengkap dengan kategori dan barcode unik.
+-   **Modul Kasir**: pencarian barcode, keranjang multi item, diskon, hitung kembalian otomatis.
+-   **Invoice**: tampilan siap cetak + tombol manual print supaya kasir punya kendali penuh.
+-   **Riwayat Transaksi**: filter per tanggal/invoice/kasir + export laporan.
+-   **Laporan Profit & Penjualan**: pantau performa bisnis dalam sekali klik.
+
+## 📷 Cuplikan Layar
+
+| Modul                  | Preview                                                    |
+| ---------------------- | ---------------------------------------------------------- |
+| Dashboard              | ![Dashboard Screenshot](public/media/readme-dashboard.png) |
+| Kasir / POS            | ![POS Screenshot](public/media/readme-pos.png)             |
+| Invoice Ready-to-Print | ![Invoice Screenshot](public/media/readme-invoice.png)     |
+
+<sub>_Tidak ada file? Silakan ganti dengan screenshot kamu sendiri di `public/media`. Table akan otomatis menarik namanya._</sub>
+
+## 🧪 Pengujian
+
+```bash
+php artisan test --filter=TransactionFlowTest
 ```
-aryaadwptr@gmail.com
-```
 
-## Request Fitur Baru dan Pelaporan Bug
+Pengujian ini mensimulasikan checkout lengkap: keranjang ➜ transaksi ➜ invoice, termasuk validasi stok, detail transaksi, profit, dan render Inertia untuk halaman print.
 
-Anda dapat meminta fitur baru maupun melaporkan bug melalui menu **issues** yang sudah disediakan oleh GitHub (lihat menu di atas), posting issues baru dan kita akan berdiskusi disana.
+## 🤝 Kontribusi
 
-## Berkontribusi
+1. Fork repo ini
+2. Buat branch fitur: `git checkout -b feature/namamu`
+3. Commit perubahanmu: `git commit -m "Tambah fitur X"`
+4. Push branch: `git push origin feature/namamu`
+5. Buka Pull Request
 
-Siapapun dapat berkontribusi pada proyek ini mulai dari pemrograman, pembuakan buku manual, sampai dengan mengenalkan produk ini kepada masyarakat Indonesia agar mengurangi kesenjangan pendidikan teknologi dengan cara membuat postingan issue di repository ini.
+Ada bug atau ide fitur? Buat issue supaya kita bisa diskusi bareng.
+
+## ⭐ Dukung Proyek Ini
+
+Kalau repositori ini membantumu membangun POS lebih cepat, klik **Star**. Dukungan kecil ini bikin proyek tetap aktif dan membantu developer lain menemukannya. Terima kasih! 🙌
+
+---
+
+Made with ❤️ menggunakan Laravel + React oleh komunitas Point of Sales.
