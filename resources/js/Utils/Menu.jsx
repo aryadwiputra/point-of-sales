@@ -92,6 +92,13 @@ export default function Menu() {
                     ),
                     permissions: hasAnyPermission(["reports-access"]),
                 },
+                {
+                    title: "Laporan Keuntungan",
+                    href: route("reports.profits.index"),
+                    active: url.startsWith("/dashboard/reports/profits"),
+                    icon: <IconChartBarPopular size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["profits-access"]),
+                },
             ],
         },
         {
