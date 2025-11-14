@@ -106,7 +106,7 @@ export default function Login({ status, canResetPassword }) {
                     <div
                         className="h-full w-full bg-cover bg-center"
                         style={{
-                            backgroundImage: `url('/assets/photo/login.jpg')`,
+                            backgroundImage: `url('/assets/photo/auth.jpg')`,
                         }}
                     />
                 </div>
