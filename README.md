@@ -1,66 +1,82 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Point of Sales – Laravel & Inertia
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Sistem kasir modern dengan alur transaksi cepat, dukungan laporan, dan mode cetak invoice yang rapi. Kalau kamu suka proyek ini, bantu dengan menekan ⭐ di atas – itu sangat membantu visibilitas repositori ini.
 
-## About Laravel
+![Dashboard Preview](public/media/readme-dashboard.png "Point of Sales Dashboard Preview")
+<sub>*Cuplikan antarmuka kasir. Screenshot tambahan ada di bagian di bawah.*</sub>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ Kenapa Menarik?
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Kasir cepat & intuitif** – pencarian barcode, keranjang, ringkasan pembayaran, dan kalkulasi diskon otomatis.
+- **Invoice siap cetak** – setelah transaksi, kasir bisa melihat preview invoice elegan dan memilih kapan mau mencetaknya.
+- **Laporan lengkap** – dari penjualan, profit, sampai riwayat transaksi dengan filter multi parameter.
+- **Akses berbasis role** – integrasi Spatie Permissions bawaan untuk role, user, dan hak akses yang granular.
+- **Dark mode ready** – UI sudah disiapkan untuk mode gelap/terang tanpa konfigurasi tambahan.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🔧 Teknologi Inti
 
-## Learning Laravel
+- [Laravel 11](https://laravel.com) + [Inertia.js](https://inertiajs.com)
+- [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com)
+- [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
+- [Tabler Icons](https://tabler-icons.io) untuk ikon kasir modern
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🚀 Cara Menjalankan
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+git clone https://github.com/<username>/point-of-sales.git
+cd point-of-sales
+cp .env.example .env
+composer install && npm install
+php artisan key:generate
+php artisan migrate --seed
+npm run dev
+php artisan serve
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+> **Tip:** Jalankan `php artisan test` – tersedia feature test baru untuk memastikan alur transaksi & invoice tetap aman.
 
-## Laravel Sponsors
+## 📊 Fitur Utama
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- **Dashboard**: ringkasan kategori, produk, transaksi, pendapatan, dan trend chart.
+- **Kelola Produk & Stok**: CRUD lengkap dengan kategori dan barcode unik.
+- **Modul Kasir**: pencarian barcode, keranjang multi item, diskon, hitung kembalian otomatis.
+- **Invoice**: tampilan siap cetak + tombol manual print supaya kasir punya kendali penuh.
+- **Riwayat Transaksi**: filter per tanggal/invoice/kasir + export laporan.
+- **Laporan Profit & Penjualan**: pantau performa bisnis dalam sekali klik.
 
-### Premium Partners
+## 📷 Cuplikan Layar
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+| Modul | Preview |
+| --- | --- |
+| Dashboard | ![Dashboard Screenshot](public/media/readme-dashboard.png) |
+| Kasir / POS | ![POS Screenshot](public/media/readme-pos.png) |
+| Invoice Ready-to-Print | ![Invoice Screenshot](public/media/readme-invoice.png) |
 
-## Contributing
+<sub>*Tidak ada file? Silakan ganti dengan screenshot kamu sendiri di `public/media`. Table akan otomatis menarik namanya.*</sub>
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🧪 Pengujian
 
-## Code of Conduct
+```bash
+php artisan test --filter=TransactionFlowTest
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Pengujian ini mensimulasikan checkout lengkap: keranjang ➜ transaksi ➜ invoice, termasuk validasi stok, detail transaksi, profit, dan render Inertia untuk halaman print.
 
-## Security Vulnerabilities
+## 🤝 Kontribusi
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. Fork repo ini
+2. Buat branch fitur: `git checkout -b feature/namamu`
+3. Commit perubahanmu: `git commit -m "Tambah fitur X"`
+4. Push branch: `git push origin feature/namamu`
+5. Buka Pull Request
 
-## License
+Ada bug atau ide fitur? Buat issue supaya kita bisa diskusi bareng.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## ⭐ Dukung Proyek Ini
+
+Kalau repositori ini membantumu membangun POS lebih cepat, klik **Star**. Dukungan kecil ini bikin proyek tetap aktif dan membantu developer lain menemukannya. Terima kasih! 🙌
+
+---
+
+Made with ❤️ menggunakan Laravel + React oleh komunitas Point of Sales.
+*** End Patch
