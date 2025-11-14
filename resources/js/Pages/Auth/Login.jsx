@@ -1,88 +1,114 @@
-import { useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import ApplicationLogo from '@/Components/ApplicationLogo';
+import { useEffect } from "react";
+import { Head, useForm } from "@inertiajs/react";
+import ApplicationLogo from "@/Components/ApplicationLogo";
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
-        password: '',
+        email: "",
+        password: "",
         remember: false,
     });
 
     useEffect(() => {
-        return () => {
-            reset('password');
-        };
+        return () => reset("password");
     }, []);
 
     const submit = (e) => {
         e.preventDefault();
-
-        post(route('login'));
+        post(route("login"));
     };
 
     return (
         <>
-            <Head title="Log in" />
-            <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
-                    <div className="text-center mb-6">
-                        <ApplicationLogo className="w-20 h-20 mx-auto mb-4" />
-                        <h1 className='text-3xl text-black font-bold mb-2'>Aplikasi Kasir</h1>
-                        <h2 className="text-xl font-semibold text-gray-700">Login</h2>
-                        <p className="text-gray-500">Lanjutkan ke Dashboard</p>
-                    </div>
+            <Head title="Login" />
 
-                    <form onSubmit={submit}>
-                        <div className="mb-4">
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:border-blue-300"
-                                value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                            />
+            <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white text-gray-900 dark:bg-neutral-900 dark:text-gray-100">
+                {/* Left - Form */}
+                <div className="flex items-center justify-center p-8">
+                    <div className="w-full max-w-md">
+                        <div className="mb-8">
+                            <ApplicationLogo className="w-16 h-16 mb-4" />
+                            <h1 className="text-3xl font-bold">
+                                Aplikasi Kasir
+                            </h1>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                Masuk ke Dashboard
+                            </p>
                         </div>
 
-                        <div className="mb-4">
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:border-blue-300"
-                                value={data.password}
-                                onChange={(e) => setData('password', e.target.value)}
-                            />
-                        </div>
-
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center">
-                                <input
-                                    id="remember_me"
-                                    name="remember"
-                                    type="checkbox"
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    checked={data.remember}
-                                    onChange={(e) => setData('remember', e.target.checked)}
-                                />
-                                <label htmlFor="remember_me" className="ml-2 block text-sm text-gray-900">
-                                    Ingat saya
+                        <form onSubmit={submit} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium">
+                                    Email
                                 </label>
+                                <input
+                                    type="email"
+                                    value={data.email}
+                                    onChange={(e) =>
+                                        setData("email", e.target.value)
+                                    }
+                                    className="mt-1 block w-full px-4 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-neutral-700 focus:border-neutral-700"
+                                />
                             </div>
 
-                            <a href="#" className="text-sm text-blue-600 hover:underline">Lupa Password?</a>
-                        </div>
+                            <div>
+                                <label className="block text-sm font-medium">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={data.password}
+                                    onChange={(e) =>
+                                        setData("password", e.target.value)
+                                    }
+                                    className="mt-1 block w-full px-4 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-2 focus:ring-neutral-700 focus:border-neutral-700"
+                                />
+                            </div>
 
-                        <div>
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.remember}
+                                        onChange={(e) =>
+                                            setData(
+                                                "remember",
+                                                e.target.checked
+                                            )
+                                        }
+                                        className="h-4 w-4 text-neutral-900 dark:text-neutral-200 border-gray-300 dark:border-neutral-700 rounded focus:ring-neutral-700"
+                                    />
+                                    <span className="text-sm">Ingat saya</span>
+                                </label>
+
+                                {canResetPassword && (
+                                    <a
+                                        href={route("password.request")}
+                                        className="text-sm text-neutral-800 dark:text-neutral-300 hover:underline"
+                                    >
+                                        Lupa Password?
+                                    </a>
+                                )}
+                            </div>
+
                             <button
                                 type="submit"
-                                className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="w-full py-2.5 rounded-md bg-black dark:bg-neutral-800 text-white font-semibold hover:bg-neutral-900 dark:hover:bg-neutral-700 focus:ring-4 focus:ring-neutral-500"
                             >
                                 Masuk
                             </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Right - Image */}
+                <div className="hidden lg:block">
+                    <div
+                        className="h-full w-full bg-cover bg-center"
+                        style={{
+                            backgroundImage: `url('/assets/photo/login.jpg')`,
+                        }}
+                    />
                 </div>
             </div>
         </>
