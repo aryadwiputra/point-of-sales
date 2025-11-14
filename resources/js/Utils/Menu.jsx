@@ -78,6 +78,13 @@ export default function Menu() {
                     icon: <IconShoppingCart size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["transactions-access"]),
                 },
+                {
+                    title: "Riwayat Transaksi",
+                    href: route("transactions.history"),
+                    active: url === "/dashboard/transactions/history" ? true : false,
+                    icon: <IconClockHour6 size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["transactions-access"]),
+                },
             ],
         },
         {
