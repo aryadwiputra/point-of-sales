@@ -8,7 +8,7 @@
 ## ✨ Kenapa Menarik?
 
 -   **Kasir cepat & intuitif** – pencarian barcode, keranjang, ringkasan pembayaran, dan kalkulasi diskon otomatis.
--   **Invoice siap cetak** – setelah transaksi, kasir bisa melihat preview invoice elegan dan memilih kapan mau mencetaknya.
+-   **Invoice siap cetak & payment link** – setelah transaksi, kasir bisa melihat preview invoice elegan, membagikan link pembayaran Midtrans/Xendit, dan memilih kapan mau mencetaknya.
 -   **Laporan lengkap** – dari penjualan, profit, sampai riwayat transaksi dengan filter multi parameter.
 -   **Akses berbasis role** – integrasi Spatie Permissions bawaan untuk role, user, dan hak akses yang granular.
 -   **Dark mode ready** – UI sudah disiapkan untuk mode gelap/terang tanpa konfigurasi tambahan.
@@ -19,6 +19,7 @@
 -   [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com)
 -   [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
 -   [Tabler Icons](https://tabler-icons.io) untuk ikon kasir modern
+-   Integrasi payment gateway Midtrans Snap & Xendit Invoice (opsional)
 
 ## 🚀 Cara Menjalankan
 
@@ -39,8 +40,8 @@ php artisan serve
 
 -   **Dashboard**: ringkasan kategori, produk, transaksi, pendapatan, dan trend chart.
 -   **Kelola Produk & Stok**: CRUD lengkap dengan kategori dan barcode unik.
--   **Modul Kasir**: pencarian barcode, keranjang multi item, diskon, hitung kembalian otomatis.
--   **Invoice**: tampilan siap cetak + tombol manual print supaya kasir punya kendali penuh.
+-   **Modul Kasir**: pencarian barcode, keranjang multi item, diskon, hitung kembalian otomatis, dan pilihan gateway (tunai, Midtrans, Xendit).
+-   **Invoice / Payment Link**: tampilan siap cetak + tombol manual print dan tautan pembayaran yang bisa dibagikan ke pelanggan.
 -   **Riwayat Transaksi**: filter per tanggal/invoice/kasir + export laporan.
 -   **Laporan Profit & Penjualan**: pantau performa bisnis dalam sekali klik.
 
@@ -60,7 +61,7 @@ php artisan serve
 php artisan test --filter=TransactionFlowTest
 ```
 
-Pengujian ini mensimulasikan checkout lengkap: keranjang ➜ transaksi ➜ invoice, termasuk validasi stok, detail transaksi, profit, dan render Inertia untuk halaman print.
+Pengujian ini mensimulasikan checkout lengkap: keranjang ➜ transaksi ➜ invoice, termasuk validasi stok, detail transaksi, profit, hitung stok, integrasi Midtrans (HTTP fake), dan render Inertia untuk halaman print.
 
 ## 🤝 Kontribusi
 
