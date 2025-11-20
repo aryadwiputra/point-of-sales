@@ -1,6 +1,6 @@
 import React from "react";
 import { Head, Link } from "@inertiajs/react";
-import { IconArrowLeft, IconPrinter } from "@tabler/icons-react";
+import { IconArrowLeft, IconPrinter, IconExternalLink } from "@tabler/icons-react";
 
 export default function Print({ transaction }) {
     const formatPrice = (price = 0) =>
@@ -21,6 +21,36 @@ export default function Print({ transaction }) {
 
     const items = transaction?.details ?? [];
 
+    const paymentLabels = {
+        cash: "Tunai",
+        midtrans: "Midtrans",
+        xendit: "Xendit",
+    };
+    const paymentMethodKey =
+        (transaction?.payment_method || "cash").toLowerCase();
+    const paymentMethodLabel =
+        paymentLabels[paymentMethodKey] ?? "Tunai";
+
+    const paymentStatuses = {
+        paid: "Lunas",
+        pending: "Menunggu Pembayaran",
+        failed: "Pembayaran Gagal",
+        expired: "Pembayaran Kedaluwarsa",
+    };
+    const paymentStatusKey = (transaction?.payment_status || "").toLowerCase();
+    const paymentStatusLabel =
+        paymentStatuses[paymentStatusKey] ??
+        (paymentMethodKey === "cash" ? "Lunas" : "Menunggu Pembayaran");
+    const paymentStatusColor =
+        paymentStatusKey === "paid"
+            ? "text-emerald-600"
+            : paymentStatusKey === "failed"
+            ? "text-rose-600"
+            : "text-amber-600";
+
+    const isNonCash = paymentMethodKey !== "cash";
+    const showPaymentLink = isNonCash && transaction.payment_url;
+
     return (
         <>
             <Head title="Invoice Penjualan" />
@@ -35,6 +65,18 @@ export default function Print({ transaction }) {
                             <IconArrowLeft size={16} />
                             Kembali ke kasir
                         </Link>
+
+                        {showPaymentLink && (
+                            <a
+                                href={transaction.payment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-full border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
+                            >
+                                <IconExternalLink size={16} />
+                                Buka pembayaran
+                            </a>
+                        )}
 
                         <button
                             type="button"
@@ -69,7 +111,15 @@ export default function Print({ transaction }) {
                                 <p className="mt-3 font-semibold text-gray-800">
                                     Metode Pembayaran
                                 </p>
-                                <p>Tunai</p>
+                                <p>{paymentMethodLabel}</p>
+                                <p className={`text-xs ${paymentStatusColor}`}>
+                                    {paymentStatusLabel}
+                                </p>
+                                {transaction.payment_reference && (
+                                    <p className="text-xs text-gray-400">
+                                        Ref: {transaction.payment_reference}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -180,16 +230,24 @@ export default function Print({ transaction }) {
                             </div>
 
                             <div className="mt-6 grid gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 text-sm text-gray-600 md:grid-cols-2">
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                        Pembayaran
-                                    </p>
-                                    <dl className="mt-2 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <dt>Uang diterima</dt>
-                                            <dd className="font-semibold text-gray-900">
-                                                {formatPrice(transaction.cash)}
-                                            </dd>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                    Pembayaran
+                                </p>
+                                <dl className="mt-2 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <dt>Status</dt>
+                                        <dd
+                                            className={`font-semibold ${paymentStatusColor}`}
+                                        >
+                                            {paymentStatusLabel}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <dt>Uang diterima</dt>
+                                        <dd className="font-semibold text-gray-900">
+                                            {formatPrice(transaction.cash)}
+                                        </dd>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <dt>Kembalian</dt>
@@ -204,9 +262,9 @@ export default function Print({ transaction }) {
                                         Catatan
                                     </p>
                                     <p className="mt-2 text-gray-700">
-                                        Simpan invoice ini sebagai bukti transaksi
-                                        resmi. Silakan hubungi kasir jika terdapat
-                                        kekeliruan.
+                                        {isNonCash
+                                            ? "Bagikan tautan pembayaran ini kepada pelanggan dan tunggu konfirmasi sistem gateway."
+                                            : "Simpan invoice ini sebagai bukti transaksi resmi. Silakan hubungi kasir jika terdapat kekeliruan."}
                                     </p>
                                 </div>
                             </div>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Head, router, usePage } from "@inertiajs/react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -12,6 +12,7 @@ import {
     IconArrowRight,
     IconBarcode,
     IconCash,
+    IconCreditCard,
     IconReceipt,
     IconShoppingBag,
     IconShoppingCartPlus,
@@ -19,7 +20,13 @@ import {
     IconUser,
 } from "@tabler/icons-react";
 
-export default function Index({ carts = [], carts_total = 0, customers = [] }) {
+export default function Index({
+    carts = [],
+    carts_total = 0,
+    customers = [],
+    paymentGateways = [],
+    defaultPaymentGateway = "cash",
+}) {
     const { auth, errors } = usePage().props;
 
     const [barcode, setBarcode] = useState("");
@@ -29,19 +36,29 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
     const [cashInput, setCashInput] = useState("");
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState(
+        defaultPaymentGateway ?? "cash"
+    );
+
+    useEffect(() => {
+        setPaymentMethod(defaultPaymentGateway ?? "cash");
+    }, [defaultPaymentGateway]);
 
     const discount = useMemo(
         () => Math.max(0, Number(discountInput) || 0),
         [discountInput]
     );
-    const cash = useMemo(
-        () => Math.max(0, Number(cashInput) || 0),
-        [cashInput]
-    );
     const subtotal = useMemo(() => carts_total ?? 0, [carts_total]);
     const payable = useMemo(
         () => Math.max(subtotal - discount, 0),
         [subtotal, discount]
+    );
+    const cash = useMemo(
+        () =>
+            paymentMethod === "cash"
+                ? Math.max(0, Number(cashInput) || 0)
+                : payable,
+        [cashInput, paymentMethod, payable]
     );
     const change = useMemo(() => Math.max(cash - payable, 0), [cash, payable]);
     const remaining = useMemo(
@@ -52,6 +69,54 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
         () => carts.reduce((total, item) => total + Number(item.qty), 0),
         [carts]
     );
+
+    const paymentOptions = useMemo(() => {
+        const options = Array.isArray(paymentGateways)
+            ? paymentGateways.filter(
+                  (gateway) =>
+                      gateway?.value && gateway.value.toLowerCase() !== "cash"
+              )
+            : [];
+
+        return [
+            {
+                value: "cash",
+                label: "Tunai",
+                description: "Pembayaran tunai langsung di kasir.",
+            },
+            ...options,
+        ];
+    }, [paymentGateways]);
+
+    const activePaymentOption =
+        paymentOptions.find((option) => option.value === paymentMethod) ??
+        paymentOptions[0];
+
+    const isCashPayment = activePaymentOption?.value === "cash";
+
+    useEffect(() => {
+        if (
+            paymentOptions.length &&
+            !paymentOptions.find((option) => option.value === paymentMethod)
+        ) {
+            setPaymentMethod(paymentOptions[0].value);
+        }
+    }, [paymentOptions, paymentMethod]);
+
+    useEffect(() => {
+        if (!isCashPayment && payable >= 0) {
+            setCashInput(String(payable));
+        }
+    }, [isCashPayment, payable]);
+
+    const submitLabel = isCashPayment
+        ? remaining > 0
+            ? "Menunggu Pembayaran"
+            : "Selesaikan Transaksi"
+        : `Buat Pembayaran ${activePaymentOption?.label ?? ""}`;
+
+    const isSubmitDisabled =
+        carts.length === 0 || (isCashPayment && remaining > 0);
 
     const formatPrice = (value = 0) =>
         value.toLocaleString("id-ID", {
@@ -153,7 +218,7 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
             return;
         }
 
-        if (cash < payable) {
+        if (isCashPayment && cash < payable) {
             toast.error("Jumlah pembayaran kurang dari total");
             return;
         }
@@ -164,14 +229,16 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
                 customer_id: selectedCustomer.id,
                 discount,
                 grand_total: payable,
-                cash,
-                change,
+                cash: isCashPayment ? cash : payable,
+                change: isCashPayment ? change : 0,
+                payment_gateway: isCashPayment ? null : paymentMethod,
             },
             {
                 onSuccess: () => {
                     setDiscountInput("");
                     setCashInput("");
                     setSelectedCustomer(null);
+                    setPaymentMethod(defaultPaymentGateway ?? "cash");
                     toast.success("Transaksi berhasil disimpan");
                 },
             }
@@ -532,9 +599,19 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
                                     <Input
                                         type="text"
                                         inputMode="numeric"
-                                        label="Bayar Tunai (Rp)"
+                                        label={
+                                            isCashPayment
+                                                ? "Bayar Tunai (Rp)"
+                                                : "Nominal Pembayaran"
+                                        }
                                         placeholder="0"
-                                        value={cashInput}
+                                        value={
+                                            isCashPayment
+                                                ? cashInput
+                                                : payable.toString()
+                                        }
+                                        disabled={!isCashPayment}
+                                        readOnly={!isCashPayment}
                                         onChange={(event) =>
                                             setCashInput(
                                                 sanitizeNumericInput(
@@ -543,6 +620,75 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
                                             )
                                         }
                                     />
+                                    {!isCashPayment && (
+                                        <p className="text-xs text-amber-600">
+                                            Nominal mengikuti total tagihan
+                                            saat membuat tautan pembayaran.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                        Pilih Metode Pembayaran
+                                    </p>
+                                    <div className="grid gap-3">
+                                        {paymentOptions.map((option) => {
+                                            const isActive =
+                                                option.value === paymentMethod;
+                                            const IconComponent =
+                                                option.value === "cash"
+                                                    ? IconCash
+                                                    : IconCreditCard;
+
+                                            return (
+                                                <button
+                                                    key={option.value}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setPaymentMethod(
+                                                            option.value
+                                                        )
+                                                    }
+                                                    className={`w-full rounded-xl border p-3 text-left transition ${
+                                                        isActive
+                                                            ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10"
+                                                            : "border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700"
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="font-semibold text-gray-900 dark:text-white">
+                                                                {option.label}
+                                                            </p>
+                                                            {option?.description && (
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {
+                                                                        option.description
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <IconComponent
+                                                            size={18}
+                                                            className={
+                                                                isActive
+                                                                    ? "text-indigo-600"
+                                                                    : "text-gray-400"
+                                                            }
+                                                        />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {!isCashPayment && (
+                                        <p className="text-xs text-amber-600">
+                                            Tautan pembayaran akan muncul di
+                                            halaman invoice setelah transaksi
+                                            dibuat.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/40">
@@ -551,35 +697,38 @@ export default function Index({ carts = [], carts_total = 0, customers = [] }) {
                                             Metode
                                         </span>
                                         <span className="font-medium">
-                                            Tunai
+                                            {activePaymentOption?.label ??
+                                                "Tunai"}
                                         </span>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between text-sm">
                                         <span className="text-gray-500">
-                                            Kembalian
+                                            {isCashPayment ? "Kembalian" : "Status"}
                                         </span>
-                                        <span className="font-semibold text-emerald-500">
-                                            {change > 0
-                                                ? formatPrice(change)
-                                                : "-"}
+                                        <span
+                                            className={`font-semibold ${
+                                                isCashPayment
+                                                    ? "text-emerald-500"
+                                                    : "text-amber-500"
+                                            }`}
+                                        >
+                                            {isCashPayment
+                                                ? change > 0
+                                                    ? formatPrice(change)
+                                                    : "-"
+                                                : "Menunggu pembayaran"}
                                         </span>
                                     </div>
                                 </div>
 
                                 <Button
                                     type="button"
-                                    label={
-                                        remaining > 0
-                                            ? "Menunggu Pembayaran"
-                                            : "Selesaikan Transaksi"
-                                    }
+                                    label={submitLabel}
                                     icon={<IconArrowRight size={18} />}
                                     onClick={handleSubmitTransaction}
-                                    disabled={
-                                        remaining > 0 || carts.length === 0
-                                    }
+                                    disabled={isSubmitDisabled}
                                     className={`border bg-white text-gray-700 hover:bg-gray-100 dark:bg-gray-950 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-900 w-full ${
-                                        remaining > 0 || carts.length === 0
+                                        isSubmitDisabled
                                             ? "opacity-50 cursor-not-allowed"
                                             : ""
                                     }`}

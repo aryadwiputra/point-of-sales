@@ -17,7 +17,17 @@ class Transaction extends Model
      * @var array
      */
     protected $fillable = [
-        'cashier_id', 'customer_id', 'invoice', 'cash', 'change', 'discount', 'grand_total'
+        'cashier_id',
+        'customer_id',
+        'invoice',
+        'cash',
+        'change',
+        'discount',
+        'grand_total',
+        'payment_method',
+        'payment_status',
+        'payment_reference',
+        'payment_url',
     ];
 
     /**

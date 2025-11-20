@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Apps;
 
 use App\Models\Cart;
+use App\Exceptions\PaymentGatewayException;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Models\Transaction;
+use App\Models\PaymentSetting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Services\Payments\PaymentGatewayManager;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TransactionController extends Controller
@@ -27,16 +31,28 @@ class TransactionController extends Controller
         //get all customers
         $customers = Customer::latest()->get();
 
+        $paymentSetting = PaymentSetting::first();
+
         $carts_total = 0;
         foreach ($carts as $cart) {
             $carts_total += $cart->price * $cart->qty; // Assuming your quantity column is named 'quantity'
         }
 
 
+        $defaultGateway = $paymentSetting?->default_gateway ?? 'cash';
+        if (
+            $defaultGateway !== 'cash'
+            && (!$paymentSetting || !$paymentSetting->isGatewayReady($defaultGateway))
+        ) {
+            $defaultGateway = 'cash';
+        }
+
         return Inertia::render('Dashboard/Transactions/Index', [
             'carts' => $carts,
             'carts_total' => $carts_total,
-            'customers' => $customers
+            'customers' => $customers,
+            'paymentGateways' => $paymentSetting?->enabledGateways() ?? [],
+            'defaultPaymentGateway' => $defaultGateway,
         ]);
     }
 
@@ -139,72 +155,99 @@ class TransactionController extends Controller
      * @param  mixed $request
      * @return void
      */
-    public function store(Request $request)
+    public function store(Request $request, PaymentGatewayManager $paymentGatewayManager)
     {
-        /**
-         * algorithm generate no invoice
-         */
+        $paymentGateway = $request->input('payment_gateway');
+        if ($paymentGateway) {
+            $paymentGateway = strtolower($paymentGateway);
+        }
+        $paymentSetting = null;
+
+        if ($paymentGateway) {
+            $paymentSetting = PaymentSetting::first();
+
+            if (!$paymentSetting || !$paymentSetting->isGatewayReady($paymentGateway)) {
+                return redirect()
+                    ->route('transactions.index')
+                    ->with('error', 'Gateway pembayaran belum dikonfigurasi.');
+            }
+        }
+
         $length = 10;
         $random = '';
         for ($i = 0; $i < $length; $i++) {
             $random .= rand(0, 1) ? rand(0, 9) : chr(rand(ord('a'), ord('z')));
         }
 
-        //generate no invoice
         $invoice = 'TRX-' . Str::upper($random);
+        $isCashPayment = empty($paymentGateway);
+        $cashAmount = $isCashPayment ? $request->cash : $request->grand_total;
+        $changeAmount = $isCashPayment ? $request->change : 0;
 
-        //insert transaction
-        $transaction = Transaction::create([
-            'cashier_id' => auth()->user()->id,
-            'customer_id' => $request->customer_id,
-            'invoice' => $invoice,
-            'cash' => $request->cash,
-            'change' => $request->change,
-            'discount' => $request->discount,
-            'grand_total' => $request->grand_total,
-        ]);
-
-        //get carts
-        $carts = Cart::where('cashier_id', auth()->user()->id)->get();
-
-        //insert transaction detail
-        foreach ($carts as $cart) {
-
-            //insert transaction detail
-            $transaction->details()->create([
-                'transaction_id' => $transaction->id,
-                'product_id' => $cart->product_id,
-                'qty' => $cart->qty,
-                'price' => $cart->price,
+        $transaction = DB::transaction(function () use (
+            $request,
+            $invoice,
+            $cashAmount,
+            $changeAmount,
+            $paymentGateway,
+            $isCashPayment
+        ) {
+            $transaction = Transaction::create([
+                'cashier_id' => auth()->user()->id,
+                'customer_id' => $request->customer_id,
+                'invoice' => $invoice,
+                'cash' => $cashAmount,
+                'change' => $changeAmount,
+                'discount' => $request->discount,
+                'grand_total' => $request->grand_total,
+                'payment_method' => $paymentGateway ?: 'cash',
+                'payment_status' => $isCashPayment ? 'paid' : 'pending',
             ]);
 
-            //get price
-            $total_buy_price = $cart->product->buy_price * $cart->qty;
-            $total_sell_price = $cart->product->sell_price * $cart->qty;
+            $carts = Cart::where('cashier_id', auth()->user()->id)->get();
 
-            //get profits
-            $profits = $total_sell_price - $total_buy_price;
+            foreach ($carts as $cart) {
+                $transaction->details()->create([
+                    'transaction_id' => $transaction->id,
+                    'product_id' => $cart->product_id,
+                    'qty' => $cart->qty,
+                    'price' => $cart->price,
+                ]);
 
-            //insert provits
-            $transaction->profits()->create([
-                'transaction_id' => $transaction->id,
-                'total' => $profits,
-            ]);
+                $total_buy_price = $cart->product->buy_price * $cart->qty;
+                $total_sell_price = $cart->product->sell_price * $cart->qty;
+                $profits = $total_sell_price - $total_buy_price;
 
-            //update stock product
-            $product = Product::find($cart->product_id);
-            $product->stock = $product->stock - $cart->qty;
-            $product->save();
+                $transaction->profits()->create([
+                    'transaction_id' => $transaction->id,
+                    'total' => $profits,
+                ]);
 
+                $product = Product::find($cart->product_id);
+                $product->stock = $product->stock - $cart->qty;
+                $product->save();
+            }
+
+            Cart::where('cashier_id', auth()->user()->id)->delete();
+
+            return $transaction->fresh(['customer']);
+        });
+
+        if ($paymentGateway) {
+            try {
+                $paymentResponse = $paymentGatewayManager->createPayment($transaction, $paymentGateway, $paymentSetting);
+
+                $transaction->update([
+                    'payment_reference' => $paymentResponse['reference'] ?? null,
+                    'payment_url' => $paymentResponse['payment_url'] ?? null,
+                ]);
+            } catch (PaymentGatewayException $exception) {
+                return redirect()
+                    ->route('transactions.print', $transaction->invoice)
+                    ->with('error', $exception->getMessage());
+            }
         }
 
-        //delete carts
-        Cart::where('cashier_id', auth()->user()->id)->delete();
-
-        // return response()->json([
-        //     'success' => true,
-        //     'data' => $transaction
-        // ]);
         return to_route('transactions.print', $transaction->invoice);
     }
 

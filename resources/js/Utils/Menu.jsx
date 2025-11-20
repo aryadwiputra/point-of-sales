@@ -8,6 +8,7 @@ import {
     IconChartInfographic,
     IconCirclePlus,
     IconClockHour6,
+    IconCreditCard,
     IconFileCertificate,
     IconFileDescription,
     IconFolder,
@@ -150,6 +151,18 @@ export default function Menu() {
                             permissions: hasAnyPermission(["users-create"]),
                         },
                     ],
+                },
+            ],
+        },
+        {
+            title: "Pengaturan",
+            details: [
+                {
+                    title: "Payment Gateway",
+                    href: route("settings.payments.edit"),
+                    active: url === "/dashboard/settings/payments",
+                    icon: <IconCreditCard size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["payment-settings-access"]),
                 },
             ],
         },
