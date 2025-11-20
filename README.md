@@ -15,7 +15,7 @@
 
 ## 🔧 Teknologi Inti
 
--   [Laravel 11](https://laravel.com) + [Inertia.js](https://inertiajs.com)
+-   [Laravel 12](https://laravel.com) + [Inertia.js](https://inertiajs.com)
 -   [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com)
 -   [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
 -   [Tabler Icons](https://tabler-icons.io) untuk ikon kasir modern
