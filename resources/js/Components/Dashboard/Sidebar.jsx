@@ -72,35 +72,45 @@ export default function Sidebar({ sidebarOpen }) {
                     <div className='w-full px-6 py-3 flex justify-center items-center gap-4 border-b bg-white dark:bg-gray-950/50 dark:border-gray-900'>
                         <img src={auth.user.avatar ? auth.user.avatar : "https://ui-avatars.com/api/?name=" + auth.user.name} className='w-8 h-8 rounded-full' />
                     </div>
-                    <div className='w-full flex flex-col overflow-y-auto items-center justify-center'>
-                        {menuNavigation.map((link, i) => (
-                            link.details.some(detail => detail.permissions === true) && (
-                                <div className='flex flex-col min-w-full items-center relative' key={i}>
-                                    {link.details.some(detail => detail.permissions === true) && (
-                                        link.details.map((detail, x) =>
-                                            detail.hasOwnProperty('subdetails') ? (
-                                                <LinkItemDropdown
-                                                    sidebarOpen={sidebarOpen}
-                                                    key={x}
-                                                    title={detail.title}
-                                                    data={detail.subdetails}
-                                                    icon={detail.icon}
-                                                    access={detail.permissions}
-                                                />
-                                            ) : (
-                                                <LinkItem
-                                                    sidebarOpen={sidebarOpen}
-                                                    key={x}
-                                                    access={link.permissions}
-                                                    icon={detail.icon}
-                                                    href={detail.href}
-                                                />
-                                            )
+                    <div className="w-full flex flex-col overflow-y-auto items-center justify-center">
+                        {menuNavigation.map((link, i) => {
+                            const visibleDetails = link.details.filter(
+                                (detail) => detail.permissions === true
+                            );
+
+                            if (!visibleDetails.length) {
+                                return null;
+                            }
+
+                            return (
+                                <div
+                                    className="flex flex-col min-w-full items-center relative"
+                                    key={i}
+                                >
+                                    {visibleDetails.map((detail, x) =>
+                                        detail.hasOwnProperty("subdetails") ? (
+                                            <LinkItemDropdown
+                                                sidebarOpen={sidebarOpen}
+                                                key={x}
+                                                title={detail.title}
+                                                data={detail.subdetails}
+                                                icon={detail.icon}
+                                                access={detail.permissions}
+                                            />
+                                        ) : (
+                                            <LinkItem
+                                                sidebarOpen={sidebarOpen}
+                                                key={x}
+                                                access={detail.permissions}
+                                                icon={detail.icon}
+                                                href={detail.href}
+                                                title={detail.title}
+                                            />
                                         )
                                     )}
                                 </div>
-                            )
-                        ))}
+                            );
+                        })}
                     </div>
                 </>
             )}
