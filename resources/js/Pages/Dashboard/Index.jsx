@@ -30,17 +30,23 @@ const formatCurrency = (value = 0) =>
     }).format(value);
 
 // Stat Card Component
-function StatCard({ title, value, subtitle, icon: Icon, gradient, trend }) {
+function StatCard({ title, value, subtitle, icon: Icon, tone = "aloe", trend }) {
+    const toneClasses = {
+        aloe: "bg-aloe-100",
+        pistachio: "bg-pistachio-100",
+        warning: "bg-warning-100",
+        success: "bg-success-100",
+    };
+
     return (
         <div
             className={`
-            relative overflow-hidden rounded-2xl p-5
-            bg-gradient-to-br ${gradient}
-            text-white shadow-lg
+            relative overflow-hidden rounded-card border border-hairline-light p-5
+            bg-white text-ink shadow-paper dark:border-hairline-dark dark:bg-canvas-night-elevated dark:text-white
         `}
         >
             {/* Background Pattern */}
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.06] dark:opacity-10">
                 <Icon
                     size={128}
                     strokeWidth={0.5}
@@ -50,18 +56,18 @@ function StatCard({ title, value, subtitle, icon: Icon, gradient, trend }) {
 
             <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
-                    <div className="p-2 rounded-xl bg-white/20">
+                    <div className={`p-2 rounded-full ${toneClasses[tone] || toneClasses.aloe} text-ink dark:bg-hairline-dark dark:text-white`}>
                         <Icon size={20} strokeWidth={1.5} />
                     </div>
-                    <span className="text-sm font-medium opacity-90">
+                    <span className="text-sm font-medium text-shade-60 dark:text-slate-300">
                         {title}
                     </span>
                 </div>
 
-                <p className="text-3xl font-bold">{value}</p>
+                <p className="text-3xl font-bold text-ink dark:text-white">{value}</p>
 
                 {subtitle && (
-                    <p className="mt-2 text-sm opacity-80 flex items-center gap-1">
+                    <p className="mt-2 text-sm text-shade-50 dark:text-slate-400 flex items-center gap-1">
                         {trend === "up" && <IconArrowUpRight size={14} />}
                         {trend === "down" && <IconArrowDownRight size={14} />}
                         {subtitle}
@@ -78,9 +84,9 @@ function TargetCard({ title, current, target, icon: Icon }) {
     const isAchieved = percentage >= 100;
 
     return (
-        <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-lg">
+        <div className="relative overflow-hidden rounded-card border border-hairline-light bg-white p-5 text-ink shadow-paper dark:border-hairline-dark dark:bg-canvas-night-elevated dark:text-white">
             {/* Background Pattern */}
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.06] dark:opacity-10">
                 <Icon
                     size={128}
                     strokeWidth={0.5}
@@ -90,10 +96,10 @@ function TargetCard({ title, current, target, icon: Icon }) {
 
             <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-3">
-                    <div className="p-2 rounded-xl bg-white/20">
+                    <div className="p-2 rounded-full bg-pistachio-100 text-ink dark:bg-hairline-dark dark:text-white">
                         <Icon size={20} strokeWidth={1.5} />
                     </div>
-                    <span className="text-sm font-medium opacity-90">
+                    <span className="text-sm font-medium text-shade-60 dark:text-slate-300">
                         {title}
                     </span>
                 </div>
@@ -101,16 +107,16 @@ function TargetCard({ title, current, target, icon: Icon }) {
                 <p className="text-2xl font-bold">{percentage.toFixed(0)}%</p>
 
                 {/* Progress Bar */}
-                <div className="mt-3 w-full h-2 bg-white/30 rounded-full overflow-hidden">
+                <div className="mt-3 w-full h-2 bg-canvas-cream dark:bg-canvas-night rounded-full overflow-hidden">
                     <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                            isAchieved ? "bg-green-400" : "bg-white"
+                            isAchieved ? "bg-success-500" : "bg-ink dark:bg-white"
                         }`}
                         style={{ width: `${percentage}%` }}
                     />
                 </div>
 
-                <p className="mt-2 text-xs opacity-80">
+                <p className="mt-2 text-xs text-shade-50 dark:text-slate-400">
                     {formatCurrency(current)} / {formatCurrency(target)}
                 </p>
             </div>
@@ -121,26 +127,26 @@ function TargetCard({ title, current, target, icon: Icon }) {
 // Info Card Component
 function InfoCard({ title, value, subtitle, icon: Icon }) {
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700">
+        <div className="rounded-card border border-hairline-light dark:border-hairline-dark bg-white dark:bg-canvas-night-elevated p-5 shadow-paper transition-all hover:border-shade-30 dark:hover:border-slate-700">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-shade-50 dark:text-slate-400">
                         {title}
                     </p>
-                    <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                    <p className="mt-2 text-2xl font-bold text-ink dark:text-white">
                         {value}
                     </p>
                     {subtitle && (
-                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                        <p className="mt-1 text-xs text-shade-40 dark:text-slate-500 flex items-center gap-1">
                             <Icon size={14} />
                             {subtitle}
                         </p>
                     )}
                 </div>
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800">
+                <div className="p-3 rounded-full bg-aloe-100 dark:bg-hairline-dark">
                     <Icon
                         size={24}
-                        className="text-slate-600 dark:text-slate-400"
+                        className="text-ink dark:text-slate-300"
                         strokeWidth={1.5}
                     />
                 </div>
@@ -152,17 +158,17 @@ function InfoCard({ title, value, subtitle, icon: Icon }) {
 // List Card Component
 function ListCard({ title, subtitle, icon: Icon, children, emptyMessage }) {
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+        <div className="rounded-card border border-hairline-light dark:border-hairline-dark bg-white dark:bg-canvas-night-elevated overflow-hidden shadow-paper">
+            <div className="p-5 border-b border-hairline-light dark:border-hairline-dark">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
+                    <div className="p-2 rounded-full bg-aloe-100 dark:bg-hairline-dark">
                         <Icon
                             size={18}
-                            className="text-primary-600 dark:text-primary-400"
+                            className="text-ink dark:text-white"
                         />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        <h3 className="text-sm font-semibold text-ink dark:text-slate-100">
                             {title}
                         </h3>
                         {subtitle && (
@@ -227,8 +233,8 @@ export default function Dashboard({
 
         const ctx = chartRef.current.getContext("2d");
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, "rgba(99, 102, 241, 0.3)");
-        gradient.addColorStop(1, "rgba(99, 102, 241, 0.01)");
+        gradient.addColorStop(0, "rgba(193, 251, 212, 0.7)");
+        gradient.addColorStop(1, "rgba(193, 251, 212, 0.04)");
 
         chartInstance.current = new Chart(chartRef.current, {
             type: "line",
@@ -238,14 +244,14 @@ export default function Dashboard({
                     {
                         label: "Pendapatan",
                         data: totals,
-                        borderColor: "#6366f1",
+                        borderColor: "#000000",
                         backgroundColor: gradient,
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4,
                         pointRadius: 0,
                         pointHoverRadius: 6,
-                        pointHoverBackgroundColor: "#6366f1",
+                        pointHoverBackgroundColor: "#000000",
                         pointHoverBorderColor: "#fff",
                         pointHoverBorderWidth: 2,
                     },
@@ -261,9 +267,9 @@ export default function Dashboard({
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: "#1e293b",
-                        titleColor: "#f1f5f9",
-                        bodyColor: "#f1f5f9",
+                        backgroundColor: "#000000",
+                        titleColor: "#ffffff",
+                        bodyColor: "#ffffff",
                         padding: 12,
                         borderRadius: 8,
                         displayColors: false,
@@ -309,16 +315,16 @@ export default function Dashboard({
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <h1 className="text-2xl font-bold text-ink dark:text-white">
                             Dashboard
                         </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                        <p className="text-sm text-shade-50 dark:text-slate-400">
                             Ringkasan aktivitas bisnis Anda
                         </p>
                     </div>
                     <Link
                         href={route("transactions.index")}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors shadow-lg shadow-primary-500/30"
+                        className="inline-flex min-h-touch items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-shade-70"
                     >
                         <IconShoppingCart size={18} />
                         <span>Transaksi Baru</span>
@@ -332,14 +338,14 @@ export default function Dashboard({
                         value={formatCurrency(todaySales)}
                         subtitle="Total penjualan hari ini"
                         icon={IconCoin}
-                        gradient="from-primary-500 to-primary-700"
+                        tone="aloe"
                     />
                     <StatCard
                         title="Profit Hari Ini"
                         value={formatCurrency(todayProfit)}
                         subtitle="Profit bersih hari ini"
                         icon={IconTrendingUp}
-                        gradient="from-success-500 to-success-700"
+                        tone="success"
                         trend="up"
                     />
                     <TargetCard
@@ -353,7 +359,7 @@ export default function Dashboard({
                         value={todayTransactions}
                         subtitle="Transaksi"
                         icon={IconClock}
-                        gradient="from-warning-500 to-warning-600"
+                        tone="warning"
                     />
                 </div>
 

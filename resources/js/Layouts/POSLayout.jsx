@@ -46,15 +46,15 @@ export default function POSLayout({ children }) {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen flex flex-col bg-canvas-cream dark:bg-canvas-night">
             {/* Top Navigation Bar */}
-            <header className="sticky top-0 z-50 h-16 flex items-center justify-between px-4 lg:px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+            <header className="sticky top-0 z-50 h-16 flex items-center justify-between px-4 lg:px-6 bg-white dark:bg-canvas-night-elevated border-b border-hairline-light dark:border-hairline-dark">
                 {/* Left Section - Logo & Time */}
                 <div className="flex items-center gap-4 lg:gap-6">
                     {/* Mobile Menu Toggle */}
                     <button
                         onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        className="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="lg:hidden min-h-touch min-w-touch rounded-full hover:bg-canvas-cream dark:hover:bg-canvas-night transition-colors"
                     >
                         {showMobileMenu ? (
                             <IconX
@@ -79,12 +79,12 @@ export default function POSLayout({ children }) {
                                     className="w-full h-full object-contain"
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-primary-600 text-white font-bold text-sm">
+                                <div className="w-full h-full rounded-full flex items-center justify-center bg-ink text-white font-bold text-sm">
                                     {(storeProfile?.name || "K").charAt(0)}
                                 </div>
                             )}
                         </div>
-                        <span className="hidden sm:block text-lg font-bold text-slate-800 dark:text-white">
+                        <span className="hidden sm:block text-lg font-bold text-ink dark:text-white">
                             {storeProfile?.name || "KASIR"}
                         </span>
                     </Link>
@@ -94,7 +94,7 @@ export default function POSLayout({ children }) {
 
                     {/* Time & Date */}
                     <div className="hidden md:flex items-center gap-3">
-                        <div className="text-2xl font-semibold text-slate-800 dark:text-white tabular-nums">
+                        <div className="text-2xl font-semibold text-ink dark:text-white tabular-nums">
                             {formatTime(currentTime)}
                         </div>
                         <div className="text-sm text-slate-500 dark:text-slate-400">
@@ -109,14 +109,14 @@ export default function POSLayout({ children }) {
                     <nav className="hidden lg:flex items-center gap-1">
                         <Link
                             href={route("dashboard")}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+                            className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-shade-60 hover:text-ink hover:bg-canvas-cream dark:text-slate-400 dark:hover:text-white dark:hover:bg-canvas-night transition-colors"
                         >
                             <IconHome size={18} />
                             <span>Dashboard</span>
                         </Link>
                         <Link
                             href={route("transactions.history")}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors"
+                            className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-shade-60 hover:text-ink hover:bg-canvas-cream dark:text-slate-400 dark:hover:text-white dark:hover:bg-canvas-night transition-colors"
                         >
                             <IconHistory size={18} />
                             <span>Riwayat</span>
@@ -134,7 +134,7 @@ export default function POSLayout({ children }) {
                     {/* Theme Toggle */}
                     <button
                         onClick={themeSwitcher}
-                        className="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-touch min-h-touch flex items-center justify-center"
+                        className="rounded-full hover:bg-canvas-cream dark:hover:bg-canvas-night transition-colors min-w-touch min-h-touch flex items-center justify-center"
                         title={darkMode ? "Light Mode" : "Dark Mode"}
                     >
                         {darkMode ? (
@@ -154,7 +154,7 @@ export default function POSLayout({ children }) {
                         {activeCashierShift && (
                             <Link
                                 href={route("cashier-shifts.show", activeCashierShift.id)}
-                                className="hidden lg:flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/60"
+                                className="hidden lg:flex items-center gap-2 rounded-full bg-aloe-100 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-pistachio-100 dark:bg-hairline-dark dark:text-emerald-300 dark:hover:bg-emerald-950/60"
                             >
                                 <IconWallet size={16} />
                                 <span>
@@ -165,7 +165,7 @@ export default function POSLayout({ children }) {
                                 </span>
                             </Link>
                         )}
-                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        <p className="text-sm font-medium text-ink dark:text-slate-200">
                             {auth.user.name}
                         </p>
                     </div>
@@ -175,7 +175,7 @@ export default function POSLayout({ children }) {
                         href={route("logout")}
                         method="post"
                         as="button"
-                        className="hidden lg:flex p-2.5 rounded-lg text-slate-500 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/50 transition-colors min-w-touch min-h-touch items-center justify-center"
+                        className="hidden lg:flex rounded-full text-slate-500 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/50 transition-colors min-w-touch min-h-touch items-center justify-center"
                         title="Logout"
                     >
                         <IconLogout size={20} />
@@ -190,20 +190,20 @@ export default function POSLayout({ children }) {
                     onClick={() => setShowMobileMenu(false)}
                 >
                     <div
-                        className="absolute top-16 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg animate-slide-up"
+                        className="absolute top-16 left-0 right-0 bg-white dark:bg-canvas-night-elevated border-b border-hairline-light dark:border-hairline-dark shadow-paper animate-slide-up"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <nav className="p-4 space-y-2">
                             <Link
                                 href={route("dashboard")}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-3 px-4 py-3 rounded-full text-shade-70 hover:bg-canvas-cream dark:text-slate-300 dark:hover:bg-canvas-night transition-colors"
                             >
                                 <IconHome size={20} />
                                 <span className="font-medium">Dashboard</span>
                             </Link>
                             <Link
                                 href={route("transactions.history")}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-3 px-4 py-3 rounded-full text-shade-70 hover:bg-canvas-cream dark:text-slate-300 dark:hover:bg-canvas-night transition-colors"
                             >
                                 <IconHistory size={20} />
                                 <span className="font-medium">
@@ -212,7 +212,7 @@ export default function POSLayout({ children }) {
                             </Link>
                             <Link
                                 href={route("profile.edit")}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-3 px-4 py-3 rounded-full text-shade-70 hover:bg-canvas-cream dark:text-slate-300 dark:hover:bg-canvas-night transition-colors"
                             >
                                 <IconUser size={20} />
                                 <span className="font-medium">Profil</span>
@@ -222,7 +222,7 @@ export default function POSLayout({ children }) {
                                 href={route("logout")}
                                 method="post"
                                 as="button"
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/50 transition-colors w-full"
+                                className="flex items-center gap-3 px-4 py-3 rounded-full text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/50 transition-colors w-full"
                             >
                                 <IconLogout size={20} />
                                 <span className="font-medium">Keluar</span>
@@ -240,11 +240,12 @@ export default function POSLayout({ children }) {
                         className: "text-sm",
                         duration: 3000,
                         style: {
-                            background: darkMode ? "#1e293b" : "#fff",
-                            color: darkMode ? "#f1f5f9" : "#1e293b",
+                            background: darkMode ? "#0a0a0a" : "#fff",
+                            color: darkMode ? "#f1f5f9" : "#000",
                             border: `1px solid ${
-                                darkMode ? "#334155" : "#e2e8f0"
+                                darkMode ? "#1e2c31" : "#e4e4e7"
                             }`,
+                            borderRadius: "9999px",
                         },
                     }}
                 />

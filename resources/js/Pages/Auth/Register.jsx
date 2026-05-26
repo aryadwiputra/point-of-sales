@@ -39,17 +39,17 @@ export default function Register({ botGuard }) {
         <>
             <Head title="Daftar" />
 
-            <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
+            <div className="min-h-screen flex bg-canvas-cream dark:bg-canvas-night">
                 {/* Left - Decoration */}
-                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary-500 to-primary-700 items-center justify-center p-12">
-                    <div className="max-w-md text-center text-white">
-                        <div className="w-24 h-24 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-8">
+                <div className="hidden lg:flex flex-1 bg-pistachio-100 dark:bg-canvas-night-elevated items-center justify-center p-12">
+                    <div className="max-w-md text-center text-ink dark:text-white">
+                        <div className="w-24 h-24 rounded-full bg-white border border-hairline-light flex items-center justify-center mx-auto mb-8 shadow-paper dark:bg-canvas-night dark:border-hairline-dark">
                             <IconShoppingCart size={48} />
                         </div>
                         <h2 className="text-3xl font-bold mb-4">
                             Bergabung Bersama Kami
                         </h2>
-                        <p className="text-lg opacity-90">
+                        <p className="text-lg text-shade-60 dark:text-slate-300">
                             Mulai kelola bisnis Anda dengan sistem Point of Sale
                             yang modern, cepat, dan mudah digunakan.
                         </p>
@@ -65,7 +65,7 @@ export default function Register({ botGuard }) {
                                 >
                                     <IconCheck
                                         size={18}
-                                        className="text-white/80"
+                                    className="text-ink dark:text-white"
                                     />
                                     {feature}
                                 </div>
@@ -83,20 +83,20 @@ export default function Register({ botGuard }) {
                                 href="/"
                                 className="inline-flex items-center gap-3 mb-6"
                             >
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-ink text-white flex items-center justify-center">
                                     <IconShoppingCart
                                         size={24}
                                         className="text-white"
                                     />
                                 </div>
-                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                                <span className="text-2xl font-bold text-ink dark:text-white">
                                     Aplikasi Kasir
                                 </span>
                             </Link>
-                            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                            <h1 className="text-3xl font-bold text-ink dark:text-white">
                                 Buat Akun Baru
                             </h1>
-                            <p className="mt-2 text-slate-600 dark:text-slate-400">
+                            <p className="mt-2 text-shade-60 dark:text-slate-400">
                                 Daftarkan bisnis Anda sekarang
                             </p>
                         </div>
@@ -109,13 +109,13 @@ export default function Register({ botGuard }) {
                                 setData={setData}
                             />
                             {errors.human && (
-                                <div className="rounded-xl bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:bg-danger-950/40 dark:text-danger-300">
+                                <div className="rounded-card bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:bg-danger-950/40 dark:text-danger-300">
                                     {errors.human}
                                 </div>
                             )}
                             {/* Name */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Nama Lengkap
                                 </label>
                                 <div className="relative">
@@ -129,11 +129,11 @@ export default function Register({ botGuard }) {
                                             setData("name", e.target.value)
                                         }
                                         placeholder="Nama Anda"
-                                        className={`w-full h-12 pl-12 pr-4 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-4 rounded-md border ${
                                             errors.name
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                 </div>
                                 {errors.name && (
@@ -145,7 +145,7 @@ export default function Register({ botGuard }) {
 
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Email
                                 </label>
                                 <div className="relative">
@@ -159,11 +159,11 @@ export default function Register({ botGuard }) {
                                             setData("email", e.target.value)
                                         }
                                         placeholder="nama@email.com"
-                                        className={`w-full h-12 pl-12 pr-4 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-4 rounded-md border ${
                                             errors.email
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                 </div>
                                 {errors.email && (
@@ -175,7 +175,7 @@ export default function Register({ botGuard }) {
 
                             {/* Password */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Password
                                 </label>
                                 <div className="relative">
@@ -191,11 +191,11 @@ export default function Register({ botGuard }) {
                                             setData("password", e.target.value)
                                         }
                                         placeholder="Minimal 8 karakter"
-                                        className={`w-full h-12 pl-12 pr-12 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-12 rounded-md border ${
                                             errors.password
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                     <button
                                         type="button"
@@ -220,7 +220,7 @@ export default function Register({ botGuard }) {
 
                             {/* Confirm Password */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Konfirmasi Password
                                 </label>
                                 <div className="relative">
@@ -241,11 +241,11 @@ export default function Register({ botGuard }) {
                                             )
                                         }
                                         placeholder="Ulangi password"
-                                        className={`w-full h-12 pl-12 pr-12 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-12 rounded-md border ${
                                             errors.password_confirmation
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                     <button
                                         type="button"
@@ -274,7 +274,7 @@ export default function Register({ botGuard }) {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold hover:from-primary-600 hover:to-primary-700 focus:ring-4 focus:ring-primary-500/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                className="w-full h-12 rounded-full bg-ink text-white font-semibold hover:bg-shade-70 focus:ring-4 focus:ring-aloe-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                             >
                                 {processing ? (
                                     <>
@@ -290,11 +290,11 @@ export default function Register({ botGuard }) {
                             </button>
 
                             {/* Login Link */}
-                            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+                            <p className="text-center text-sm text-shade-60 dark:text-slate-400">
                                 Sudah punya akun?{" "}
                                 <Link
                                     href="/login"
-                                    className="text-primary-500 hover:text-primary-600 font-semibold"
+                                    className="text-ink hover:text-shade-70 font-semibold"
                                 >
                                     Masuk disini
                                 </Link>

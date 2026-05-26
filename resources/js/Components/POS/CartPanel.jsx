@@ -14,13 +14,22 @@ const formatPrice = (value = 0) =>
         minimumFractionDigits: 0,
     });
 
+const formatQty = (value = 0) =>
+    Number(value || 0).toLocaleString("id-ID", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+    });
+
 // Single Cart Item
 function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
     // Note: item.price from backend is already the total (sell_price * qty)
     const quantity = Number(item.qty || 0);
     const itemPrice = Number(item.price || 0);
     const unitPrice =
-        Number(item.product?.sell_price || 0) || itemPrice / quantity || 0;
+        Number(item.product_unit?.sell_price || item.product?.sell_price || 0) ||
+        itemPrice / quantity ||
+        0;
+    const unitLabel = item.unit_label || item.product_unit?.label || "unit";
     const subtotal = itemPrice; // Already calculated total from backend
 
     return (
@@ -56,7 +65,7 @@ function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
                     {item.product?.title || "Produk"}
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {formatPrice(unitPrice)} × {item.qty}
+                    {formatPrice(unitPrice)} x {formatQty(quantity)} {unitLabel}
                 </p>
                 <p className="text-sm font-semibold text-primary-600 dark:text-primary-400 mt-1">
                     {formatPrice(subtotal)}
@@ -78,18 +87,18 @@ function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() =>
-                            onUpdateQty(item.id, Math.max(1, item.qty - 1))
+                            onUpdateQty(item.id, Math.max(1, quantity - 1))
                         }
-                        disabled={item.qty <= 1}
+                        disabled={quantity <= 1}
                         className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <IconMinus size={14} />
                     </button>
                     <span className="w-8 text-center text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {item.qty}
+                        {formatQty(quantity)}
                     </span>
                     <button
-                        onClick={() => onUpdateQty(item.id, item.qty + 1)}
+                        onClick={() => onUpdateQty(item.id, quantity + 1)}
                         className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
                     >
                         <IconPlus size={14} />

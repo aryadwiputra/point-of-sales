@@ -156,17 +156,19 @@ class PricingService
     private function buildPreview(Collection $carts, ?Customer $customer, Collection $rules): array
     {
         $items = $carts->map(function (Cart $cart) {
-            $baseUnitPrice = (int) $cart->product->sell_price;
+            $quantity = (float) $cart->qty;
+            $baseUnitPrice = (int) ($cart->productUnit?->sell_price ?? $cart->product->sell_price);
+            $lineBaseTotal = (int) ($cart->price ?: round($baseUnitPrice * $quantity));
 
             return [
                 'cart_id' => $cart->id,
                 'product_id' => $cart->product_id,
                 'product_title' => $cart->product?->title,
-                'qty' => (int) $cart->qty,
+                'qty' => $quantity,
                 'base_unit_price' => $baseUnitPrice,
                 'effective_unit_price' => $baseUnitPrice,
-                'line_base_total' => $baseUnitPrice * (int) $cart->qty,
-                'line_total' => $baseUnitPrice * (int) $cart->qty,
+                'line_base_total' => $lineBaseTotal,
+                'line_total' => $lineBaseTotal,
                 'line_discount_total' => 0,
                 'pricing_rule' => null,
                 'pricing_group_key' => null,
@@ -176,7 +178,7 @@ class PricingService
         })->keyBy('cart_id');
 
         $remainingQuantities = $items
-            ->mapWithKeys(fn (array $item, int|string $cartId) => [(int) $cartId => (int) $item['qty']])
+            ->mapWithKeys(fn (array $item, int|string $cartId) => [(int) $cartId => (int) floor((float) $item['qty'])])
             ->all();
 
         $eligibleRules = $rules
@@ -244,7 +246,7 @@ class PricingService
             $lineTotal = max(0, (int) $item['line_total']);
             $item['line_total'] = $lineTotal;
             $item['line_discount_total'] = max(0, (int) $item['line_discount_total']);
-            $item['effective_unit_price'] = (int) round($lineTotal / max(1, (int) $item['qty']));
+            $item['effective_unit_price'] = (int) round($lineTotal / max(0.001, (float) $item['qty']));
 
             return $item;
         })->values();
@@ -258,7 +260,7 @@ class PricingService
             'applied_groups' => array_values($appliedGroups),
             'consumed_quantities' => collect($remainingQuantities)
                 ->mapWithKeys(function (int $qty, int $cartId) use ($items) {
-                    $original = (int) collect($items)->firstWhere('cart_id', $cartId)['qty'];
+                    $original = (int) floor((float) collect($items)->firstWhere('cart_id', $cartId)['qty']);
 
                     return [$cartId => max(0, $original - $qty)];
                 })

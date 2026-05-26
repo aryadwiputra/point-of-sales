@@ -23,13 +23,13 @@ export default function Sidebar({ sidebarOpen }) {
                 md:translate-x-0 ${sidebarOpen ? "md:w-[260px]" : "md:w-[80px]"}
                 fixed md:relative inset-y-0 left-0 z-40
                 flex h-screen flex-col overflow-hidden md:sticky md:top-0 md:self-stretch md:shrink-0
-                border-r border-slate-200 dark:border-slate-800
-                bg-white dark:bg-slate-900
+                border-r border-hairline-light dark:border-hairline-dark
+                bg-white dark:bg-canvas-night-elevated
                 transition-all duration-300 ease-in-out
             `}
         >
             {/* Logo */}
-            <div className="flex items-center justify-center h-16 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-center h-16 border-b border-hairline-light dark:border-hairline-dark">
                 {sidebarOpen ? (
                     <div className="flex items-center gap-2">
                         {storeLogo ? (
@@ -39,13 +39,13 @@ export default function Sidebar({ sidebarOpen }) {
                                 className="w-10 h-10  object-cover"
                             />
                         ) : (
-                            <div className="w-10 h-10  bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">
                                     {storeInitial}
                                 </span>
                             </div>
                         )}
-                        <span className="text-xl font-bold text-slate-800 dark:text-white truncate">
+                        <span className="text-xl font-bold text-ink dark:text-white truncate">
                             {storeName}
                         </span>
                     </div>
@@ -57,7 +57,7 @@ export default function Sidebar({ sidebarOpen }) {
                             className="w-9 h-9 rounded-md object-cover"
                         />
                     ) : (
-                        <div className="w-9 h-9 rounded-md bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center">
                             <span className="text-white font-bold text-sm">
                                 {storeInitial}
                             </span>
@@ -79,7 +79,7 @@ export default function Sidebar({ sidebarOpen }) {
                             {/* Section Title */}
                             {sidebarOpen && (
                                 <div className="px-4 py-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-shade-40 dark:text-slate-600">
                                         {section.title}
                                     </span>
                                 </div>
@@ -128,8 +128,8 @@ export default function Sidebar({ sidebarOpen }) {
 
             {/* Version/Footer */}
             {sidebarOpen && (
-                <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-400 dark:text-slate-600 text-center">
+                <div className="p-4 border-t border-hairline-light dark:border-hairline-dark">
+                    <p className="text-[10px] text-shade-40 dark:text-slate-600 text-center">
                         Point of Sales v2.0
                     </p>
                 </div>

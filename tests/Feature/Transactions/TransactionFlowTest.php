@@ -107,6 +107,70 @@ class TransactionFlowTest extends TestCase
         $this->assertSame($product->stock - $quantity, $product->fresh()->stock);
     }
 
+    public function test_cashier_can_complete_transaction_for_walk_in_buyer(): void
+    {
+        $cashier = $this->createCashier();
+        $shift = $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+
+        $cart = Cart::create([
+            'cashier_id' => $cashier->id,
+            'product_id' => $product->id,
+            'qty' => 1,
+            'price' => $product->sell_price,
+        ]);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->post(route('transactions.store'), [
+                'discount' => 0,
+                'grand_total' => $cart->price,
+                'cash' => $cart->price,
+                'change' => 0,
+            ]);
+
+        $transaction = Transaction::with('details')->latest('id')->first();
+
+        $this->assertNotNull($transaction);
+        $response->assertRedirect(route('transactions.print', $transaction->invoice));
+        $this->assertSame($shift->id, $transaction->cashier_shift_id);
+        $this->assertNull($transaction->customer_id);
+        $this->assertSame('cash', $transaction->payment_method);
+        $this->assertSame('paid', $transaction->payment_status);
+        $this->assertSame($cart->price, (int) $transaction->grand_total);
+        $this->assertSame(1, $transaction->details->count());
+    }
+
+    public function test_pay_later_transaction_requires_registered_customer(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+
+        Cart::create([
+            'cashier_id' => $cashier->id,
+            'product_id' => $product->id,
+            'qty' => 1,
+            'price' => $product->sell_price,
+        ]);
+
+        $response = $this
+            ->from(route('transactions.index'))
+            ->actingAs($cashier)
+            ->post(route('transactions.store'), [
+                'discount' => 0,
+                'grand_total' => $product->sell_price,
+                'cash' => 0,
+                'change' => 0,
+                'pay_later' => true,
+                'due_date' => now()->addWeek()->toDateString(),
+            ]);
+
+        $response->assertRedirect(route('transactions.index'));
+        $response->assertSessionHas('error', 'Pelanggan wajib dipilih untuk nota barang/piutang.');
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_cashier_can_view_invoice_page_after_transaction(): void
     {
         $cashier = $this->createCashier();

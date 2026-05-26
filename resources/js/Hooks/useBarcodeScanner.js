@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
+const isQuantityPrefix = (value) => /^\d+(?:[.,]\d{1,3})?\*$/.test(value);
+
 /**
  * useBarcodeScanner - Hook for handling barcode scanner input
  *
@@ -59,7 +61,11 @@ export default function useBarcodeScanner(onScan, options = {}) {
             const timeSinceLastKey = now - lastKeyTimeRef.current;
 
             // If too much time has passed, reset buffer
-            if (timeSinceLastKey > maxDelay && bufferRef.current.length > 0) {
+            if (
+                timeSinceLastKey > maxDelay &&
+                bufferRef.current.length > 0 &&
+                !isQuantityPrefix(bufferRef.current)
+            ) {
                 bufferRef.current = "";
             }
 
@@ -78,7 +84,7 @@ export default function useBarcodeScanner(onScan, options = {}) {
             }
 
             // Only accept alphanumeric characters and common barcode chars
-            if (e.key.length === 1 && /^[a-zA-Z0-9\-_.]$/.test(e.key)) {
+            if (e.key.length === 1 && /^[a-zA-Z0-9\-_.\*,]$/.test(e.key)) {
                 bufferRef.current += e.key;
                 setIsScanning(true);
 
@@ -87,11 +93,15 @@ export default function useBarcodeScanner(onScan, options = {}) {
                     clearTimeout(timeoutRef.current);
                 }
 
+                const resetDelay = isQuantityPrefix(bufferRef.current)
+                    ? 10000
+                    : maxDelay * 3;
+
                 timeoutRef.current = setTimeout(() => {
                     // Reset if no more input
                     bufferRef.current = "";
                     setIsScanning(false);
-                }, maxDelay * 3);
+                }, resetDelay);
             }
         },
         [enabled, minLength, maxDelay, ignoreInputs, onScan]

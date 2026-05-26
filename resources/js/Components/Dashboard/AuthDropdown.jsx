@@ -68,7 +68,7 @@ export default function AuthDropdown({ auth, isMobile }) {
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold">
+                            <div className="w-10 h-10 rounded-full bg-aloe-100 text-ink flex items-center justify-center font-semibold">
                                 {userInitial}
                             </div>
                         )}
@@ -81,8 +81,8 @@ export default function AuthDropdown({ auth, isMobile }) {
                         leaveFrom="transform scale-100 opacity-100"
                         leaveTo="transform scale-95 opacity-0"
                     >
-                        <Menu.Items className="absolute rounded-lg w-48 border mt-2 py-2 right-0 z-[100] bg-white dark:bg-gray-950 dark:border-gray-900">
-                            <div className="flex flex-col gap-1.5 divide-y divide-gray-100 dark:divide-gray-900">
+                        <Menu.Items className="absolute rounded-card w-48 border mt-2 py-2 right-0 z-[100] bg-white shadow-paper border-hairline-light dark:bg-canvas-night-elevated dark:border-hairline-dark">
+                            <div className="flex flex-col gap-1.5 divide-y divide-hairline-light dark:divide-hairline-dark">
                                 {/* <Menu.Item>
                                     <Link href="/apps/profile" className='px-3 py-1.5 text-sm flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'>
                                         <IconUserCog strokeWidth={'1.5'} size={'20'} /> Profile
@@ -91,7 +91,7 @@ export default function AuthDropdown({ auth, isMobile }) {
                                 <Menu.Item>
                                     <button
                                         onClick={logout}
-                                        className="px-3 py-1.5 text-sm flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                                        className="w-full rounded-full px-3 py-2 text-sm flex items-center gap-2 text-shade-60 hover:bg-canvas-cream hover:text-ink dark:text-gray-400 dark:hover:bg-canvas-night dark:hover:text-gray-200"
                                     >
                                         <IconLogout
                                             strokeWidth={"1.5"}
@@ -114,7 +114,7 @@ export default function AuthDropdown({ auth, isMobile }) {
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-semibold">
+                            <div className="w-10 h-10 rounded-full bg-aloe-100 text-ink flex items-center justify-center font-semibold">
                                 {userInitial}
                             </div>
                         )}

@@ -1,18 +1,19 @@
 import React, { useState } from "react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Head, useForm, usePage, Link } from "@inertiajs/react";
-import Button from "@/Components/Dashboard/Button";
 import Input from "@/Components/Dashboard/Input";
 import Textarea from "@/Components/Dashboard/TextArea";
 import InputSelect from "@/Components/Dashboard/InputSelect";
 import toast from "react-hot-toast";
+import ProductUnitFields, {
+    createProductUnit,
+} from "./Partials/ProductUnitFields";
 import {
     IconPackage,
     IconDeviceFloppy,
     IconArrowLeft,
     IconPhoto,
     IconBarcode,
-    IconCurrencyDollar,
 } from "@tabler/icons-react";
 
 export default function Create({ categories }) {
@@ -20,14 +21,18 @@ export default function Create({ categories }) {
 
     const { data, setData, post, processing } = useForm({
         image: "",
-        barcode: "",
         sku: "",
         title: "",
         category_id: "",
         description: "",
-        buy_price: "",
-        sell_price: "",
         stock: "",
+        product_units: [
+            createProductUnit({
+                label: "pcs",
+                conversion_qty: "1",
+                is_base_unit: true,
+            }),
+        ],
     });
 
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -134,16 +139,6 @@ export default function Create({ categories }) {
                                 </div>
                                 <Input
                                     type="text"
-                                    label="Barcode"
-                                    value={data.barcode}
-                                    onChange={(e) =>
-                                        setData("barcode", e.target.value)
-                                    }
-                                    errors={errors.barcode}
-                                    placeholder="Masukkan kode produk"
-                                />
-                                <Input
-                                    type="text"
                                     label="SKU"
                                     value={data.sku}
                                     onChange={(e) => setData("sku", e.target.value)}
@@ -178,33 +173,13 @@ export default function Create({ categories }) {
                             </div>
                         </div>
 
-                        {/* Pricing & Stock */}
+                        {/* Stock */}
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                                <IconCurrencyDollar size={18} />
-                                Harga & Stok
+                                <IconPackage size={18} />
+                                Stok Awal
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Input
-                                    type="number"
-                                    label="Harga Beli"
-                                    value={data.buy_price}
-                                    onChange={(e) =>
-                                        setData("buy_price", e.target.value)
-                                    }
-                                    errors={errors.buy_price}
-                                    placeholder="0"
-                                />
-                                <Input
-                                    type="number"
-                                    label="Harga Jual"
-                                    value={data.sell_price}
-                                    onChange={(e) =>
-                                        setData("sell_price", e.target.value)
-                                    }
-                                    errors={errors.sell_price}
-                                    placeholder="0"
-                                />
+                            <div className="max-w-sm">
                                 <Input
                                     type="number"
                                     label="Stok"
@@ -216,41 +191,13 @@ export default function Create({ categories }) {
                                     placeholder="0"
                                 />
                             </div>
-
-                            {/* Profit Estimation */}
-                            {data.buy_price > 0 && data.sell_price > 0 && (
-                                <div className="mt-4 p-4 rounded-xl bg-success-50 dark:bg-success-950/30 border border-success-200 dark:border-success-900">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-success-700 dark:text-success-400 font-medium">
-                                                Estimasi Profit per Item
-                                            </p>
-                                            <p className="text-2xl font-bold text-success-600 dark:text-success-500 mt-1">
-                                                + Rp{" "}
-                                                {(
-                                                    data.sell_price -
-                                                    data.buy_price
-                                                ).toLocaleString("id-ID")}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm text-success-700 dark:text-success-400 font-medium">
-                                                Margin
-                                            </p>
-                                            <p className="text-xl font-bold text-success-600 dark:text-success-500 mt-1">
-                                                {(
-                                                    ((data.sell_price -
-                                                        data.buy_price) /
-                                                        data.buy_price) *
-                                                    100
-                                                ).toFixed(1)}
-                                                %
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
+
+                        <ProductUnitFields
+                            data={data}
+                            setData={setData}
+                            errors={errors}
+                        />
 
                         {/* Submit */}
                         <div className="flex justify-end gap-3">

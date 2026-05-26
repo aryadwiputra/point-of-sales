@@ -504,6 +504,10 @@ export default function Print({ transaction }) {
                                             {items.map((item, index) => {
                                                 const quantity =
                                                     Number(item.qty) || 1;
+                                                const unitLabel =
+                                                    item.unit_label ||
+                                                    item.product_unit?.label ||
+                                                    "unit";
                                                 const subtotal =
                                                     Number(item.price) || 0;
                                                 const unitPrice =
@@ -543,12 +547,17 @@ export default function Print({ transaction }) {
                                                                         "Promo aktif"}
                                                                 </p>
                                                             )}
-                                                            {item.product
-                                                                ?.barcode && (
+                                                            {(item.product_unit
+                                                                ?.barcode ||
+                                                                item.product
+                                                                    ?.barcode) && (
                                                                 <p className="text-xs text-slate-500 dark:text-slate-400">
                                                                     {
-                                                                        item.product
-                                                                            .barcode
+                                                                        item.product_unit
+                                                                            ?.barcode ||
+                                                                        item
+                                                                            .product
+                                                                            ?.barcode
                                                                     }
                                                                 </p>
                                                             )}
@@ -570,7 +579,13 @@ export default function Print({ transaction }) {
                                                             </div>
                                                         </td>
                                                         <td className="py-3 text-center text-slate-600 dark:text-slate-400">
-                                                            {quantity}
+                                                            {quantity.toLocaleString(
+                                                                "id-ID",
+                                                                {
+                                                                    maximumFractionDigits: 3,
+                                                                }
+                                                            )}{" "}
+                                                            {unitLabel}
                                                         </td>
                                                         <td className="py-3 text-right font-semibold text-slate-900 dark:text-white">
                                                             {formatPrice(

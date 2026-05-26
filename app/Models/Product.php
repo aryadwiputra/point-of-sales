@@ -55,6 +55,16 @@ class Product extends Model
         return $this->hasMany(StockMutation::class);
     }
 
+    public function units()
+    {
+        return $this->hasMany(ProductUnit::class)->orderByDesc('is_base_unit')->orderBy('label');
+    }
+
+    public function baseUnit()
+    {
+        return $this->hasOne(ProductUnit::class)->where('is_base_unit', true);
+    }
+
     public function salesReturnItems()
     {
         return $this->hasMany(SalesReturnItem::class);

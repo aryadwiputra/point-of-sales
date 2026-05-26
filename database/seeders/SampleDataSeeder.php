@@ -12,6 +12,7 @@ use App\Models\LoyaltyPointHistory;
 use App\Models\Payable;
 use App\Models\PayablePayment;
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Models\Profit;
 use App\Models\Receivable;
 use App\Models\ReceivablePayment;
@@ -53,6 +54,7 @@ class SampleDataSeeder extends Seeder
         TransactionDetail::truncate();
         Profit::truncate();
         Transaction::truncate();
+        ProductUnit::truncate();
         Product::truncate();
         Category::truncate();
         Customer::truncate();
@@ -333,7 +335,7 @@ class SampleDataSeeder extends Seeder
                 'prod-'.$slug
             );
 
-            return Product::create([
+            $createdProduct = Product::create([
                 'category_id' => $category?->id,
                 'image' => $image ?? 'default.jpg',
                 'barcode' => $product['barcode'],
@@ -343,7 +345,67 @@ class SampleDataSeeder extends Seeder
                 'sell_price' => $product['sell_price'],
                 'stock' => $product['stock'],
             ]);
+
+            $this->seedProductUnits($createdProduct, $product);
+
+            return $createdProduct;
         })->keyBy('barcode');
+    }
+
+    private function seedProductUnits(Product $product, array $blueprint): void
+    {
+        foreach ($this->productUnitBlueprints($blueprint) as $unit) {
+            $product->units()->create([
+                'label' => $unit['label'],
+                'conversion_qty' => $unit['conversion_qty'],
+                'is_base_unit' => $unit['is_base_unit'] ?? false,
+                'sell_price' => $unit['sell_price'],
+                'buy_price' => $unit['buy_price'],
+                'barcode' => $unit['barcode'],
+            ]);
+        }
+    }
+
+    private function productUnitBlueprints(array $product): array
+    {
+        $units = [
+            [
+                'label' => $this->baseUnitLabel($product),
+                'conversion_qty' => 1,
+                'is_base_unit' => true,
+                'sell_price' => $product['sell_price'],
+                'buy_price' => $product['buy_price'],
+                'barcode' => $product['barcode'],
+            ],
+        ];
+
+        $bulkUnits = [
+            'MNM-0001' => [['label' => 'dus', 'conversion_qty' => 24, 'sell_price' => 112000, 'buy_price' => 72000, 'barcode' => 'MNM-0001-DUS']],
+            'MNM-0002' => [['label' => 'krat', 'conversion_qty' => 24, 'sell_price' => 135000, 'buy_price' => 96000, 'barcode' => 'MNM-0002-KRT']],
+            'SNK-0003' => [['label' => 'dus', 'conversion_qty' => 40, 'sell_price' => 132000, 'buy_price' => 100000, 'barcode' => 'SNK-0003-DUS']],
+            'SSU-0001' => [['label' => 'karton', 'conversion_qty' => 12, 'sell_price' => 240000, 'buy_price' => 192000, 'barcode' => 'SSU-0001-KTN']],
+            'RTI-0002' => [['label' => 'lusin', 'conversion_qty' => 12, 'sell_price' => 90000, 'buy_price' => 60000, 'barcode' => 'RTI-0002-LSN']],
+            'BMB-0001' => [['label' => 'dus', 'conversion_qty' => 12, 'sell_price' => 285000, 'buy_price' => 216000, 'barcode' => 'BMB-0001-DUS']],
+            'BMB-0002' => [['label' => 'karton', 'conversion_qty' => 6, 'sell_price' => 220000, 'buy_price' => 168000, 'barcode' => 'BMB-0002-KTN']],
+            'BMB-0003' => [['label' => 'karung 25kg', 'conversion_qty' => 25, 'sell_price' => 430000, 'buy_price' => 350000, 'barcode' => 'BMB-0003-KRG']],
+            'PRW-0001' => [['label' => 'pack', 'conversion_qty' => 6, 'sell_price' => 37000, 'buy_price' => 24000, 'barcode' => 'PRW-0001-PCK']],
+            'RMH-0001' => [['label' => 'karton', 'conversion_qty' => 12, 'sell_price' => 250000, 'buy_price' => 180000, 'barcode' => 'RMH-0001-KTN']],
+        ];
+
+        return array_merge($units, $bulkUnits[$product['barcode']] ?? []);
+    }
+
+    private function baseUnitLabel(array $product): string
+    {
+        if (Str::contains($product['title'], ['Aqua', 'Teh Botol', 'Jus', 'Ultra Milk', 'Yogurt', 'Kecap', 'Minyak', 'Shampoo', 'Sabun Cuci', 'Pewangi'])) {
+            return 'botol';
+        }
+
+        if (Str::contains($product['title'], ['Gula Pasir'])) {
+            return 'kg';
+        }
+
+        return 'pcs';
     }
 
     /**
@@ -363,7 +425,7 @@ class SampleDataSeeder extends Seeder
                 'discount' => 5000,
                 'cash' => 100000,
                 'items' => [
-                    ['barcode' => 'MNM-0001', 'qty' => 3],
+                    ['barcode' => 'MNM-0001', 'unit_barcode' => 'MNM-0001-DUS', 'qty' => 1],
                     ['barcode' => 'SNK-0001', 'qty' => 2],
                     ['barcode' => 'RTI-0001', 'qty' => 1],
                 ],
@@ -373,7 +435,7 @@ class SampleDataSeeder extends Seeder
                 'discount' => 0,
                 'cash' => 150000,
                 'items' => [
-                    ['barcode' => 'SSU-0001', 'qty' => 2],
+                    ['barcode' => 'SSU-0001', 'unit_barcode' => 'SSU-0001-KTN', 'qty' => 1],
                     ['barcode' => 'RTI-0002', 'qty' => 3],
                     ['barcode' => 'PRW-0001', 'qty' => 2],
                 ],
@@ -394,7 +456,7 @@ class SampleDataSeeder extends Seeder
                 'cash' => 80000,
                 'items' => [
                     ['barcode' => 'MNM-0003', 'qty' => 2],
-                    ['barcode' => 'SNK-0003', 'qty' => 5],
+                    ['barcode' => 'SNK-0003', 'unit_barcode' => 'SNK-0003-DUS', 'qty' => 0.5],
                     ['barcode' => 'SSU-0002', 'qty' => 2],
                 ],
             ],
@@ -404,7 +466,7 @@ class SampleDataSeeder extends Seeder
                 'cash' => 250000,
                 'items' => [
                     ['barcode' => 'PRW-0002', 'qty' => 1],
-                    ['barcode' => 'BMB-0001', 'qty' => 2],
+                    ['barcode' => 'BMB-0001', 'unit_barcode' => 'BMB-0001-DUS', 'qty' => 1],
                     ['barcode' => 'MKN-0003', 'qty' => 2],
                     ['barcode' => 'RMH-0003', 'qty' => 1],
                 ],
@@ -433,13 +495,18 @@ class SampleDataSeeder extends Seeder
                         return null;
                     }
 
-                    $lineTotal = $product->sell_price * $item['qty'];
+                    $unit = $this->findProductUnit($product, $item['unit_barcode'] ?? $item['barcode']);
+                    $qty = (float) $item['qty'];
+                    $baseQty = $qty * (float) $unit->conversion_qty;
+                    $lineTotal = (int) round($unit->sell_price * $qty);
 
                     return [
                         'product' => $product,
-                        'qty' => $item['qty'],
+                        'unit' => $unit,
+                        'qty' => $qty,
+                        'base_qty' => $baseQty,
                         'line_total' => $lineTotal,
-                        'profit' => ($product->sell_price - $product->buy_price) * $item['qty'],
+                        'profit' => (int) round(($unit->sell_price - $unit->buy_price) * $qty),
                     ];
                 })
                 ->filter();
@@ -465,19 +532,41 @@ class SampleDataSeeder extends Seeder
             ]);
 
             foreach ($items as $item) {
-                $transaction->details()->create([
+                $detail = new TransactionDetail([
                     'product_id' => $item['product']->id,
                     'qty' => $item['qty'],
+                    'base_unit_price' => $item['product']->sell_price,
+                    'unit_price' => $item['unit']->sell_price,
                     'price' => $item['line_total'],
                 ]);
+
+                $detail->forceFill([
+                    'product_unit_id' => $item['unit']->id,
+                    'unit_label' => $item['unit']->label,
+                    'unit_conversion_qty' => $item['unit']->conversion_qty,
+                ]);
+
+                $transaction->details()->save($detail);
 
                 $transaction->profits()->create([
                     'total' => $item['profit'],
                 ]);
 
-                $item['product']->decrement('stock', $item['qty']);
+                $item['product']->decrement('stock', $item['base_qty']);
             }
         }
+    }
+
+    private function findProductUnit(Product $product, string $barcode): ProductUnit
+    {
+        return ProductUnit::query()
+            ->where('product_id', $product->id)
+            ->where('barcode', $barcode)
+            ->first()
+            ?? ProductUnit::query()
+                ->where('product_id', $product->id)
+                ->where('is_base_unit', true)
+                ->first();
     }
 
     /**

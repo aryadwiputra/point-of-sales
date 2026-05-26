@@ -21,23 +21,23 @@ export default function LinkItem({
     const baseClasses = `
         flex items-center gap-3
         transition-all duration-200
-        text-slate-600 dark:text-slate-400
+        text-shade-60 dark:text-slate-400
     `;
 
     const activeClasses = isActive
-        ? "bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-400 border-l-[3px] border-primary-500"
-        : "hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 border-l-[3px] border-transparent";
+        ? "bg-aloe-100 text-ink dark:bg-hairline-dark dark:text-white"
+        : "hover:bg-canvas-cream dark:hover:bg-canvas-night hover:text-ink dark:hover:text-slate-200";
 
     if (sidebarOpen) {
         return (
             <Link
                 href={href}
-                className={`${baseClasses} ${activeClasses} px-4 py-2.5 text-sm font-medium`}
+                className={`${baseClasses} ${activeClasses} mx-3 rounded-full px-4 py-2.5 text-sm font-medium`}
                 {...props}
             >
                 <span
                     className={
-                        isActive ? "text-primary-600 dark:text-primary-400" : ""
+                        isActive ? "text-ink dark:text-white" : ""
                     }
                 >
                     {icon}
@@ -56,8 +56,8 @@ export default function LinkItem({
                 transition-all duration-200
                 ${
                     isActive
-                        ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/50"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        ? "text-ink dark:text-white bg-aloe-100 dark:bg-hairline-dark"
+                        : "text-shade-50 dark:text-slate-400 hover:text-ink dark:hover:text-slate-200 hover:bg-canvas-cream dark:hover:bg-canvas-night"
                 }
             `}
             title={title}

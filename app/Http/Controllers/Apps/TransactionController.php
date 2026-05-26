@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Services\AuditLogService;
@@ -44,7 +45,7 @@ class TransactionController extends Controller
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($userId);
 
         // Get active cart items (not held)
-        $carts = Cart::with('product')
+        $carts = Cart::with(['product', 'productUnit'])
             ->where('cashier_id', $userId)
             ->active()
             ->latest()
@@ -55,7 +56,7 @@ class TransactionController extends Controller
         );
 
         // Get held carts grouped by hold_id
-        $heldCarts = Cart::with('product:id,title,sell_price,image')
+        $heldCarts = Cart::with(['product:id,title,sell_price,image', 'productUnit:id,label,sell_price'])
             ->where('cashier_id', $userId)
             ->held()
             ->get()
@@ -77,7 +78,7 @@ class TransactionController extends Controller
         $customers = Customer::latest()->get();
 
         // get all products with categories for product grid
-        $products = Product::with('category:id,name')
+        $products = Product::with(['category:id,name', 'units'])
             ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id')
             ->where('stock', '>', 0)
             ->orderBy('title')
@@ -146,8 +147,24 @@ class TransactionController extends Controller
      */
     public function searchProduct(Request $request)
     {
-        // find product by barcode
-        $product = Product::where('barcode', $request->barcode)->first();
+        $barcode = (string) $request->barcode;
+
+        // find product by product barcode or unit barcode
+        $unit = ProductUnit::with('product.units')
+            ->where('barcode', $barcode)
+            ->first();
+
+        if ($unit?->product) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    ...$unit->product->toArray(),
+                    'selected_unit' => $unit,
+                ],
+            ]);
+        }
+
+        $product = Product::with('units')->where('barcode', $barcode)->first();
 
         if ($product) {
             return response()->json([
@@ -179,7 +196,7 @@ class TransactionController extends Controller
             ? CustomerVoucher::find($validated['customer_voucher_id'])
             : null;
 
-        $carts = Cart::with('product.category')
+        $carts = Cart::with(['product.category', 'productUnit'])
             ->where('cashier_id', $request->user()->id)
             ->active()
             ->latest()
@@ -206,40 +223,60 @@ class TransactionController extends Controller
      */
     public function addToCart(Request $request)
     {
+        $validated = $request->validate([
+            'product_id' => ['required', 'exists:products,id'],
+            'product_unit_id' => ['nullable', 'exists:product_units,id'],
+            'qty' => ['required', 'numeric', 'min:0.001'],
+        ]);
+
+        $qty = (float) $validated['qty'];
+
         // Cari produk berdasarkan ID yang diberikan
-        $product = Product::whereId($request->product_id)->first();
+        $product = Product::with('units')->whereId($validated['product_id'])->first();
 
         // Jika produk tidak ditemukan, redirect dengan pesan error
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
         }
 
+        $unit = $this->resolveProductUnit($product, $validated['product_unit_id'] ?? null);
+        $baseQty = $qty * (float) $unit->conversion_qty;
+
         // Cek stok produk
-        if ($product->stock < $request->qty) {
+        if ((float) $product->stock < $baseQty) {
             return redirect()->back()->with('error', 'Out of Stock Product!.');
         }
 
         // Cek keranjang
-        $cart = Cart::with('product')
-            ->where('product_id', $request->product_id)
+        $cart = Cart::with(['product', 'productUnit'])
+            ->where('product_id', $validated['product_id'])
+            ->where('product_unit_id', $unit->id)
             ->where('cashier_id', auth()->user()->id)
+            ->active()
             ->first();
 
         if ($cart) {
-            // Tingkatkan qty
-            $cart->increment('qty', $request->qty);
+            $newQty = (float) $cart->qty + $qty;
+            $newBaseQty = $newQty * (float) $cart->unit_conversion_qty;
 
-            // Jumlahkan harga * kuantitas
-            $cart->price = $cart->product->sell_price * $cart->qty;
+            if ((float) $product->stock < $newBaseQty) {
+                return redirect()->back()->with('error', 'Out of Stock Product!.');
+            }
 
+            // Tingkatkan qty dan jumlahkan harga * kuantitas
+            $cart->qty = $newQty;
+            $cart->price = (int) round($unit->sell_price * $newQty);
             $cart->save();
         } else {
             // Insert ke keranjang
             Cart::create([
                 'cashier_id' => auth()->user()->id,
-                'product_id' => $request->product_id,
-                'qty' => $request->qty,
-                'price' => $request->sell_price * $request->qty,
+                'product_id' => $validated['product_id'],
+                'product_unit_id' => $unit->id,
+                'unit_label' => $unit->label,
+                'unit_conversion_qty' => $unit->conversion_qty,
+                'qty' => $qty,
+                'price' => (int) round($unit->sell_price * $qty),
             ]);
         }
 
@@ -277,10 +314,10 @@ class TransactionController extends Controller
     public function updateCart(Request $request, $cart_id)
     {
         $request->validate([
-            'qty' => 'required|integer|min:1',
+            'qty' => 'required|numeric|min:0.001',
         ]);
 
-        $cart = Cart::with('product')->whereId($cart_id)
+        $cart = Cart::with(['product', 'productUnit'])->whereId($cart_id)
             ->where('cashier_id', auth()->user()->id)
             ->first();
 
@@ -292,7 +329,10 @@ class TransactionController extends Controller
         }
 
         // Check stock availability
-        if ($cart->product->stock < $request->qty) {
+        $qty = (float) $request->qty;
+        $baseQty = $qty * (float) ($cart->unit_conversion_qty ?: 1);
+
+        if ((float) $cart->product->stock < $baseQty) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok tidak mencukupi. Tersedia: '.$cart->product->stock,
@@ -300,8 +340,8 @@ class TransactionController extends Controller
         }
 
         // Update quantity and price
-        $cart->qty = $request->qty;
-        $cart->price = $cart->product->sell_price * $request->qty;
+        $cart->qty = $qty;
+        $cart->price = (int) round(($cart->productUnit?->sell_price ?? $cart->product->sell_price) * $qty);
         $cart->save();
 
         return back()->with('success', 'Quantity updated successfully');
@@ -436,7 +476,7 @@ class TransactionController extends Controller
     {
         $userId = auth()->user()->id;
 
-        $heldCarts = Cart::with('product:id,title,sell_price,image')
+        $heldCarts = Cart::with(['product:id,title,sell_price,image', 'productUnit:id,label,sell_price'])
             ->where('cashier_id', $userId)
             ->held()
             ->get()
@@ -453,6 +493,9 @@ class TransactionController extends Controller
                     'items' => $items->map(fn ($item) => [
                         'id' => $item->id,
                         'product' => $item->product,
+                        'product_unit' => $item->productUnit,
+                        'unit_label' => $item->unit_label,
+                        'unit_conversion_qty' => $item->unit_conversion_qty,
                         'qty' => $item->qty,
                         'price' => $item->price,
                     ]),
@@ -474,12 +517,31 @@ class TransactionController extends Controller
      */
     public function store(Request $request, PaymentGatewayManager $paymentGatewayManager)
     {
+        $validated = $request->validate([
+            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'shipping_cost' => ['nullable', 'integer', 'min:0'],
+            'redeem_points' => ['nullable', 'integer', 'min:0'],
+            'customer_voucher_id' => ['nullable', 'integer', 'exists:customer_vouchers,id'],
+            'cash' => ['nullable', 'integer', 'min:0'],
+            'payment_gateway' => ['nullable', 'string'],
+            'bank_account_id' => ['nullable', 'integer', 'exists:bank_accounts,id'],
+            'pay_later' => ['nullable', 'boolean'],
+            'due_date' => ['nullable', 'date'],
+        ]);
+
         $isPayLater = $request->boolean('pay_later');
         $paymentGateway = $isPayLater ? null : $request->input('payment_gateway');
         if ($paymentGateway) {
             $paymentGateway = strtolower($paymentGateway);
         }
         $paymentSetting = null;
+
+        if ($isPayLater && empty($validated['customer_id'])) {
+            return redirect()
+                ->route('transactions.index')
+                ->with('error', 'Pelanggan wajib dipilih untuk nota barang/piutang.');
+        }
 
         if ($isPayLater && ! $request->filled('due_date')) {
             return redirect()
@@ -509,8 +571,9 @@ class TransactionController extends Controller
         $shippingCost = max(0, (int) $request->input('shipping_cost', 0));
         $requestedRedeemPoints = max(0, (int) $request->input('redeem_points', 0));
         $cashAmount = $isCashPayment ? max(0, (int) $request->cash) : 0;
-        $customer = $request->filled('customer_id')
-            ? Customer::find($request->integer('customer_id'))
+        $customerId = $validated['customer_id'] ?? null;
+        $customer = $customerId
+            ? Customer::find($customerId)
             : null;
         $voucher = $request->filled('customer_voucher_id')
             ? CustomerVoucher::find($request->integer('customer_voucher_id'))
@@ -526,6 +589,7 @@ class TransactionController extends Controller
             $manualDiscount,
             $shippingCost,
             $requestedRedeemPoints,
+            $customerId,
             $customer,
             $voucher
         ) {
@@ -534,7 +598,7 @@ class TransactionController extends Controller
                 lockForUpdate: true
             );
 
-            $carts = Cart::with('product')
+            $carts = Cart::with(['product', 'productUnit'])
                 ->where('cashier_id', auth()->user()->id)
                 ->active()
                 ->get();
@@ -561,7 +625,7 @@ class TransactionController extends Controller
             $transaction = Transaction::create([
                 'cashier_id' => auth()->user()->id,
                 'cashier_shift_id' => $activeShift->id,
-                'customer_id' => $request->customer_id,
+                'customer_id' => $customerId,
                 'invoice' => $invoice,
                 'cash' => $cashAmount,
                 'change' => $changeAmount,
@@ -584,10 +648,15 @@ class TransactionController extends Controller
                 $linePromoDiscount = (int) data_get($pricingItem, 'line_discount_total', 0);
                 $baseUnitPrice = (int) data_get($pricingItem, 'base_unit_price', $cart->product->sell_price);
                 $unitPrice = (int) data_get($pricingItem, 'effective_unit_price', $cart->product->sell_price);
+                $unit = $cart->productUnit;
+                $unitConversionQty = (float) ($cart->unit_conversion_qty ?: $unit?->conversion_qty ?: 1);
 
                 $transaction->details()->create([
                     'transaction_id' => $transaction->id,
                     'product_id' => $cart->product_id,
+                    'product_unit_id' => $cart->product_unit_id,
+                    'unit_label' => $cart->unit_label ?? $unit?->label,
+                    'unit_conversion_qty' => $unitConversionQty,
                     'qty' => $cart->qty,
                     'base_unit_price' => $baseUnitPrice,
                     'unit_price' => $unitPrice,
@@ -600,7 +669,7 @@ class TransactionController extends Controller
                     'pricing_group_label' => data_get($pricingItem, 'pricing_group_label'),
                 ]);
 
-                $total_buy_price = $cart->product->buy_price * $cart->qty;
+                $total_buy_price = ($unit?->buy_price ?? $cart->product->buy_price) * (float) $cart->qty;
                 $lineShare = $subtotalAfterPromo > 0 ? $lineTotal / $subtotalAfterPromo : 0;
                 $allocatedManualDiscount = (int) round($appliedManualDiscount * $lineShare);
                 $netSellPrice = max(0, $lineTotal - $allocatedManualDiscount);
@@ -612,7 +681,7 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
-                $product->stock = $product->stock - $cart->qty;
+                $product->stock = $product->stock - ((float) $cart->qty * $unitConversionQty);
                 $product->save();
             }
 
@@ -622,7 +691,7 @@ class TransactionController extends Controller
 
             if ($isPayLater) {
                 Receivable::create([
-                    'customer_id' => $request->customer_id,
+                    'customer_id' => $customerId,
                     'transaction_id' => $transaction->id,
                     'invoice' => $invoice,
                     'total' => $grandTotal,
@@ -656,7 +725,7 @@ class TransactionController extends Controller
     public function print($invoice)
     {
         // get transaction
-        $transaction = Transaction::with('details.product', 'details.pricingRule', 'cashier', 'customer', 'receivable', 'bankAccount')
+        $transaction = Transaction::with('details.product', 'details.productUnit', 'details.pricingRule', 'cashier', 'customer', 'receivable', 'bankAccount')
             ->where('invoice', $invoice)
             ->firstOrFail();
 
@@ -784,5 +853,32 @@ class TransactionController extends Controller
         return redirect()
             ->back()
             ->with('success', "Pembayaran untuk invoice {$transaction->invoice} berhasil dikonfirmasi.");
+    }
+
+    private function resolveProductUnit(Product $product, ?int $productUnitId): ProductUnit
+    {
+        if ($productUnitId) {
+            $unit = $product->units->firstWhere('id', $productUnitId);
+
+            if ($unit) {
+                return $unit;
+            }
+        }
+
+        $unit = $product->units->firstWhere('is_base_unit', true) ?? $product->units->first();
+
+        if ($unit) {
+            return $unit;
+        }
+
+        return ProductUnit::create([
+            'product_id' => $product->id,
+            'label' => 'pcs',
+            'conversion_qty' => 1,
+            'is_base_unit' => true,
+            'sell_price' => $product->sell_price,
+            'buy_price' => $product->buy_price,
+            'barcode' => $product->barcode,
+        ]);
     }
 }

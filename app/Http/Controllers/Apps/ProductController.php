@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Services\AuditLogService;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -27,8 +31,17 @@ class ProductController extends Controller
     {
         // get products
         $products = Product::when(request()->search, function ($products) {
-            $products = $products->where('title', 'like', '%'.request()->search.'%');
-        })->with('category')->latest()->paginate(5);
+            $search = request()->search;
+
+            $products = $products
+                ->where('title', 'like', '%'.$search.'%')
+                ->orWhere('barcode', 'like', '%'.$search.'%')
+                ->orWhere('sku', 'like', '%'.$search.'%')
+                ->orWhereHas('units', function ($units) use ($search) {
+                    $units->where('label', 'like', '%'.$search.'%')
+                        ->orWhere('barcode', 'like', '%'.$search.'%');
+                });
+        })->with(['category', 'units'])->latest()->paginate(5);
 
         // return inertia
         return Inertia::render('Dashboard/Products/Index', [
@@ -59,43 +72,39 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        /**
-         * validate
-         */
-        $request->validate([
-            'barcode' => 'required|unique:products,barcode',
-            'sku' => 'required|unique:products,sku',
-            'title' => 'required',
-            'description' => 'required',
-            'category_id' => 'required',
-            'buy_price' => 'required',
-            'sell_price' => 'required',
-            'stock' => 'required|integer|min:0',
-        ]);
-        // upload image
-        $image = $request->file('image');
-        $image->storeAs('public/products', $image->hashName());
+        $validated = $this->validatedProductData($request);
+        $baseUnit = collect($validated['product_units'])->firstWhere('is_base_unit', true);
 
-        // create product
-        $product = Product::create([
-            'image' => $image->hashName(),
-            'barcode' => $request->barcode,
-            'sku' => $request->sku,
-            'title' => $request->title,
-            'description' => $request->description,
-            'category_id' => $request->category_id,
-            'buy_price' => $request->buy_price,
-            'sell_price' => $request->sell_price,
-            'stock' => $request->stock,
-        ]);
+        $product = DB::transaction(function () use ($request, $validated, $baseUnit) {
+            // upload image
+            $image = $request->file('image');
+            $image->storeAs('public/products', $image->hashName());
 
-        $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
+            // create product
+            $product = Product::create([
+                'image' => $image->hashName(),
+                'barcode' => $baseUnit['barcode'],
+                'sku' => $validated['sku'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'category_id' => $validated['category_id'],
+                'buy_price' => $baseUnit['buy_price'],
+                'sell_price' => $baseUnit['sell_price'],
+                'stock' => $validated['stock'],
+            ]);
+
+            $this->syncProductUnits($product, $validated['product_units']);
+            $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
+
+            return $product;
+        });
+
         $this->auditLogService->log(
             event: 'product.created',
             module: 'products',
             auditable: $product,
             description: 'Produk baru dibuat.',
-            after: $this->productAuditPayload($product->fresh())
+            after: $this->productAuditPayload($product->fresh(['units']))
         );
 
         // redirect
@@ -114,7 +123,7 @@ class ProductController extends Controller
         $categories = Category::all();
 
         return Inertia::render('Dashboard/Products/Edit', [
-            'product' => $product,
+            'product' => $product->load('units'),
             'categories' => $categories,
         ]);
     }
@@ -127,58 +136,34 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        $before = $this->productAuditPayload($product);
+        $before = $this->productAuditPayload($product->load('units'));
+        $validated = $this->validatedProductData($request, $product);
+        $baseUnit = collect($validated['product_units'])->firstWhere('is_base_unit', true);
 
-        /**
-         * validate
-         */
-        $request->validate([
-            'barcode' => 'required|unique:products,barcode,'.$product->id,
-            'sku' => 'required|unique:products,sku,'.$product->id,
-            'title' => 'required',
-            'description' => 'required',
-            'category_id' => 'required',
-            'buy_price' => 'required',
-            'sell_price' => 'required',
-        ]);
+        DB::transaction(function () use ($request, $product, $validated, $baseUnit) {
+            $payload = [
+                'barcode' => $baseUnit['barcode'],
+                'sku' => $validated['sku'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'category_id' => $validated['category_id'],
+                'buy_price' => $baseUnit['buy_price'],
+                'sell_price' => $baseUnit['sell_price'],
+            ];
 
-        // check image update
-        if ($request->file('image')) {
+            if ($request->file('image')) {
+                // remove old image
+                Storage::disk('local')->delete('public/products/'.basename($product->image));
 
-            // remove old image
-            Storage::disk('local')->delete('public/products/'.basename($product->image));
+                // upload new image
+                $image = $request->file('image');
+                $image->storeAs('public/products', $image->hashName());
+                $payload['image'] = $image->hashName();
+            }
 
-            // upload new image
-            $image = $request->file('image');
-            $image->storeAs('public/products', $image->hashName());
-
-            // update product with new image
-            $product->update([
-                'image' => $image->hashName(),
-                'barcode' => $request->barcode,
-                'sku' => $request->sku,
-                'title' => $request->title,
-                'description' => $request->description,
-                'category_id' => $request->category_id,
-                'buy_price' => $request->buy_price,
-                'sell_price' => $request->sell_price,
-            ]);
-
-            $this->logProductUpdate($product, $before);
-
-            return to_route('products.index');
-        }
-
-        // update product without image
-        $product->update([
-            'barcode' => $request->barcode,
-            'sku' => $request->sku,
-            'title' => $request->title,
-            'description' => $request->description,
-            'category_id' => $request->category_id,
-            'buy_price' => $request->buy_price,
-            'sell_price' => $request->sell_price,
-        ]);
+            $product->update($payload);
+            $this->syncProductUnits($product, $validated['product_units']);
+        });
 
         $this->logProductUpdate($product, $before);
 
@@ -218,7 +203,7 @@ class ProductController extends Controller
 
     private function logProductUpdate(Product $product, array $before): void
     {
-        $after = $this->productAuditPayload($product->fresh());
+        $after = $this->productAuditPayload($product->fresh(['units']));
 
         $this->auditLogService->log(
             event: 'product.updated',
@@ -252,7 +237,10 @@ class ProductController extends Controller
 
     private function productAuditPayload(Product $product): array
     {
-        return $this->auditLogService->only($product->toArray(), [
+        $product->loadMissing('units');
+
+        return [
+            ...$this->auditLogService->only($product->toArray(), [
             'title',
             'barcode',
             'sku',
@@ -260,6 +248,134 @@ class ProductController extends Controller
             'sell_price',
             'stock',
             'category_id',
-        ]);
+            ]),
+            'units' => $product->units
+                ->map(fn (ProductUnit $unit) => $this->auditLogService->only($unit->toArray(), [
+                    'label',
+                    'conversion_qty',
+                    'is_base_unit',
+                    'buy_price',
+                    'sell_price',
+                    'barcode',
+                ]))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function validatedProductData(Request $request, ?Product $product = null): array
+    {
+        $rules = [
+            'image' => [$product ? 'nullable' : 'required', 'image', 'max:2048'],
+            'sku' => ['required', 'string', 'max:255', Rule::unique('products', 'sku')->ignore($product?->id)],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'stock' => [$product ? 'nullable' : 'required', 'integer', 'min:0'],
+            'product_units' => ['required', 'array', 'min:1'],
+            'product_units.*.id' => ['nullable', 'integer'],
+            'product_units.*.label' => ['required', 'string', 'max:255'],
+            'product_units.*.conversion_qty' => ['required', 'numeric', 'min:0.001'],
+            'product_units.*.is_base_unit' => ['nullable', 'boolean'],
+            'product_units.*.buy_price' => ['required', 'integer', 'min:0'],
+            'product_units.*.sell_price' => ['required', 'integer', 'min:0'],
+            'product_units.*.barcode' => ['required', 'string', 'max:255'],
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        $validator->after(function ($validator) use ($request, $product) {
+            $units = collect($request->input('product_units', []));
+
+            if ($units->isEmpty()) {
+                return;
+            }
+
+            $baseUnits = $units->filter(
+                fn (array $unit) => filter_var($unit['is_base_unit'] ?? false, FILTER_VALIDATE_BOOL)
+            );
+
+            if ($baseUnits->count() !== 1) {
+                $validator->errors()->add('product_units', 'Pilih tepat satu satuan dasar.');
+            }
+
+            $seenBarcodes = [];
+
+            foreach ($units as $index => $unit) {
+                $barcode = trim((string) ($unit['barcode'] ?? ''));
+                $unitId = $unit['id'] ?? null;
+                $isBaseUnit = filter_var($unit['is_base_unit'] ?? false, FILTER_VALIDATE_BOOL);
+
+                if ($unitId && $product && ! ProductUnit::whereKey($unitId)->where('product_id', $product->id)->exists()) {
+                    $validator->errors()->add("product_units.{$index}.id", 'Satuan tidak valid untuk produk ini.');
+                }
+
+                if ($isBaseUnit && abs((float) ($unit['conversion_qty'] ?? 0) - 1.0) > 0.0001) {
+                    $validator->errors()->add("product_units.{$index}.conversion_qty", 'Satuan dasar harus bernilai 1.');
+                }
+
+                if ($barcode === '') {
+                    continue;
+                }
+
+                $barcodeKey = strtolower($barcode);
+
+                if (isset($seenBarcodes[$barcodeKey])) {
+                    $validator->errors()->add("product_units.{$index}.barcode", 'Barcode satuan tidak boleh duplikat.');
+                }
+
+                $seenBarcodes[$barcodeKey] = true;
+
+                $unitExists = ProductUnit::where('barcode', $barcode)
+                    ->when($product, fn ($query) => $query->where('product_id', '!=', $product->id))
+                    ->exists();
+
+                if ($unitExists) {
+                    $validator->errors()->add("product_units.{$index}.barcode", 'Barcode satuan sudah digunakan.');
+                }
+
+                $productExists = Product::where('barcode', $barcode)
+                    ->when($product, fn ($query) => $query->where('id', '!=', $product->id))
+                    ->exists();
+
+                if ($productExists) {
+                    $validator->errors()->add("product_units.{$index}.barcode", 'Barcode sudah digunakan produk lain.');
+                }
+            }
+        });
+
+        $validated = $validator->validate();
+        $validated['product_units'] = $this->normalizeProductUnits($validated['product_units']);
+
+        return $validated;
+    }
+
+    private function normalizeProductUnits(array $units): array
+    {
+        return collect($units)
+            ->map(function (array $unit) {
+                $isBaseUnit = filter_var($unit['is_base_unit'] ?? false, FILTER_VALIDATE_BOOL);
+
+                return [
+                    'label' => trim($unit['label']),
+                    'conversion_qty' => $isBaseUnit ? 1 : (float) $unit['conversion_qty'],
+                    'is_base_unit' => $isBaseUnit,
+                    'buy_price' => (int) $unit['buy_price'],
+                    'sell_price' => (int) $unit['sell_price'],
+                    'barcode' => trim($unit['barcode']),
+                ];
+            })
+            ->sortByDesc('is_base_unit')
+            ->values()
+            ->all();
+    }
+
+    private function syncProductUnits(Product $product, array $units): void
+    {
+        $product->units()->delete();
+
+        foreach ($units as $unit) {
+            $product->units()->create($unit);
+        }
     }
 }

@@ -15,7 +15,16 @@ class Cart extends Model
      * @var array
      */
     protected $fillable = [
-        'cashier_id', 'product_id', 'qty', 'price', 'hold_id', 'hold_label', 'held_at',
+        'cashier_id',
+        'product_id',
+        'product_unit_id',
+        'unit_label',
+        'unit_conversion_qty',
+        'qty',
+        'price',
+        'hold_id',
+        'hold_label',
+        'held_at',
     ];
 
     /**
@@ -24,6 +33,8 @@ class Cart extends Model
      * @var array
      */
     protected $casts = [
+        'qty' => 'decimal:3',
+        'unit_conversion_qty' => 'decimal:3',
         'held_at' => 'datetime',
     ];
 
@@ -35,6 +46,11 @@ class Cart extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function productUnit()
+    {
+        return $this->belongsTo(ProductUnit::class);
     }
 
     /**

@@ -5,13 +5,15 @@ import Input from "@/Components/Dashboard/Input";
 import Textarea from "@/Components/Dashboard/TextArea";
 import InputSelect from "@/Components/Dashboard/InputSelect";
 import toast from "react-hot-toast";
+import ProductUnitFields, {
+    productUnitsFromProduct,
+} from "./Partials/ProductUnitFields";
 import {
     IconPackage,
     IconDeviceFloppy,
     IconArrowLeft,
     IconPhoto,
     IconBarcode,
-    IconCurrencyDollar,
 } from "@tabler/icons-react";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 
@@ -20,13 +22,11 @@ export default function Edit({ categories, product }) {
 
     const { data, setData, post, processing } = useForm({
         image: "",
-        barcode: product.barcode,
         sku: product.sku,
         title: product.title,
         category_id: product.category_id,
         description: product.description,
-        buy_price: product.buy_price,
-        sell_price: product.sell_price,
+        product_units: productUnitsFromProduct(product),
         _method: "PUT",
     });
 
@@ -143,16 +143,6 @@ export default function Edit({ categories, product }) {
                                 </div>
                                 <Input
                                     type="text"
-                                    label="Barcode"
-                                    value={data.barcode}
-                                    onChange={(e) =>
-                                        setData("barcode", e.target.value)
-                                    }
-                                    errors={errors.barcode}
-                                    placeholder="Kode produk"
-                                />
-                                <Input
-                                    type="text"
                                     label="SKU"
                                     value={data.sku}
                                     onChange={(e) => setData("sku", e.target.value)}
@@ -189,33 +179,10 @@ export default function Edit({ categories, product }) {
 
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                                <IconCurrencyDollar size={18} />
-                                Harga Produk
+                                <IconPackage size={18} />
+                                Stok Produk
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Input
-                                    type="number"
-                                    label="Harga Beli"
-                                    value={data.buy_price}
-                                    onChange={(e) =>
-                                        setData("buy_price", e.target.value)
-                                    }
-                                    errors={errors.buy_price}
-                                    placeholder="0"
-                                />
-                                <Input
-                                    type="number"
-                                    label="Harga Jual"
-                                    value={data.sell_price}
-                                    onChange={(e) =>
-                                        setData("sell_price", e.target.value)
-                                    }
-                                    errors={errors.sell_price}
-                                    placeholder="0"
-                                />
-                            </div>
-
-                            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                     Stok Saat Ini
                                 </p>
@@ -226,41 +193,13 @@ export default function Edit({ categories, product }) {
                                     Perubahan stok dilakukan melalui transaksi atau stock opname.
                                 </p>
                             </div>
-
-                            {/* Profit Estimation */}
-                            {data.buy_price > 0 && data.sell_price > 0 && (
-                                <div className="mt-4 p-4 rounded-xl bg-success-50 dark:bg-success-950/30 border border-success-200 dark:border-success-900">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-sm text-success-700 dark:text-success-400 font-medium">
-                                                Estimasi Profit per Item
-                                            </p>
-                                            <p className="text-2xl font-bold text-success-600 dark:text-success-500 mt-1">
-                                                + Rp{" "}
-                                                {(
-                                                    data.sell_price -
-                                                    data.buy_price
-                                                ).toLocaleString("id-ID")}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm text-success-700 dark:text-success-400 font-medium">
-                                                Margin
-                                            </p>
-                                            <p className="text-xl font-bold text-success-600 dark:text-success-500 mt-1">
-                                                {(
-                                                    ((data.sell_price -
-                                                        data.buy_price) /
-                                                        data.buy_price) *
-                                                    100
-                                                ).toFixed(1)}
-                                                %
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
+
+                        <ProductUnitFields
+                            data={data}
+                            setData={setData}
+                            errors={errors}
+                        />
 
                         <div className="flex justify-end gap-3">
                             <Link

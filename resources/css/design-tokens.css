@@ -1,88 +1,60 @@
 /* =====================================================
-   POINT OF SALES - DESIGN TOKENS
-   Modern POS-optimized design system
+   POINT OF SALES - TRANSACTIONAL LIGHT DESIGN TOKENS
    ===================================================== */
 
-/* === Color Palette === */
 :root {
-  /* Primary - Deep Blue/Indigo */
-  --color-primary-50: 238 242 255;
-  --color-primary-100: 224 231 255;
-  --color-primary-200: 199 210 254;
-  --color-primary-300: 165 180 252;
-  --color-primary-400: 129 140 248;
-  --color-primary-500: 99 102 241;
-  --color-primary-600: 79 70 229;
-  --color-primary-700: 67 56 202;
-  --color-primary-800: 55 48 163;
-  --color-primary-900: 49 46 129;
+  --color-canvas-night: 0 0 0;
+  --color-canvas-night-elevated: 10 10 10;
+  --color-canvas-light: 255 255 255;
+  --color-canvas-cream: 251 251 245;
+  --color-aloe-10: 193 251 212;
+  --color-pistachio-10: 212 249 224;
+  --color-ink: 0 0 0;
+  --color-shade-30: 212 212 216;
+  --color-shade-40: 161 161 170;
+  --color-shade-50: 113 113 122;
+  --color-shade-60: 82 82 91;
+  --color-shade-70: 63 63 70;
+  --color-hairline-light: 228 228 231;
+  --color-hairline-dark: 30 44 49;
 
-  /* Accent - Teal/Cyan */
-  --color-accent-50: 236 254 255;
-  --color-accent-100: 207 250 254;
-  --color-accent-200: 165 243 252;
-  --color-accent-300: 103 232 249;
-  --color-accent-400: 34 211 238;
-  --color-accent-500: 6 182 212;
-  --color-accent-600: 8 145 178;
-  --color-accent-700: 14 116 144;
-  --color-accent-800: 21 94 117;
-  --color-accent-900: 22 78 99;
+  /* Backward-compatible aliases used across existing pages */
+  --color-primary-50: 247 247 247;
+  --color-primary-100: 238 238 238;
+  --color-primary-200: var(--color-hairline-light);
+  --color-primary-300: var(--color-shade-30);
+  --color-primary-400: var(--color-shade-40);
+  --color-primary-500: var(--color-ink);
+  --color-primary-600: var(--color-ink);
+  --color-primary-700: 24 24 27;
+  --color-primary-800: 9 9 11;
+  --color-primary-900: var(--color-ink);
+  --color-accent-50: 244 255 247;
+  --color-accent-100: var(--color-pistachio-10);
+  --color-accent-200: var(--color-aloe-10);
+  --color-accent-500: 49 195 107;
+  --color-accent-700: 22 114 61;
 
-  /* Success - Emerald */
   --color-success-50: 236 253 245;
   --color-success-100: 209 250 229;
-  --color-success-200: 167 243 208;
-  --color-success-300: 110 231 183;
-  --color-success-400: 52 211 153;
   --color-success-500: 16 185 129;
   --color-success-600: 5 150 105;
   --color-success-700: 4 120 87;
-  --color-success-800: 6 95 70;
   --color-success-900: 6 78 59;
-
-  /* Warning - Amber */
   --color-warning-50: 255 251 235;
   --color-warning-100: 254 243 199;
-  --color-warning-200: 253 230 138;
-  --color-warning-300: 252 211 77;
-  --color-warning-400: 251 191 36;
   --color-warning-500: 245 158 11;
   --color-warning-600: 217 119 6;
   --color-warning-700: 180 83 9;
-  --color-warning-800: 146 64 14;
-  --color-warning-900: 120 53 15;
-
-  /* Danger - Rose */
   --color-danger-50: 255 241 242;
   --color-danger-100: 255 228 230;
-  --color-danger-200: 254 205 211;
-  --color-danger-300: 253 164 175;
-  --color-danger-400: 251 113 133;
   --color-danger-500: 244 63 94;
   --color-danger-600: 225 29 72;
   --color-danger-700: 190 18 60;
-  --color-danger-800: 159 18 57;
-  --color-danger-900: 136 19 55;
 
-  /* Neutral - Slate */
-  --color-slate-50: 248 250 252;
-  --color-slate-100: 241 245 249;
-  --color-slate-200: 226 232 240;
-  --color-slate-300: 203 213 225;
-  --color-slate-400: 148 163 184;
-  --color-slate-500: 100 116 139;
-  --color-slate-600: 71 85 105;
-  --color-slate-700: 51 65 85;
-  --color-slate-800: 30 41 59;
-  --color-slate-900: 15 23 42;
-  --color-slate-950: 2 6 23;
-
-  /* === Typography === */
-  --font-family-sans: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-family-sans: 'Inter', 'Inter Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Font Sizes */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -92,7 +64,6 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
 
-  /* === Spacing (Touch-friendly for tablet) === */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -103,63 +74,59 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
 
-  /* Touch targets (minimum 44px for tablet) */
   --touch-target-min: 2.75rem;
   --touch-target-comfortable: 3rem;
 
-  /* === Border Radius === */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* === Shadows === */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-glow: 0 0 20px rgb(99 102 241 / 0.3);
+  --shadow-paper: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 30px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 18px 36px -24px rgb(0 0 0 / 0.35);
+  --shadow-glow: 0 0 20px rgb(var(--color-aloe-10) / 0.45);
 
-  /* === Transitions === */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* === Z-Index Scale === */
   --z-dropdown: 50;
   --z-sticky: 100;
   --z-modal: 200;
   --z-toast: 300;
 
-  /* === Light Theme Semantic Colors === */
-  --bg-primary: var(--color-slate-50);
-  --bg-secondary: 255 255 255;
-  --bg-tertiary: var(--color-slate-100);
-  --text-primary: var(--color-slate-900);
-  --text-secondary: var(--color-slate-600);
-  --text-muted: var(--color-slate-400);
-  --border-default: var(--color-slate-200);
-  --border-subtle: var(--color-slate-100);
+  --bg-primary: var(--color-canvas-cream);
+  --bg-secondary: var(--color-canvas-light);
+  --bg-tertiary: 247 247 242;
+  --text-primary: var(--color-ink);
+  --text-secondary: var(--color-shade-60);
+  --text-muted: var(--color-shade-40);
+  --border-default: var(--color-hairline-light);
+  --border-subtle: 238 238 231;
+  --scrollbar-track: 246 246 239;
+  --scrollbar-thumb: var(--color-shade-30);
+  --scrollbar-thumb-hover: var(--color-shade-40);
 }
 
-/* === Dark Theme === */
 .dark {
-  --bg-primary: var(--color-slate-950);
-  --bg-secondary: var(--color-slate-900);
-  --bg-tertiary: var(--color-slate-800);
-  --text-primary: var(--color-slate-50);
-  --text-secondary: var(--color-slate-300);
-  --text-muted: var(--color-slate-500);
-  --border-default: var(--color-slate-800);
-  --border-subtle: var(--color-slate-900);
+  --bg-primary: var(--color-canvas-night);
+  --bg-secondary: var(--color-canvas-night-elevated);
+  --bg-tertiary: 17 24 28;
+  --text-primary: 250 250 250;
+  --text-secondary: 212 212 216;
+  --text-muted: 113 113 122;
+  --border-default: var(--color-hairline-dark);
+  --border-subtle: 18 28 32;
+  --scrollbar-track: 10 10 10;
+  --scrollbar-thumb: var(--color-shade-60);
+  --scrollbar-thumb-hover: var(--color-shade-50);
 }
 
-/* === Base Styles === */
 html {
   font-family: var(--font-family-sans);
+  font-feature-settings: "ss03";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -169,26 +136,68 @@ body {
   color: rgb(var(--text-primary));
 }
 
-/* === POS-specific utilities === */
-
-/* Touch-friendly buttons */
 .touch-target {
   min-height: var(--touch-target-min);
   min-width: var(--touch-target-min);
 }
 
-/* Glassmorphism effect */
+.surface-paper {
+  background: rgb(var(--bg-secondary));
+  border: 1px solid rgb(var(--border-default));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-paper);
+}
+
+.button-primary-pill {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-full);
+  background: rgb(var(--color-ink));
+  color: rgb(var(--color-canvas-light));
+}
+
+.button-primary-pill:hover {
+  background: rgb(var(--color-shade-70));
+}
+
+.button-aloe-pill {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-full);
+  background: rgb(var(--color-aloe-10));
+  color: rgb(var(--color-ink));
+}
+
+.button-outline-on-light {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-full);
+  border: 1px solid rgb(var(--border-default));
+  background: rgb(var(--color-canvas-light));
+  color: rgb(var(--color-ink));
+}
+
+.text-input-surface {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  border: 1px solid rgb(var(--border-default));
+  background: rgb(var(--color-canvas-light));
+  color: rgb(var(--color-ink));
+}
+
+.text-input-surface:focus {
+  outline: none;
+  border-color: rgb(var(--color-ink));
+  box-shadow: 0 0 0 3px rgb(var(--color-aloe-10) / 0.65);
+}
+
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgb(var(--bg-secondary) / 0.86);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 .dark .glass {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgb(var(--color-canvas-night-elevated) / 0.86);
 }
 
-/* Smooth scrollbar */
 .scrollbar-thin,
 .dashboard-scrollbar {
   scrollbar-width: thin;
@@ -222,19 +231,6 @@ body {
   scrollbar-gutter: stable;
 }
 
-:root {
-  --scrollbar-track: var(--color-slate-100);
-  --scrollbar-thumb: var(--color-slate-300);
-  --scrollbar-thumb-hover: var(--color-slate-400);
-}
-
-.dark {
-  --scrollbar-track: var(--color-slate-900);
-  --scrollbar-thumb: var(--color-slate-700);
-  --scrollbar-thumb-hover: var(--color-slate-600);
-}
-
-/* Hide scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -244,36 +240,33 @@ body {
   display: none;
 }
 
-/* Product card hover effect */
 .product-card {
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-paper);
 }
 
 .product-card:active {
   transform: scale(0.98);
 }
 
-/* Quick amount button */
 .quick-amount-btn {
   transition: all var(--transition-fast);
 }
 
 .quick-amount-btn:hover {
-  background-color: rgb(var(--color-primary-100));
-  border-color: rgb(var(--color-primary-400));
+  background-color: rgb(var(--color-aloe-10));
+  border-color: rgb(var(--color-ink));
 }
 
 .dark .quick-amount-btn:hover {
-  background-color: rgb(var(--color-primary-900) / 0.5);
-  border-color: rgb(var(--color-primary-600));
+  background-color: rgb(var(--color-hairline-dark));
+  border-color: rgb(var(--color-shade-50));
 }
 
-/* Pulse animation for cart */
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
@@ -287,7 +280,6 @@ body {
   animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Slide in animation */
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -303,7 +295,6 @@ body {
   animation: slide-in-right var(--transition-base);
 }
 
-/* Number counter animation */
 @keyframes count-up {
   from {
     opacity: 0;

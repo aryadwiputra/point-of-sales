@@ -5,9 +5,9 @@ export default function Checkbox({ label, errors, ...props }) {
                 <input
                     {...props}
                     type="checkbox"
-                    className={'rounded-md bg-white border-gray-200 dark:bg-gray-950 dark:border-gray-800 checked:bg-teal-500'}
+                    className={'rounded-md bg-white border-hairline-light text-ink focus:ring-aloe-100 dark:bg-canvas-night-elevated dark:border-hairline-dark checked:bg-ink'}
                 />
-                <label className="text-sm text-gray-700 dark:text-gray-400">{label}</label>
+                <label className="text-sm text-shade-70 dark:text-gray-400">{label}</label>
 
                 {errors && (
                     <small className='text-xs text-red-500'>{errors}</small>

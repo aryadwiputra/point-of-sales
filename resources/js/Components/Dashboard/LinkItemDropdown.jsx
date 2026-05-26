@@ -25,8 +25,8 @@ export default function LinkItemDropdown({ icon, title, data, access, sidebarOpe
     }
 
     const buttonClass = sidebarOpen
-        ? "min-w-full flex items-center font-medium gap-x-3.5 px-4 py-3 hover:border-r-2 capitalize hover:cursor-pointer text-sm justify-between text-gray-500 hover:border-r-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:border-r-gray-50 dark:hover:text-gray-100"
-        : "min-w-full flex justify-center py-3 hover:border-r-2 hover:cursor-pointer text-gray-500 hover:border-r-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:border-r-gray-50 dark:hover:text-gray-100";
+        ? "mx-3 flex min-w-[calc(100%-1.5rem)] items-center justify-between gap-x-3.5 rounded-full px-4 py-3 text-sm font-medium capitalize text-shade-60 transition hover:cursor-pointer hover:bg-canvas-cream hover:text-ink dark:text-gray-400 dark:hover:bg-canvas-night dark:hover:text-gray-100"
+        : "min-w-full flex justify-center py-3 text-shade-50 transition hover:cursor-pointer hover:bg-canvas-cream hover:text-ink dark:text-gray-400 dark:hover:bg-canvas-night dark:hover:text-gray-100";
 
     return (
         <>
@@ -57,11 +57,11 @@ export default function LinkItemDropdown({ icon, title, data, access, sidebarOpe
                         href={item.href}
                         className={`${
                             url === item.href &&
-                            "border-r-2 border-r-gray-400 bg-gray-100 text-gray-700 dark:border-r-gray-500 dark:bg-gray-900 dark:text-white"
+                            "bg-aloe-100 text-ink dark:bg-hairline-dark dark:text-white"
                         } ${
                             sidebarOpen
-                                ? "min-w-full flex items-center font-medium gap-x-3.5 px-5 py-3 hover:border-r-2 capitalize hover:cursor-pointer text-sm line-clamp-1 text-gray-500 hover:border-r-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:border-r-gray-50 dark:hover:text-gray-100"
-                                : "min-w-full flex justify-center py-3 hover:border-r-2 hover:cursor-pointer text-gray-500 hover:border-r-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:border-r-gray-50 dark:hover:text-gray-100"
+                                ? "mx-3 flex min-w-[calc(100%-1.5rem)] items-center gap-x-3.5 rounded-full px-5 py-3 text-sm font-medium capitalize line-clamp-1 text-shade-50 transition hover:cursor-pointer hover:bg-canvas-cream hover:text-ink dark:text-gray-500 dark:hover:bg-canvas-night dark:hover:text-gray-100"
+                                : "min-w-full flex justify-center py-3 text-gray-500 transition hover:cursor-pointer hover:bg-canvas-cream hover:text-gray-900 dark:text-gray-500 dark:hover:bg-canvas-night dark:hover:text-gray-100"
                         }`}
                         {...props}
                     >
