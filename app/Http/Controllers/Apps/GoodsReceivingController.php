@@ -1,112 +1,50 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GoodsReceiving\CreateGoodsReceivingRequest;
+use App\Http\Requests\GoodsReceiving\IndexGoodsReceivingRequest;
+use App\Http\Requests\GoodsReceiving\StoreGoodsReceivingRequest;
 use App\Models\GoodsReceiving;
-use App\Models\PurchaseOrder;
-use App\Services\GoodsReceivingService;
-use Illuminate\Http\Request;
+use App\Services\GoodsReceivings\CreateGoodsReceivingService;
+use App\Services\GoodsReceivings\GoodsReceivingCreateQueryService;
+use App\Services\GoodsReceivings\GoodsReceivingIndexQueryService;
+use App\Services\GoodsReceivings\GoodsReceivingShowQueryService;
 use Inertia\Inertia;
 
 class GoodsReceivingController extends Controller
 {
-    public function __construct(
-        private readonly GoodsReceivingService $goodsReceivingService
-    ) {}
-
-    public function index(Request $request)
+    public function index(IndexGoodsReceivingRequest $request, GoodsReceivingIndexQueryService $service)
     {
-        $filters = [
-            'search' => $request->input('search'),
-            'purchase_order_id' => $request->input('purchase_order_id'),
-        ];
-
-        $query = GoodsReceiving::with([
-            'purchaseOrder:id,document_number,status',
-            'supplier:id,name',
-            'receiver:id,name',
-        ])->orderByDesc('received_at');
-
-        $query->when($filters['search'], fn ($q, $s) => $q->where('document_number', 'like', "%{$s}%"))
-            ->when($filters['purchase_order_id'], fn ($q, $id) => $q->where('purchase_order_id', $id));
-
-        $receivings = $query->paginate(10)->withQueryString();
-
-        return Inertia::render('Dashboard/GoodsReceivings/Index', [
-            'receivings' => $receivings,
-            'filters' => $filters,
-        ]);
+        return Inertia::render('Dashboard/GoodsReceivings/Index', $service->execute($request->filters()));
     }
 
-    public function create(Request $request)
+    public function create(CreateGoodsReceivingRequest $request, GoodsReceivingCreateQueryService $service)
     {
-        $purchaseOrderId = $request->input('purchase_order_id');
-
-        $orders = PurchaseOrder::with([
-            'supplier:id,name',
-            'items.product:id,title,sku',
-        ])->whereIn('status', ['ordered', 'partial_received'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        if ($purchaseOrderId) {
-            $orders = $orders->where('id', $purchaseOrderId);
-        }
-
-        return Inertia::render('Dashboard/GoodsReceivings/Create', [
-            'orders' => $orders,
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'purchase_order_id' => ['required', 'exists:purchase_orders,id'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.purchase_order_item_id' => ['required', 'exists:purchase_order_items,id'],
-            'items.*.qty_received' => ['required', 'integer', 'min:1'],
-            'items.*.notes' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $order = PurchaseOrder::with('items')->findOrFail($data['purchase_order_id']);
-
-        foreach ($data['items'] as $item) {
-            $poItem = $order->items->firstWhere('id', $item['purchase_order_item_id']);
-            if (! $poItem) {
-                return back()->with('error', 'Item tidak ditemukan di PO.');
-            }
-            $outstanding = $poItem->qty_ordered - $poItem->qty_received;
-            if ($item['qty_received'] > $outstanding) {
-                return back()->with('error', "Qty diterima melebihi sisa item {$poItem->product_id}.");
-            }
-        }
-
-        $receiving = $this->goodsReceivingService->receive(
-            order: $order,
-            items: $data['items'],
-            notes: $data['notes'] ?? null,
-            userId: $request->user()->id,
+        return Inertia::render(
+            'Dashboard/GoodsReceivings/Create',
+            $service->execute($request->integer('purchase_order_id') ?: null)
         );
+    }
+
+    public function store(StoreGoodsReceivingRequest $request, CreateGoodsReceivingService $service)
+    {
+        $result = $service->execute($request->validated(), $request->user()->id);
+
+        if ($result['error']) {
+            return back()->with('error', $result['error']);
+        }
 
         return redirect()
-            ->route('goods-receivings.show', $receiving)
+            ->route('goods-receivings.show', $result['receiving'])
             ->with('success', 'Penerimaan barang berhasil dicatat.');
     }
 
-    public function show(GoodsReceiving $goodsReceiving)
+    public function show(GoodsReceiving $goodsReceiving, GoodsReceivingShowQueryService $service)
     {
-        $goodsReceiving->load([
-            'purchaseOrder:id,document_number,status',
-            'supplier:id,name',
-            'items.product:id,title,sku',
-            'items.purchaseOrderItem:id,unit_price',
-            'receiver:id,name',
-        ]);
-
-        return Inertia::render('Dashboard/GoodsReceivings/Show', [
-            'receiving' => $goodsReceiving,
-        ]);
+        return Inertia::render('Dashboard/GoodsReceivings/Show', $service->execute($goodsReceiving));
     }
 }
