@@ -210,6 +210,9 @@ function ProductCard({
 }
 
 export default function Index({ products }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
@@ -218,6 +221,7 @@ export default function Index({ products }) {
     const canCreateProducts = can("products-create");
     const canEditProducts = can("products-edit");
     const canDeleteProducts = can("products-delete");
+    const effectiveViewMode = isCompactMode ? "list" : viewMode;
 
     const handlePrintSingleBarcode = (product) => {
         setSingleProductBarcode(product);
@@ -339,34 +343,38 @@ export default function Index({ products }) {
                             Cetak Terpilih ({selectedProducts.length})
                         </button>
                     )}
-                    <button
-                        onClick={() => setViewMode("grid")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "grid"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="Grid View"
-                    >
-                        <IconLayoutGrid size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode("list")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "list"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="List View"
-                    >
-                        <IconList size={20} />
-                    </button>
+                    {!isCompactMode && (
+                        <>
+                            <button
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "grid"
+                                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                }`}
+                                title="Grid View"
+                            >
+                                <IconLayoutGrid size={20} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "list"
+                                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                }`}
+                                title="List View"
+                            >
+                                <IconList size={20} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Content */}
             {products.data.length > 0 ? (
-                viewMode === "grid" ? (
+                effectiveViewMode === "grid" ? (
                     /* Grid View */
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {products.data.map((product, i) => (
@@ -412,22 +420,24 @@ export default function Index({ products }) {
                                         </Table.Td>
                                         <Table.Td>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                                    {product.image ? (
-                                                        <img
-                                                            src={getProductImageUrl(product.image)}
-                                                            alt={product.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <IconPackage
-                                                                size={16}
-                                                                className="text-slate-400"
+                                                {!isCompactMode && (
+                                                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+                                                        {product.image ? (
+                                                            <img
+                                                                src={getProductImageUrl(product.image)}
+                                                                alt={product.title}
+                                                                className="w-full h-full object-cover"
                                                             />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <IconPackage
+                                                                    size={16}
+                                                                    className="text-slate-400"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                                                         {product.title}

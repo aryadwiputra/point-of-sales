@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -49,18 +50,26 @@ class CategoryController extends Controller
          * validate
          */
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'image' => [
+                Setting::productDisplayMode() === Setting::PRODUCT_DISPLAY_COMPACT_LIST ? 'nullable' : 'required',
+                'image',
+                'mimes:jpeg,jpg,png',
+                'max:2048',
+            ],
             'name' => 'required',
             'description' => 'required',
         ]);
 
-        // upload image
-        $image = $request->file('image');
-        $image->storeAs('public/category', $image->hashName());
+        $imageName = null;
+        if ($request->file('image')) {
+            $image = $request->file('image');
+            $image->storeAs('public/category', $image->hashName());
+            $imageName = $image->hashName();
+        }
 
         // create category
         Category::create([
-            'image' => $image->hashName(),
+            'image' => $imageName,
             'name' => $request->name,
             'description' => $request->description,
         ]);
@@ -96,13 +105,16 @@ class CategoryController extends Controller
         $request->validate([
             'name' => 'required',
             'description' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
         ]);
 
         // check image update
         if ($request->file('image')) {
 
             // remove old image
-            Storage::disk('local')->delete('public/category/'.basename($category->image));
+            if ($category->image) {
+                Storage::disk('local')->delete('public/category/'.basename($category->image));
+            }
 
             // upload new image
             $image = $request->file('image');
@@ -138,7 +150,9 @@ class CategoryController extends Controller
         $category = Category::findOrFail($id);
 
         // remove image
-        Storage::disk('local')->delete('public/category/'.basename($category->image));
+        if ($category->image) {
+            Storage::disk('local')->delete('public/category/'.basename($category->image));
+        }
 
         // delete
         $category->delete();

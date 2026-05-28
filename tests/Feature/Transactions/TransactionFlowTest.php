@@ -249,6 +249,126 @@ class TransactionFlowTest extends TestCase
             });
     }
 
+    public function test_json_add_cart_returns_compact_cart_state_without_redirect(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+
+        $response = $this
+            ->actingAs($cashier)
+            ->postJson(route('transactions.addToCart'), [
+                'product_id' => $product->id,
+                'qty' => 2,
+                'discount' => 1000,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('carts.0.product_id', $product->id)
+            ->assertJsonPath('carts_total', $product->sell_price * 2)
+            ->assertJsonStructure([
+                'message',
+                'carts',
+                'carts_total',
+                'pricingPreview' => ['items', 'summary'],
+            ]);
+    }
+
+    public function test_json_update_cart_returns_compact_cart_state_with_latest_total(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+        $cart = Cart::create([
+            'cashier_id' => $cashier->id,
+            'product_id' => $product->id,
+            'qty' => 1,
+            'price' => $product->sell_price,
+        ]);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->patchJson(route('transactions.updateCart', $cart->id), [
+                'qty' => 3,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('carts.0.id', $cart->id)
+            ->assertJsonPath('carts_total', $product->sell_price * 3);
+
+        $this->assertSame(3, (int) $cart->fresh()->qty);
+    }
+
+    public function test_json_delete_cart_returns_remaining_cart_state(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+        $cart = Cart::create([
+            'cashier_id' => $cashier->id,
+            'product_id' => $product->id,
+            'qty' => 1,
+            'price' => $product->sell_price,
+        ]);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->deleteJson(route('transactions.destroyCart', $cart->id));
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('carts', [])
+            ->assertJsonPath('carts_total', 0);
+
+        $this->assertDatabaseMissing('carts', ['id' => $cart->id]);
+    }
+
+    public function test_json_add_cart_rejects_insufficient_stock_without_mutating_cart(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+        $product->update(['stock' => 1]);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->postJson(route('transactions.addToCart'), [
+                'product_id' => $product->id,
+                'qty' => 2,
+            ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseCount('carts', 0);
+    }
+
+    public function test_non_json_add_cart_keeps_existing_redirect_flow(): void
+    {
+        $cashier = $this->createCashier();
+        $this->openShiftFor($cashier);
+        $product = $this->createProduct();
+
+        $response = $this
+            ->actingAs($cashier)
+            ->post(route('transactions.addToCart'), [
+                'product_id' => $product->id,
+                'qty' => 1,
+            ]);
+
+        $response->assertRedirect(route('transactions.index'));
+        $this->assertDatabaseHas('carts', [
+            'cashier_id' => $cashier->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
     public function test_cashier_can_request_midtrans_payment_link(): void
     {
         $cashier = $this->createCashier();

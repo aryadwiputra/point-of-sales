@@ -1,4 +1,5 @@
 import React from "react";
+import { usePage } from "@inertiajs/react";
 import {
     IconTrash,
     IconMinus,
@@ -21,7 +22,7 @@ const formatQty = (value = 0) =>
     });
 
 // Single Cart Item
-function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
+function CartItem({ item, onUpdateQty, onRemove, isRemoving, isCompactMode }) {
     // Note: item.price from backend is already the total (sell_price * qty)
     const quantity = Number(item.qty || 0);
     const itemPrice = Number(item.price || 0);
@@ -41,23 +42,24 @@ function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
             ${isRemoving ? "opacity-50 scale-95" : ""}
         `}
         >
-            {/* Product Image */}
-            <div className="w-14 h-14 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
-                {item.product?.image ? (
-                    <img
-                        src={getProductImageUrl(item.product.image)}
-                        alt={item.product.title}
-                        className="w-full h-full object-cover"
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <IconShoppingCart
-                            size={20}
-                            className="text-slate-400"
+            {!isCompactMode && (
+                <div className="w-14 h-14 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
+                    {item.product?.image ? (
+                        <img
+                            src={getProductImageUrl(item.product.image)}
+                            alt={item.product.title}
+                            className="w-full h-full object-cover"
                         />
-                    </div>
-                )}
-            </div>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <IconShoppingCart
+                                size={20}
+                                className="text-slate-400"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Product Info */}
             <div className="flex-1 min-w-0">
@@ -137,6 +139,9 @@ export default function CartPanel({
     removingItemId,
     className = "",
 }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const totalItems = items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
     // Note: item.price from backend is already sell_price * qty
     const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0), 0);
@@ -174,6 +179,7 @@ export default function CartPanel({
                             onUpdateQty={onUpdateQty}
                             onRemove={onRemove}
                             isRemoving={removingItemId === item.id}
+                            isCompactMode={isCompactMode}
                         />
                     ))}
                 </div>

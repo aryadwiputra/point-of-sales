@@ -12,7 +12,9 @@ import {
 } from "@tabler/icons-react";
 
 export default function Create() {
-    const { errors } = usePage().props;
+    const { errors, appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
 
     const { data, setData, post, processing } = useForm({
         name: "",
@@ -59,8 +61,13 @@ export default function Create() {
             <form onSubmit={submit}>
                 <div className="max-w-2xl">
                     <div className="bg-white dark:bg-canvas-night-elevated rounded-card border border-hairline-light dark:border-hairline-dark p-6 shadow-paper">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div
+                            className={`grid grid-cols-1 gap-6 ${
+                                isCompactMode ? "" : "md:grid-cols-2"
+                            }`}
+                        >
                             {/* Image */}
+                            {!isCompactMode && (
                             <div>
                                 <h3 className="text-sm font-semibold text-shade-70 dark:text-slate-300 mb-3 flex items-center gap-2">
                                     <IconPhoto size={16} />
@@ -87,6 +94,7 @@ export default function Create() {
                                     accept="image/*"
                                 />
                             </div>
+                            )}
 
                             {/* Info */}
                             <div className="space-y-4">

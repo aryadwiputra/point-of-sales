@@ -227,6 +227,7 @@ class TransactionController extends Controller
             'product_id' => ['required', 'exists:products,id'],
             'product_unit_id' => ['nullable', 'exists:product_units,id'],
             'qty' => ['required', 'numeric', 'min:0.001'],
+            ...$this->cartContextRules(),
         ]);
 
         $qty = (float) $validated['qty'];
@@ -236,6 +237,13 @@ class TransactionController extends Controller
 
         // Jika produk tidak ditemukan, redirect dengan pesan error
         if (! $product) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found.',
+                ], 404);
+            }
+
             return redirect()->back()->with('error', 'Product not found.');
         }
 
@@ -244,6 +252,13 @@ class TransactionController extends Controller
 
         // Cek stok produk
         if ((float) $product->stock < $baseQty) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stok tidak mencukupi. Tersedia: '.$product->stock,
+                ], 422);
+            }
+
             return redirect()->back()->with('error', 'Out of Stock Product!.');
         }
 
@@ -260,6 +275,13 @@ class TransactionController extends Controller
             $newBaseQty = $newQty * (float) $cart->unit_conversion_qty;
 
             if ((float) $product->stock < $newBaseQty) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stok tidak mencukupi. Tersedia: '.$product->stock,
+                    ], 422);
+                }
+
                 return redirect()->back()->with('error', 'Out of Stock Product!.');
             }
 
@@ -280,6 +302,10 @@ class TransactionController extends Controller
             ]);
         }
 
+        if ($request->expectsJson()) {
+            return $this->cartStateResponse($request, 'Product Added Successfully!.');
+        }
+
         return redirect()->route('transactions.index')->with('success', 'Product Added Successfully!.');
     }
 
@@ -289,15 +315,32 @@ class TransactionController extends Controller
      * @param  mixed  $request
      * @return void
      */
-    public function destroyCart($cart_id)
+    public function destroyCart(Request $request, $cart_id)
     {
-        $cart = Cart::with('product')->whereId($cart_id)->first();
+        $request->validate($this->cartContextRules());
+
+        $cart = Cart::with('product')
+            ->whereId($cart_id)
+            ->where('cashier_id', $request->user()->id)
+            ->active()
+            ->first();
 
         if ($cart) {
             $cart->delete();
 
+            if ($request->expectsJson()) {
+                return $this->cartStateResponse($request, 'Item dihapus dari keranjang');
+            }
+
             return back();
         } else {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cart not found',
+                ], 404);
+            }
+
             // Handle case where no cart is found (e.g., redirect with error message)
             return back()->withErrors(['message' => 'Cart not found']);
         }
@@ -315,6 +358,7 @@ class TransactionController extends Controller
     {
         $request->validate([
             'qty' => 'required|numeric|min:0.001',
+            ...$this->cartContextRules(),
         ]);
 
         $cart = Cart::with(['product', 'productUnit'])->whereId($cart_id)
@@ -322,6 +366,10 @@ class TransactionController extends Controller
             ->first();
 
         if (! $cart) {
+            if (! $request->expectsJson()) {
+                return back()->withErrors(['message' => 'Cart item not found']);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Cart item not found',
@@ -333,6 +381,12 @@ class TransactionController extends Controller
         $baseQty = $qty * (float) ($cart->unit_conversion_qty ?: 1);
 
         if ((float) $cart->product->stock < $baseQty) {
+            if (! $request->expectsJson()) {
+                return back()->withErrors([
+                    'message' => 'Stok tidak mencukupi. Tersedia: '.$cart->product->stock,
+                ]);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Stok tidak mencukupi. Tersedia: '.$cart->product->stock,
@@ -343,6 +397,10 @@ class TransactionController extends Controller
         $cart->qty = $qty;
         $cart->price = (int) round(($cart->productUnit?->sell_price ?? $cart->product->sell_price) * $qty);
         $cart->save();
+
+        if ($request->expectsJson()) {
+            return $this->cartStateResponse($request, 'Quantity updated successfully');
+        }
 
         return back()->with('success', 'Quantity updated successfully');
     }
@@ -853,6 +911,55 @@ class TransactionController extends Controller
         return redirect()
             ->back()
             ->with('success', "Pembayaran untuk invoice {$transaction->invoice} berhasil dikonfirmasi.");
+    }
+
+    private function cartContextRules(): array
+    {
+        return [
+            'customer_id' => ['nullable', 'exists:customers,id'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'shipping_cost' => ['nullable', 'integer', 'min:0'],
+            'redeem_points' => ['nullable', 'integer', 'min:0'],
+            'customer_voucher_id' => ['nullable', 'integer', 'exists:customer_vouchers,id'],
+        ];
+    }
+
+    private function cartStateResponse(Request $request, string $message, int $status = 200): JsonResponse
+    {
+        $context = validator($request->all(), $this->cartContextRules())->validate();
+        $userId = $request->user()->id;
+
+        $carts = Cart::with(['product', 'productUnit'])
+            ->where('cashier_id', $userId)
+            ->active()
+            ->latest()
+            ->get();
+
+        $customer = isset($context['customer_id'])
+            ? Customer::find($context['customer_id'])
+            : null;
+        $voucher = isset($context['customer_voucher_id'])
+            ? CustomerVoucher::find($context['customer_voucher_id'])
+            : null;
+
+        $pricingPreview = $this->loyaltyService->previewCheckout(
+            $this->pricingService->previewCart($carts, $customer),
+            $customer,
+            [
+                'manual_discount' => (int) ($context['discount'] ?? 0),
+                'shipping_cost' => (int) ($context['shipping_cost'] ?? 0),
+                'redeem_points' => (int) ($context['redeem_points'] ?? 0),
+                'voucher' => $voucher,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'carts' => $carts,
+            'carts_total' => (int) $carts->sum('price'),
+            'pricingPreview' => $pricingPreview,
+        ], $status);
     }
 
     private function resolveProductUnit(Product $product, ?int $productUnitId): ProductUnit

@@ -17,7 +17,9 @@ import {
 } from "@tabler/icons-react";
 
 export default function Create({ categories }) {
-    const { errors } = usePage().props;
+    const { errors, appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
 
     const { data, setData, post, processing } = useForm({
         image: "",
@@ -79,8 +81,13 @@ export default function Create({ categories }) {
             </div>
 
             <form onSubmit={submit}>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div
+                    className={`grid grid-cols-1 gap-6 ${
+                        isCompactMode ? "" : "lg:grid-cols-3"
+                    }`}
+                >
                     {/* Left Column - Image */}
+                    {!isCompactMode && (
                     <div className="lg:col-span-1">
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
@@ -115,9 +122,10 @@ export default function Create({ categories }) {
                             />
                         </div>
                     </div>
+                    )}
 
                     {/* Right Column - Form */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className={isCompactMode ? "space-y-6" : "lg:col-span-2 space-y-6"}>
                         {/* Basic Info */}
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductUnit;
+use App\Models\Setting;
 use App\Services\AuditLogService;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
@@ -76,13 +77,16 @@ class ProductController extends Controller
         $baseUnit = collect($validated['product_units'])->firstWhere('is_base_unit', true);
 
         $product = DB::transaction(function () use ($request, $validated, $baseUnit) {
-            // upload image
-            $image = $request->file('image');
-            $image->storeAs('public/products', $image->hashName());
+            $imageName = null;
+            if ($request->file('image')) {
+                $image = $request->file('image');
+                $image->storeAs('public/products', $image->hashName());
+                $imageName = $image->hashName();
+            }
 
             // create product
             $product = Product::create([
-                'image' => $image->hashName(),
+                'image' => $imageName,
                 'barcode' => $baseUnit['barcode'],
                 'sku' => $validated['sku'],
                 'title' => $validated['title'],
@@ -153,7 +157,9 @@ class ProductController extends Controller
 
             if ($request->file('image')) {
                 // remove old image
-                Storage::disk('local')->delete('public/products/'.basename($product->image));
+                if ($product->image) {
+                    Storage::disk('local')->delete('public/products/'.basename($product->image));
+                }
 
                 // upload new image
                 $image = $request->file('image');
@@ -184,7 +190,9 @@ class ProductController extends Controller
         $before = $this->productAuditPayload($product);
 
         // remove image
-        Storage::disk('local')->delete('public/products/'.basename($product->image));
+        if ($product->image) {
+            Storage::disk('local')->delete('public/products/'.basename($product->image));
+        }
 
         // delete
         $product->delete();
@@ -241,13 +249,13 @@ class ProductController extends Controller
 
         return [
             ...$this->auditLogService->only($product->toArray(), [
-            'title',
-            'barcode',
-            'sku',
-            'buy_price',
-            'sell_price',
-            'stock',
-            'category_id',
+                'title',
+                'barcode',
+                'sku',
+                'buy_price',
+                'sell_price',
+                'stock',
+                'category_id',
             ]),
             'units' => $product->units
                 ->map(fn (ProductUnit $unit) => $this->auditLogService->only($unit->toArray(), [
@@ -266,7 +274,7 @@ class ProductController extends Controller
     private function validatedProductData(Request $request, ?Product $product = null): array
     {
         $rules = [
-            'image' => [$product ? 'nullable' : 'required', 'image', 'max:2048'],
+            'image' => [$this->imageRuleRequirement($product), 'image', 'max:2048'],
             'sku' => ['required', 'string', 'max:255', Rule::unique('products', 'sku')->ignore($product?->id)],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
@@ -348,6 +356,17 @@ class ProductController extends Controller
         $validated['product_units'] = $this->normalizeProductUnits($validated['product_units']);
 
         return $validated;
+    }
+
+    private function imageRuleRequirement(?Product $product = null): string
+    {
+        if ($product) {
+            return 'nullable';
+        }
+
+        return Setting::productDisplayMode() === Setting::PRODUCT_DISPLAY_COMPACT_LIST
+            ? 'nullable'
+            : 'required';
     }
 
     private function normalizeProductUnits(array $units): array

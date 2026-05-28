@@ -68,9 +68,41 @@ const parseScannedBarcode = (value = "") => {
 
 const normalizeBarcode = (value = "") => String(value || "").trim().toLowerCase();
 
+const emptyPricingPreview = {
+    items: [],
+    summary: {
+        base_subtotal: 0,
+        promo_discount_total: 0,
+        subtotal_after_promo: 0,
+        voucher_discount_total: 0,
+        loyalty_discount_total: 0,
+        manual_discount_total: 0,
+        shipping_cost: 0,
+        grand_total: 0,
+    },
+};
+
+const sumCartPrices = (items = []) =>
+    items.reduce((total, item) => total + Number(item.price || 0), 0);
+
+const getCartUnitPrice = (item) => {
+    const quantity = Number(item?.qty || 0);
+
+    return (
+        Number(item?.product_unit?.sell_price || item?.productUnit?.sell_price || 0) ||
+        Number(item?.product?.sell_price || 0) ||
+        (quantity > 0 ? Number(item?.price || 0) / quantity : 0)
+    );
+};
+
+const getAxiosErrorMessage = (error, fallback) =>
+    error?.response?.data?.message ||
+    error?.response?.data?.errors?.message?.[0] ||
+    fallback;
+
 export default function Index({
-    carts = [],
-    carts_total = 0,
+    carts: initialCarts = [],
+    carts_total: initialCartsTotal = 0,
     heldCarts = [],
     customers = [],
     products = [],
@@ -84,9 +116,12 @@ export default function Index({
     const {
         auth,
         errors,
+        appSettings = {},
         lowStockNotifications = [],
         activeCashierShift,
     } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const canOpenShift = can("cashier-shifts-open");
 
@@ -96,6 +131,8 @@ export default function Index({
     const [isSearching, setIsSearching] = useState(false);
     const [addingProductId, setAddingProductId] = useState(null);
     const [removingItemId, setRemovingItemId] = useState(null);
+    const [carts, setCarts] = useState(initialCarts);
+    const [cartsTotal, setCartsTotal] = useState(initialCartsTotal);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [pricingPreview, setPricingPreview] = useState(initialPricingPreview);
     const [isLoadingPricing, setIsLoadingPricing] = useState(false);
@@ -116,8 +153,9 @@ export default function Index({
     const [selectedVoucherId, setSelectedVoucherId] = useState("");
     const [openingCashInput, setOpeningCashInput] = useState("");
     const [shiftNotesInput, setShiftNotesInput] = useState("");
-    const normalizedSelectedCategory =
-        selectedCategory === null ? null : Number(selectedCategory);
+    const qtyUpdateTimers = useRef({});
+    const qtyUpdateSnapshots = useRef({});
+    const qtyUpdateSequences = useRef({});
     const pricingItemsByCartId = useMemo(() => {
         const items = pricingPreview?.items || [];
 
@@ -130,6 +168,7 @@ export default function Index({
 
     // Ref for search input to enable keyboard focus
     const searchInputRef = useRef(null);
+    const handleAddToCartRef = useRef(null);
 
     // Set default payment method
     useEffect(() => {
@@ -139,6 +178,11 @@ export default function Index({
     useEffect(() => {
         setPricingPreview(initialPricingPreview);
     }, [initialPricingPreview]);
+
+    useEffect(() => {
+        setCarts(initialCarts);
+        setCartsTotal(initialCartsTotal);
+    }, [initialCarts, initialCartsTotal]);
 
     const findProductByBarcode = useCallback(
         (barcode) => {
@@ -194,7 +238,7 @@ export default function Index({
                 const baseQty = qty * unitConversionQty;
 
                 if (Number(product.stock || 0) >= baseQty) {
-                    handleAddToCart(product, scannedUnit, qty);
+                    handleAddToCartRef.current?.(product, scannedUnit, qty);
                     setSearchQuery("");
                     return true;
                 } else {
@@ -226,8 +270,8 @@ export default function Index({
         [shippingInput]
     );
     const baseSubtotal = useMemo(
-        () => Number(pricingPreview?.summary?.base_subtotal ?? carts_total ?? 0),
-        [pricingPreview, carts_total]
+        () => Number(pricingPreview?.summary?.base_subtotal ?? cartsTotal ?? 0),
+        [pricingPreview, cartsTotal]
     );
     const promoDiscount = useMemo(
         () => Number(pricingPreview?.summary?.promo_discount_total ?? 0),
@@ -259,26 +303,9 @@ export default function Index({
         () => carts.reduce((total, item) => total + Number(item.qty), 0),
         [carts]
     );
-    const pricingDependency = useMemo(
-        () => carts.map((item) => `${item.id}:${item.qty}`).join("|"),
-        [carts]
-    );
-
     useEffect(() => {
         if (carts.length === 0) {
-            setPricingPreview({
-                items: [],
-                summary: {
-                    base_subtotal: 0,
-                    promo_discount_total: 0,
-                    subtotal_after_promo: 0,
-                    voucher_discount_total: 0,
-                    loyalty_discount_total: 0,
-                    manual_discount_total: 0,
-                    shipping_cost: 0,
-                    grand_total: 0,
-                },
-            });
+            setPricingPreview(emptyPricingPreview);
 
             return;
         }
@@ -315,7 +342,6 @@ export default function Index({
         };
     }, [
         selectedCustomer?.id,
-        pricingDependency,
         discount,
         shipping,
         redeemPointsInput,
@@ -375,8 +401,41 @@ export default function Index({
         });
     };
 
+    const cartMutationPayload = useCallback(
+        () => ({
+            customer_id: selectedCustomer?.id ?? null,
+            discount,
+            shipping_cost: shipping,
+            redeem_points: Number(redeemPointsInput || 0),
+            customer_voucher_id: selectedVoucherId || null,
+        }),
+        [
+            selectedCustomer?.id,
+            discount,
+            shipping,
+            redeemPointsInput,
+            selectedVoucherId,
+        ]
+    );
+
+    const applyCartResponse = useCallback((payload = {}) => {
+        const nextCarts = payload.carts ?? [];
+
+        setCarts(nextCarts);
+        setCartsTotal(Number(payload.carts_total ?? sumCartPrices(nextCarts)));
+        setPricingPreview(payload.pricingPreview ?? emptyPricingPreview);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            Object.values(qtyUpdateTimers.current).forEach((timer) =>
+                clearTimeout(timer)
+            );
+        };
+    }, []);
+
     // Handle add product to cart
-    const handleAddToCart = async (product, selectedUnit = null, qty = 1) => {
+    const handleAddToCart = useCallback(async (product, selectedUnit = null, qty = 1) => {
         if (!product?.id) return;
         const unit =
             selectedUnit ||
@@ -384,56 +443,172 @@ export default function Index({
             product.units?.[0] ||
             null;
         const itemQty = Math.max(0.001, Number(qty) || 1);
+        const snapshot = { carts, cartsTotal, pricingPreview };
+        const unitId = unit?.id ?? null;
+        const unitPrice = Number(unit?.sell_price || product.sell_price || 0);
 
         setAddingProductId(product.id);
 
-        router.post(
-            route("transactions.addToCart"),
-            {
-                product_id: product.id,
-                product_unit_id: unit?.id ?? null,
-                qty: itemQty,
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success(
-                        `${formatQty(itemQty)} ${unit?.label || "unit"} ${
-                            product.title
-                        } ditambahkan`
-                    );
-                    setAddingProductId(null);
-                },
-                onError: () => {
-                    toast.error("Gagal menambahkan produk");
-                    setAddingProductId(null);
-                },
+        setCarts((currentCarts) => {
+            let matched = false;
+            const nextCarts = currentCarts.map((item) => {
+                const sameProduct = Number(item.product_id) === Number(product.id);
+                const sameUnit = unitId === null
+                    ? sameProduct
+                    : String(item.product_unit_id ?? "") === String(unitId);
+
+                if (!sameProduct || !sameUnit) {
+                    return item;
+                }
+
+                matched = true;
+                const nextQty = Number(item.qty || 0) + itemQty;
+
+                return {
+                    ...item,
+                    qty: nextQty,
+                    price: Math.round(unitPrice * nextQty),
+                };
+            });
+
+            if (!matched) {
+                nextCarts.unshift({
+                    id: `temp-${product.id}-${Date.now()}`,
+                    cashier_id: auth?.user?.id ?? null,
+                    product_id: product.id,
+                    product_unit_id: unitId,
+                    unit_label: unit?.label || "unit",
+                    unit_conversion_qty: unit?.conversion_qty || 1,
+                    qty: itemQty,
+                    price: Math.round(unitPrice * itemQty),
+                    product,
+                    product_unit: unit,
+                });
             }
-        );
-    };
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            return nextCarts;
+        });
+
+        try {
+            const response = await axios.post(route("transactions.addToCart"), {
+                product_id: product.id,
+                product_unit_id: unitId,
+                qty: itemQty,
+                ...cartMutationPayload(),
+            });
+
+            applyCartResponse(response.data);
+            toast.success(
+                `${formatQty(itemQty)} ${unit?.label || "unit"} ${
+                    product.title
+                } ditambahkan`
+            );
+        } catch (error) {
+            setCarts(snapshot.carts);
+            setCartsTotal(snapshot.cartsTotal);
+            setPricingPreview(snapshot.pricingPreview);
+            toast.error(getAxiosErrorMessage(error, "Gagal menambahkan produk"));
+        } finally {
+            setAddingProductId(null);
+        }
+    }, [
+        applyCartResponse,
+        auth?.user?.id,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
+
+    useEffect(() => {
+        handleAddToCartRef.current = handleAddToCart;
+    }, [handleAddToCart]);
 
     // Handle update cart quantity
     const [updatingCartId, setUpdatingCartId] = useState(null);
 
-    const handleUpdateQty = (cartId, newQty) => {
+    const handleUpdateQty = useCallback((cartId, newQty) => {
         if (newQty < 1) return;
         setUpdatingCartId(cartId);
 
-        router.patch(
-            route("transactions.updateCart", cartId),
-            { qty: newQty },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
+        if (!qtyUpdateSnapshots.current[cartId]) {
+            qtyUpdateSnapshots.current[cartId] = {
+                carts,
+                cartsTotal,
+                pricingPreview,
+            };
+        }
+
+        setCarts((currentCarts) => {
+            const nextCarts = currentCarts.map((item) => {
+                if (String(item.id) !== String(cartId)) {
+                    return item;
+                }
+
+                return {
+                    ...item,
+                    qty: newQty,
+                    price: Math.round(getCartUnitPrice(item) * newQty),
+                };
+            });
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            return nextCarts;
+        });
+
+        clearTimeout(qtyUpdateTimers.current[cartId]);
+        qtyUpdateSequences.current[cartId] =
+            (qtyUpdateSequences.current[cartId] || 0) + 1;
+        const sequence = qtyUpdateSequences.current[cartId];
+
+        qtyUpdateTimers.current[cartId] = setTimeout(async () => {
+            try {
+                const response = await axios.patch(
+                    route("transactions.updateCart", cartId),
+                    {
+                        qty: newQty,
+                        ...cartMutationPayload(),
+                    }
+                );
+
+                if (qtyUpdateSequences.current[cartId] !== sequence) {
+                    return;
+                }
+
+                applyCartResponse(response.data);
+                delete qtyUpdateSnapshots.current[cartId];
+            } catch (error) {
+                if (qtyUpdateSequences.current[cartId] !== sequence) {
+                    return;
+                }
+
+                const snapshot = qtyUpdateSnapshots.current[cartId];
+
+                if (snapshot) {
+                    setCarts(snapshot.carts);
+                    setCartsTotal(snapshot.cartsTotal);
+                    setPricingPreview(snapshot.pricingPreview);
+                    delete qtyUpdateSnapshots.current[cartId];
+                }
+
+                toast.error(getAxiosErrorMessage(error, "Gagal update quantity"));
+            } finally {
+                if (qtyUpdateSequences.current[cartId] === sequence) {
                     setUpdatingCartId(null);
-                },
-                onError: (errors) => {
-                    toast.error(errors?.message || "Gagal update quantity");
-                    setUpdatingCartId(null);
-                },
+                    delete qtyUpdateTimers.current[cartId];
+                }
             }
-        );
-    };
+        }, 250);
+    }, [
+        applyCartResponse,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
 
     // Handle numpad confirm for cash input
     const handleNumpadConfirm = useCallback((value) => {
@@ -516,21 +691,49 @@ export default function Index({
     }, [carts, selectedCustomer, mobileView, showShortcuts]);
 
     // Handle remove from cart
-    const handleRemoveFromCart = (cartId) => {
+    const handleRemoveFromCart = useCallback(async (cartId) => {
+        const snapshot = { carts, cartsTotal, pricingPreview };
         setRemovingItemId(cartId);
 
-        router.delete(route("transactions.destroyCart", cartId), {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Item dihapus dari keranjang");
-                setRemovingItemId(null);
-            },
-            onError: () => {
-                toast.error("Gagal menghapus item");
-                setRemovingItemId(null);
-            },
+        setCarts((currentCarts) => {
+            const nextCarts = currentCarts.filter(
+                (item) => String(item.id) !== String(cartId)
+            );
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            if (nextCarts.length === 0) {
+                setPricingPreview(emptyPricingPreview);
+            }
+
+            return nextCarts;
         });
-    };
+
+        try {
+            const response = await axios.delete(
+                route("transactions.destroyCart", cartId),
+                {
+                    data: cartMutationPayload(),
+                }
+            );
+
+            applyCartResponse(response.data);
+            toast.success("Item dihapus dari keranjang");
+        } catch (error) {
+            setCarts(snapshot.carts);
+            setCartsTotal(snapshot.cartsTotal);
+            setPricingPreview(snapshot.pricingPreview);
+            toast.error(getAxiosErrorMessage(error, "Gagal menghapus item"));
+        } finally {
+            setRemovingItemId(null);
+        }
+    }, [
+        applyCartResponse,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
 
     // Handle submit transaction
     const handleSubmitTransaction = () => {
@@ -601,30 +804,6 @@ export default function Index({
             }
         );
     };
-
-    // Filter products including out of stock
-    const allProducts = useMemo(() => {
-        return products.filter((product) => {
-            const query = searchQuery.toLowerCase();
-            const matchesCategory =
-                normalizedSelectedCategory === null ||
-                Number(product.category_id) === normalizedSelectedCategory;
-            const matchesSearch =
-                !searchQuery ||
-                product.title
-                    .toLowerCase()
-                    .includes(query) ||
-                product.barcode
-                    ?.toLowerCase()
-                    .includes(query) ||
-                product.units?.some(
-                    (unit) =>
-                        unit.label?.toLowerCase().includes(query) ||
-                        unit.barcode?.toLowerCase().includes(query)
-                );
-            return matchesCategory && matchesSearch;
-        });
-    }, [products, normalizedSelectedCategory, searchQuery]);
 
     if (!activeCashierShift) {
         return (
@@ -746,7 +925,7 @@ export default function Index({
                     }`}
                 >
                     <ProductGrid
-                        products={allProducts}
+                        products={products}
                         categories={categories}
                         selectedCategory={selectedCategory}
                         onCategoryChange={(categoryId) =>
@@ -859,24 +1038,26 @@ export default function Index({
                                             key={item.id}
                                             className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 group"
                                         >
-                                            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
-                                                {item.product?.image ? (
-                                                    <img
-                                                        src={getProductImageUrl(
-                                                            item.product.image
-                                                        )}
-                                                        alt={item.product.title}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <IconShoppingCart
-                                                            size={14}
-                                                            className="text-slate-400"
+                                            {!isCompactMode && (
+                                                <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
+                                                    {item.product?.image ? (
+                                                        <img
+                                                            src={getProductImageUrl(
+                                                                item.product.image
+                                                            )}
+                                                            alt={item.product.title}
+                                                            className="w-full h-full object-cover"
                                                         />
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <IconShoppingCart
+                                                                size={14}
+                                                                className="text-slate-400"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                                                     {item.product?.title ||

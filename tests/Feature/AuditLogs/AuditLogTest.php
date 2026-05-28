@@ -104,26 +104,41 @@ class AuditLogTest extends TestCase
 
         $this->actingAs($user)->post(route('products.store'), [
             'image' => UploadedFile::fake()->image('product.png'),
-            'barcode' => 'BRCD-'.Str::upper(Str::random(6)),
             'sku' => 'SKU-'.Str::upper(Str::random(6)),
             'title' => 'Produk Audit',
             'description' => 'Produk Audit',
             'category_id' => $category->id,
-            'buy_price' => 10000,
-            'sell_price' => 15000,
             'stock' => 7,
+            'product_units' => [
+                [
+                    'label' => 'pcs',
+                    'conversion_qty' => 1,
+                    'is_base_unit' => true,
+                    'buy_price' => 10000,
+                    'sell_price' => 15000,
+                    'barcode' => 'BRCD-'.Str::upper(Str::random(6)),
+                ],
+            ],
         ])->assertRedirect(route('products.index'));
 
-        $product = Product::firstOrFail();
+        $product = Product::with('baseUnit')->firstOrFail();
 
         $this->actingAs($user)->put(route('products.update', $product), [
-            'barcode' => $product->barcode,
             'sku' => $product->sku,
             'title' => 'Produk Audit Final',
             'description' => 'Produk Audit Baru',
             'category_id' => $category->id,
-            'buy_price' => 12000,
-            'sell_price' => 18000,
+            'product_units' => [
+                [
+                    'id' => $product->baseUnit->id,
+                    'label' => 'pcs',
+                    'conversion_qty' => 1,
+                    'is_base_unit' => true,
+                    'buy_price' => 12000,
+                    'sell_price' => 18000,
+                    'barcode' => $product->barcode,
+                ],
+            ],
         ])->assertRedirect(route('products.index'));
 
         $this->actingAs($user)

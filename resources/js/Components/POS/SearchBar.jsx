@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { usePage } from "@inertiajs/react";
 import { IconSearch, IconX, IconBarcode } from "@tabler/icons-react";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 
@@ -19,6 +20,9 @@ export default function SearchBar({
     placeholder = "Cari produk atau scan barcode...",
     autoFocus = false,
 }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const [isFocused, setIsFocused] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef(null);
@@ -160,25 +164,26 @@ export default function SearchBar({
                                         }
                                     `}
                                 >
-                                    {/* Product Image */}
-                                    <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                        {product.image ? (
-                                            <img
-                                                src={getProductImageUrl(
-                                                    product.image
-                                                )}
-                                                alt={product.title}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <IconBarcode
-                                                    size={20}
-                                                    className="text-slate-400"
+                                    {!isCompactMode && (
+                                        <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+                                            {product.image ? (
+                                                <img
+                                                    src={getProductImageUrl(
+                                                        product.image
+                                                    )}
+                                                    alt={product.title}
+                                                    className="w-full h-full object-cover"
                                                 />
-                                            </div>
-                                        )}
-                                    </div>
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <IconBarcode
+                                                        size={20}
+                                                        className="text-slate-400"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Product Info */}
                                     <div className="flex-1 min-w-0">

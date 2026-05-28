@@ -12,7 +12,9 @@ import {
 } from "@tabler/icons-react";
 
 export default function Edit({ category }) {
-    const { errors } = usePage().props;
+    const { errors, appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
 
     const { data, setData, post, processing } = useForm({
         id: category.id,
@@ -23,7 +25,7 @@ export default function Edit({ category }) {
     });
 
     const [imagePreview, setImagePreview] = useState(
-        category.image ? `/storage/categories/${category.image}` : null
+        category.image || null
     );
 
     const handleImageChange = (e) => {
@@ -64,7 +66,12 @@ export default function Edit({ category }) {
             <form onSubmit={submit}>
                 <div className="max-w-2xl">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div
+                            className={`grid grid-cols-1 gap-6 ${
+                                isCompactMode ? "" : "md:grid-cols-2"
+                            }`}
+                        >
+                            {!isCompactMode && (
                             <div>
                                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                                     <IconPhoto size={16} />
@@ -91,6 +98,7 @@ export default function Edit({ category }) {
                                     accept="image/*"
                                 />
                             </div>
+                            )}
 
                             <div className="space-y-4">
                                 <Input

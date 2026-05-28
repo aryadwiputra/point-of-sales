@@ -79,6 +79,201 @@ class PricingRuleTest extends TestCase
         ]);
     }
 
+    public function test_create_pricing_rule_ignores_hidden_relation_rows_from_form(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'pricing-rules-access',
+            'pricing-rules-create',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('pricing-rules.store'), [
+                'name' => 'Diskon Kasir',
+                'kind' => PricingRule::KIND_STANDARD_DISCOUNT,
+                'is_active' => true,
+                'priority' => 100,
+                'target_type' => 'all',
+                'customer_scope' => 'all',
+                'discount_type' => PricingRule::TYPE_PERCENTAGE,
+                'discount_value' => 5,
+                'preview_quantity_multiplier' => 1,
+                'qty_breaks' => [
+                    ['min_qty' => '3', 'discount_type' => PricingRule::TYPE_FIXED_PRICE, 'discount_value' => '', 'sort_order' => '0'],
+                ],
+                'bundle_items' => [
+                    ['product_id' => '', 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => '', 'quantity' => '1', 'sort_order' => '1'],
+                ],
+                'buy_get_items' => [
+                    ['product_id' => '', 'role' => 'buy', 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => '', 'role' => 'get', 'quantity' => '1', 'sort_order' => '1'],
+                ],
+            ]);
+
+        $response->assertRedirect(route('pricing-rules.index'));
+        $this->assertDatabaseHas('pricing_rules', [
+            'name' => 'Diskon Kasir',
+            'kind' => PricingRule::KIND_STANDARD_DISCOUNT,
+            'discount_value' => 5,
+        ]);
+        $this->assertDatabaseMissing('pricing_rule_bundle_items', [
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseMissing('pricing_rule_buy_get_items', [
+            'quantity' => 1,
+        ]);
+    }
+
+    public function test_create_buy_x_get_y_rule_does_not_require_discount_value_from_form(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'pricing-rules-access',
+            'pricing-rules-create',
+        ]);
+        $buyProduct = $this->createProduct('Produk Beli');
+        $getProduct = $this->createProduct('Produk Bonus');
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('pricing-rules.store'), [
+                'name' => 'Beli Satu Gratis Satu',
+                'kind' => PricingRule::KIND_BUY_X_GET_Y,
+                'is_active' => true,
+                'priority' => 100,
+                'target_type' => 'all',
+                'customer_scope' => 'all',
+                'preview_quantity_multiplier' => 1,
+                'buy_get_items' => [
+                    ['product_id' => $buyProduct->id, 'role' => 'buy', 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => $getProduct->id, 'role' => 'get', 'quantity' => '1', 'sort_order' => '1'],
+                ],
+            ]);
+
+        $response->assertRedirect(route('pricing-rules.index'));
+        $this->assertDatabaseHas('pricing_rules', [
+            'name' => 'Beli Satu Gratis Satu',
+            'kind' => PricingRule::KIND_BUY_X_GET_Y,
+            'discount_type' => PricingRule::TYPE_FIXED_AMOUNT,
+            'discount_value' => 0,
+        ]);
+        $this->assertDatabaseHas('pricing_rule_buy_get_items', [
+            'product_id' => $buyProduct->id,
+            'role' => 'buy',
+        ]);
+        $this->assertDatabaseHas('pricing_rule_buy_get_items', [
+            'product_id' => $getProduct->id,
+            'role' => 'get',
+        ]);
+    }
+
+    public function test_create_bundle_rule_ignores_hidden_discount_type_from_form(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'pricing-rules-access',
+            'pricing-rules-create',
+        ]);
+        $productA = $this->createProduct('Produk Paket A');
+        $productB = $this->createProduct('Produk Paket B');
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('pricing-rules.store'), [
+                'name' => 'Paket Hemat',
+                'kind' => PricingRule::KIND_BUNDLE_PRICE,
+                'is_active' => true,
+                'priority' => 100,
+                'target_type' => 'all',
+                'customer_scope' => 'all',
+                'discount_type' => PricingRule::TYPE_PERCENTAGE,
+                'discount_value' => 100000,
+                'preview_quantity_multiplier' => 1,
+                'bundle_items' => [
+                    ['product_id' => $productA->id, 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => $productB->id, 'quantity' => '1', 'sort_order' => '1'],
+                ],
+            ]);
+
+        $response->assertRedirect(route('pricing-rules.index'));
+        $this->assertDatabaseHas('pricing_rules', [
+            'name' => 'Paket Hemat',
+            'kind' => PricingRule::KIND_BUNDLE_PRICE,
+            'discount_type' => PricingRule::TYPE_FIXED_PRICE,
+            'discount_value' => 100000,
+        ]);
+        $this->assertDatabaseHas('pricing_rule_bundle_items', [
+            'product_id' => $productA->id,
+            'quantity' => 1,
+        ]);
+        $this->assertDatabaseHas('pricing_rule_bundle_items', [
+            'product_id' => $productB->id,
+            'quantity' => 1,
+        ]);
+    }
+
+    public function test_create_permission_user_can_run_pricing_rule_draft_preview(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'pricing-rules-create',
+        ]);
+        $this->createProduct('Produk Preview');
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson(route('pricing-rules.preview'), [
+                'name' => 'Preview Diskon',
+                'kind' => PricingRule::KIND_STANDARD_DISCOUNT,
+                'is_active' => true,
+                'priority' => 100,
+                'target_type' => 'all',
+                'customer_scope' => 'all',
+                'discount_type' => PricingRule::TYPE_PERCENTAGE,
+                'discount_value' => 10,
+                'preview_quantity_multiplier' => 1,
+                'bundle_items' => [
+                    ['product_id' => '', 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => '', 'quantity' => '1', 'sort_order' => '1'],
+                ],
+                'buy_get_items' => [
+                    ['product_id' => '', 'role' => 'buy', 'quantity' => '1', 'sort_order' => '0'],
+                    ['product_id' => '', 'role' => 'get', 'quantity' => '1', 'sort_order' => '1'],
+                ],
+            ]);
+
+        $response->assertOk();
+        $this->assertSame(6000, data_get($response->json(), 'data.summary.promo_discount_total'));
+    }
+
+    public function test_pricing_rule_draft_preview_uses_selected_product_target(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'pricing-rules-access',
+        ]);
+        $otherProduct = $this->createProduct('Produk Lain');
+        $targetProduct = $this->createProduct('Produk Target');
+
+        $response = $this
+            ->actingAs($user)
+            ->postJson(route('pricing-rules.preview'), [
+                'name' => 'Preview Produk Target',
+                'kind' => PricingRule::KIND_STANDARD_DISCOUNT,
+                'is_active' => true,
+                'priority' => 100,
+                'target_type' => PricingRule::TARGET_PRODUCT,
+                'product_id' => $targetProduct->id,
+                'customer_scope' => 'all',
+                'discount_type' => PricingRule::TYPE_PERCENTAGE,
+                'discount_value' => 10,
+                'preview_quantity_multiplier' => 1,
+            ]);
+
+        $response->assertOk();
+        $this->assertCount(1, data_get($response->json(), 'data.items'));
+        $this->assertSame($targetProduct->id, data_get($response->json(), 'data.items.0.product_id'));
+        $this->assertNotSame($otherProduct->id, data_get($response->json(), 'data.items.0.product_id'));
+        $this->assertSame(6000, data_get($response->json(), 'data.summary.promo_discount_total'));
+    }
+
     public function test_pricing_preview_respects_customer_scope(): void
     {
         $cashier = $this->createUserWithPermissions([

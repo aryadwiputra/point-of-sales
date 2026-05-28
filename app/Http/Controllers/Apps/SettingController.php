@@ -8,6 +8,7 @@ use App\Services\AuditLogService;
 use App\Services\LoyaltyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SettingController extends Controller
@@ -62,6 +63,7 @@ class SettingController extends Controller
             'store_email' => Setting::get('store_email', ''),
             'store_website' => Setting::get('store_website', ''),
             'store_city' => Setting::get('store_city', ''),
+            'product_display_mode' => Setting::productDisplayMode(),
         ];
 
         return Inertia::render('Dashboard/Settings/Store', [
@@ -82,6 +84,7 @@ class SettingController extends Controller
             'store_website' => 'nullable|string|max:255',
             'store_city' => 'nullable|string|max:255',
             'store_logo' => 'nullable|image|max:2048',
+            'product_display_mode' => ['required', Rule::in(Setting::PRODUCT_DISPLAY_MODES)],
         ]);
 
         $before = [
@@ -92,6 +95,7 @@ class SettingController extends Controller
             'store_website' => Setting::get('store_website', ''),
             'store_city' => Setting::get('store_city', ''),
             'store_logo_changed' => false,
+            'product_display_mode' => Setting::productDisplayMode(),
         ];
 
         $logoPath = Setting::get('store_logo');
@@ -112,6 +116,7 @@ class SettingController extends Controller
         Setting::set('store_website', $request->store_website, 'Website toko');
         Setting::set('store_city', $request->store_city, 'Kota/Kabupaten toko');
         Setting::set('store_logo', $logoPath, 'Logo toko');
+        Setting::set('product_display_mode', $request->product_display_mode, 'Mode tampilan produk dan kategori');
 
         $this->auditLogService->log(
             event: 'store.setting.updated',
@@ -127,6 +132,7 @@ class SettingController extends Controller
                 'store_website' => $request->store_website,
                 'store_city' => $request->store_city,
                 'store_logo_changed' => $logoChanged,
+                'product_display_mode' => $request->product_display_mode,
             ],
         );
 

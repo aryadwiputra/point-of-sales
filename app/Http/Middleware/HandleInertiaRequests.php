@@ -6,6 +6,7 @@ use App\Models\CashierShift;
 use App\Models\Payable;
 use App\Models\Product;
 use App\Models\Receivable;
+use App\Models\Setting;
 use App\Services\CashierShiftService;
 use App\Services\PayableAgingService;
 use App\Services\ReceivableService;
@@ -155,6 +156,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
                 'super' => $request->user() ? $request->user()->isSuperAdmin() : false,
+            ],
+            'appSettings' => [
+                'product_display_mode' => Schema::hasTable('settings')
+                    ? Setting::productDisplayMode()
+                    : Setting::PRODUCT_DISPLAY_IMAGE_GRID,
             ],
             'lowStockNotifications' => $lowStockNotifications,
             'receivableNotifications' => $receivableNotifications,

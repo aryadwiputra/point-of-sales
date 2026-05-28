@@ -81,11 +81,15 @@ function CategoryCard({ category, canUpdate, canDelete }) {
 }
 
 export default function Index({ categories }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid");
     const canCreateCategories = can("categories-create");
     const canEditCategories = can("categories-edit");
     const canDeleteCategories = can("categories-delete");
+    const effectiveViewMode = isCompactMode ? "list" : viewMode;
 
     return (
         <>
@@ -131,34 +135,38 @@ export default function Index({ categories }) {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setViewMode("grid")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "grid"
-                                ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
-                        }`}
-                        title="Grid View"
-                    >
-                        <IconLayoutGrid size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode("list")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "list"
-                                ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
-                        }`}
-                        title="List View"
-                    >
-                        <IconList size={20} />
-                    </button>
+                    {!isCompactMode && (
+                        <>
+                            <button
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "grid"
+                                        ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
+                                }`}
+                                title="Grid View"
+                            >
+                                <IconLayoutGrid size={20} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "list"
+                                        ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
+                                }`}
+                                title="List View"
+                            >
+                                <IconList size={20} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Content */}
             {categories.data.length > 0 ? (
-                viewMode === "grid" ? (
+                effectiveViewMode === "grid" ? (
                     /* Grid View */
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {categories.data.map((category) => (
@@ -195,22 +203,24 @@ export default function Index({ categories }) {
                                         </Table.Td>
                                         <Table.Td>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                                    {category.image ? (
-                                                        <img
-                                                            src={category.image}
-                                                            alt={category.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <IconCategory
-                                                                size={20}
-                                                                className="text-slate-400"
+                                                {!isCompactMode && (
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+                                                        {category.image ? (
+                                                            <img
+                                                                src={category.image}
+                                                                alt={category.name}
+                                                                className="w-full h-full object-cover"
                                                             />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <IconCategory
+                                                                    size={20}
+                                                                    className="text-slate-400"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                                                     {category.name}
                                                 </p>
