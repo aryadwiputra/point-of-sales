@@ -1,253 +1,399 @@
-# Laravel 13 Coding Standards
+# Rules of Code - Pragmatic Service Repository Pattern
 
-## Base Service Repository Pattern Architecture
-
-Version: 2.0  
-Framework: Laravel 13  
+Version: 3.0
+Framework: Laravel 12, compatible with Laravel 13 direction
 PHP Standard: PSR-12
 
 ---
 
-# Table of Contents
+## 1. Core Principles
 
-1. General Rules
-2. Project Structure
-3. Naming Convention
-4. Controller Rules
-5. BaseRepository Pattern
-6. Repository Rules
-7. BaseService Pattern
-8. Service Rules
-9. DTO Rules
-10. Validation Rules
-11. Response Rules
-12. Database Rules
-13. Enum Rules
-14. Error Handling
-15. Query Rules
-16. Security Rules
-17. Logging Rules
-18. API Standards
-19. Git Standards
-20. Testing Rules
-21. Clean Code Rules
-22. Architecture Flow
-23. Full Example Flow
-24. Forbidden Rules
-25. Recommended Packages
-26. Final Principles
-
----
-
-# 1. General Rules
-
-## 1.1 PHP Standards
-
-Semua kode wajib mengikuti:
+Semua kode backend wajib mengikuti:
 
 - PSR-12
 - SOLID Principles
-- DRY (Don't Repeat Yourself)
-- KISS (Keep It Simple)
-- Clean Architecture
+- DRY, KISS, dan readable code
 - Convention over Configuration
+- Thin Controller
+- Service sebagai application boundary
+- Repository dan DTO digunakan secara pragmatis, bukan dogmatis
+
+Tujuan utama aturan ini adalah menjaga codebase POS tetap:
+
+- predictable
+- maintainable
+- testable
+- scalable
+- tidak over-engineered untuk kebutuhan kecil
 
 ---
 
-## 1.2 Formatter
+## 2. Project Structure
 
-Gunakan Laravel Pint.
+Struktur utama yang direkomendasikan:
 
-Install:
-
-```bash
-composer require laravel/pint --dev
-```
-
-````
-
-Run formatter:
-
-```bash id="t2d8fk"
-./vendor/bin/pint
-```
-
----
-
-## 1.3 Strict Typing
-
-WAJIB menggunakan strict typing.
-
-```php id="tb99x0"
-declare(strict_types=1);
-```
-
----
-
-# 2. Project Structure
-
-Gunakan struktur berikut:
-
-```text id="7h9wdb"
+```text
 app/
-├── DTOs/
-├── Enums/
-├── Exceptions/
-├── Helpers/
-├── Http/
-│   ├── Controllers/
-│   ├── Middleware/
-│   ├── Requests/
-│   └── Resources/
-├── Models/
-├── Repositories/
-│   ├── BaseRepository.php
-│   ├── UserRepository.php
-│   └── ProductRepository.php
-├── Services/
-│   ├── BaseService.php
-│   ├── User/
-│   │   ├── CreateUserService.php
-│   │   ├── UpdateUserService.php
-│   │   └── DeleteUserService.php
-├── Traits/
-├── Policies/
-└── Providers/
++-- DTOs/
++-- Enums/
++-- Exceptions/
++-- Helpers/
++-- Http/
+|   +-- Controllers/
+|   +-- Middleware/
+|   +-- Requests/
+|   |   +-- Category/
+|   |   |   +-- StoreCategoryRequest.php
+|   |   |   +-- UpdateCategoryRequest.php
+|   |   +-- Region/
+|   |   |   +-- GetRegenciesRequest.php
+|   |   |   +-- GetDistrictsRequest.php
+|   |   +-- Supplier/
+|   |       +-- StoreSupplierRequest.php
+|   +-- Resources/
++-- Models/
++-- Repositories/
+|   +-- BaseRepository.php
+|   +-- ProductRepository.php
+|   +-- TransactionRepository.php
++-- Services/
+|   +-- BaseService.php
+|   +-- Queries/
+|   |   +-- RegionQueryService.php
+|   |   +-- DashboardSummaryQueryService.php
+|   +-- Products/
+|   |   +-- CreateProductService.php
+|   |   +-- UpdateProductService.php
+|   +-- Transactions/
+|       +-- CheckoutTransactionService.php
++-- Traits/
++-- Policies/
++-- Providers/
 ```
+
+Catatan:
+
+- `Repositories/` tidak wajib berisi repository untuk setiap model.
+- `Services/Queries/` digunakan untuk read-only lookup atau page payload yang ringan.
+- `DTOs/` digunakan hanya saat payload cukup kompleks atau butuh type safety tinggi.
 
 ---
 
-# 3. Naming Convention
+## 3. Naming Convention
 
-## 3.1 Controller
+### 3.1 Controller
 
 Gunakan suffix `Controller`.
 
-```php id="t2c0wm"
-UserController
-AuthController
-OrderController
+```php
+CategoryController
+TransactionController
+PaymentWebhookController
 ```
 
----
-
-## 3.2 Repository
-
-Gunakan suffix `Repository`.
-
-```php id="xvrh5y"
-UserRepository
-OrderRepository
-```
-
----
-
-## 3.3 Service
-
-Gunakan suffix `Service`.
-
-```php id="4wrpq0"
-CreateUserService
-UpdateUserService
-DeleteUserService
-```
-
----
-
-## 3.4 DTO
-
-Gunakan suffix `Dto`.
-
-```php id="k7mrm6"
-CreateUserDto
-UpdateOrderDto
-```
-
----
-
-## 3.5 Request Validation
+### 3.2 Request
 
 Gunakan suffix `Request`.
 
-```php id="qaq6p9"
-StoreUserRequest
+```php
+StoreSupplierRequest
 UpdateProductRequest
+GetRegenciesRequest
 ```
+
+Simpan request di folder domain agar mudah dicari.
+
+```text
+app/Http/Requests/Category/StoreCategoryRequest.php
+app/Http/Requests/Supplier/UpdateSupplierRequest.php
+app/Http/Requests/Region/GetRegenciesRequest.php
+```
+
+Namespace mengikuti folder domain.
+
+```php
+App\Http\Requests\Category\StoreCategoryRequest
+App\Http\Requests\Supplier\UpdateSupplierRequest
+App\Http\Requests\Region\GetRegenciesRequest
+```
+
+### 3.3 Command / Use-Case Service
+
+Gunakan suffix `Service` dengan nama action yang jelas.
+
+```php
+CreateSupplierService
+UpdateCategoryService
+CheckoutTransactionService
+CompleteSalesReturnService
+```
+
+### 3.4 Query Service
+
+Gunakan suffix `QueryService`.
+
+```php
+RegionQueryService
+SupplierIndexQueryService
+DashboardSummaryQueryService
+```
+
+### 3.5 Repository
+
+Gunakan suffix `Repository`.
+
+```php
+ProductRepository
+TransactionRepository
+SalesReturnRepository
+```
+
+### 3.6 DTO
+
+Gunakan suffix `Dto`.
+
+```php
+CheckoutTransactionDto
+CreateSalesReturnDto
+UpdateProductDto
+```
+
+### 3.7 Trait
+
+Gunakan suffix `Trait` atau nama behavior yang sangat jelas.
+
+```php
+UploadsImagesTrait
+```
+
+Trait hanya dibuat jika ada reusable behavior nyata, bukan sekadar memindahkan kode.
 
 ---
 
-## 3.6 API Resource
+## 4. Controller Rules
 
-Gunakan suffix `Resource`.
-
-```php id="zhbrvj"
-UserResource
-OrderResource
-```
-
----
-
-# 4. Controller Rules
-
-## 4.1 Controller Harus Thin
+Controller wajib tipis.
 
 Controller hanya bertanggung jawab untuk:
 
 - menerima request
-- memanggil service
-- return response
+- menggunakan FormRequest untuk validasi
+- membangun DTO jika memang diperlukan
+- memanggil Service
+- mengembalikan response, redirect, Inertia page, atau JSON
 
-Controller DILARANG:
+Controller dilarang:
 
-- query database
-- business logic
-- manipulasi data kompleks
+- query Model langsung
+- memanggil Repository langsung
+- menjalankan business logic
+- menjalankan workflow transaksi database
+- melakukan manipulasi data kompleks
 
----
+Benar:
 
-## 4.2 Controller Example
+```php
+public function store(
+    StoreSupplierRequest $request,
+    CreateSupplierService $service
+) {
+    $service->execute($request->validated());
 
-```php id="fs2x4p"
-class UserController extends Controller
+    return back()->with('success', 'Supplier berhasil ditambahkan.');
+}
+```
+
+Salah:
+
+```php
+public function store(Request $request)
 {
-    public function store(
-        StoreUserRequest $request,
-        CreateUserService $service
-    ) {
-        return response()->json(
-            $service->execute(
-                new CreateUserDto(
-                    ...$request->validated()
-                )
-            )
-        );
-    }
+    $data = $request->validate([...]);
+
+    Supplier::create($data);
+
+    return back();
 }
 ```
 
 ---
 
-# 5. BaseRepository Pattern
+## 5. Service Rules
 
-## 5.1 Semua Repository WAJIB Extends BaseRepository
+Service adalah batas utama aplikasi.
 
-Repository tidak perlu membuat fungsi CRUD dasar berulang.
+Service bertanggung jawab untuk:
 
-Semua CRUD standard disediakan oleh `BaseRepository`.
+- business logic
+- domain validation
+- workflow mutation
+- orchestration antar repository/service
+- transaction boundary
+- pemanggilan external gateway
+- audit log untuk perubahan penting
+
+Service boleh berbentuk:
+
+- command/use-case service untuk aksi mutation atau workflow bisnis
+- query service untuk read-only lookup atau page payload
+
+Service action-based direkomendasikan untuk domain besar, tetapi modul kecil boleh memakai service yang lebih ringkas selama tidak menjadi god service.
+
+Contoh domain besar yang sebaiknya memakai service action-based:
+
+- transaction checkout
+- sales return completion
+- stock opname finalization
+- product creation/update with units and image
+- payment webhook handling
+- receivable/payable payment
+
+Contoh modul kecil yang boleh lebih ringkas:
+
+- region lookup
+- low-stock notification read marker
+- simple settings payload
 
 ---
 
-## 5.2 BaseRepository Structure
+## 6. QueryService Pattern
 
-```php id="e6zqax"
+QueryService digunakan untuk kebutuhan read-only yang kecil, spesifik, atau lebih cocok sebagai page payload.
+
+QueryService boleh mengakses Model langsung jika:
+
+- query bersifat read-only
+- query kecil dan spesifik
+- tidak ada mutation
+- tidak ada business workflow
+- tidak ada kebutuhan reuse lintas banyak service
+
+Lokasi:
+
+```text
+app/Services/Queries/RegionQueryService.php
+app/Services/Queries/DashboardSummaryQueryService.php
+```
+
+Atau jika lebih natural secara domain:
+
+```text
+app/Services/Suppliers/SupplierIndexQueryService.php
+```
+
+Contoh:
+
+```php
 <?php
+
+declare(strict_types=1);
+
+namespace App\Services\Queries;
+
+use Illuminate\Support\Collection;
+use Laravolt\Indonesia\Models\City;
+
+class RegionQueryService
+{
+    public function regencies(string $provinceCode): Collection
+    {
+        return City::query()
+            ->where('province_code', $provinceCode)
+            ->select('code', 'name')
+            ->orderBy('name')
+            ->get();
+    }
+}
+```
+
+Controller tetap hanya memanggil service:
+
+```php
+public function regencies(
+    GetRegenciesRequest $request,
+    RegionQueryService $service
+) {
+    return $service->regencies($request->validated('province_id'));
+}
+```
+
+QueryService dilarang:
+
+- membuat, mengubah, atau menghapus data
+- menjalankan domain workflow
+- menyimpan audit log mutation
+- menjadi tempat business rule kompleks
+
+Jika QueryService mulai kompleks atau reusable lintas domain, pindahkan data access-nya ke Repository.
+
+---
+
+## 7. Repository Rules
+
+Repository tidak wajib untuk semua model.
+
+Repository digunakan jika memberi nilai nyata, misalnya:
+
+- domain besar
+- query reusable
+- query kompleks
+- pagination/filter/sorting yang dipakai banyak tempat
+- eager loading yang perlu distandarkan
+- lock for update
+- aggregate query penting
+- operasi data yang dipakai banyak service
+
+Repository hanya bertanggung jawab untuk:
+
+- data access
+- query builder
+- eager loading
+- filtering
+- pagination
+- sorting
+- locking
+- aggregate database query
+
+Repository dilarang:
+
+- business logic
+- response formatting
+- validation request
+- redirect/Inertia/JSON response
+- audit wording
+
+Controller tidak boleh memanggil Repository langsung.
+
+Flow yang benar:
+
+```text
+Controller -> Service -> Repository -> Model -> Database
+```
+
+Flow yang dilarang:
+
+```text
+Controller -> Repository
+Controller -> Model
+```
+
+---
+
+## 8. BaseRepository Pattern
+
+Gunakan `BaseRepository` untuk CRUD dasar yang memang reusable.
+
+```php
+<?php
+
+declare(strict_types=1);
 
 namespace App\Repositories;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 abstract class BaseRepository
 {
@@ -270,36 +416,30 @@ abstract class BaseRepository
         return $this->query()->get();
     }
 
-    public function paginate(
-        int $perPage = 10
-    ): LengthAwarePaginator {
+    public function paginate(int $perPage = 10): LengthAwarePaginator
+    {
         return $this->query()->paginate($perPage);
     }
 
-    public function findById(
-        int|string $id
-    ): ?Model {
+    public function findById(int|string $id): ?Model
+    {
         return $this->query()->find($id);
     }
 
-    public function create(
-        array $data
-    ): Model {
+    public function create(array $data): Model
+    {
         return $this->query()->create($data);
     }
 
-    public function update(
-        int|string $id,
-        array $data
-    ): bool {
-        return $this->query()
+    public function update(int|string $id, array $data): bool
+    {
+        return (bool) $this->query()
             ->whereKey($id)
             ->update($data);
     }
 
-    public function delete(
-        int|string $id
-    ): bool {
+    public function delete(int|string $id): bool
+    {
         return (bool) $this->query()
             ->whereKey($id)
             ->delete();
@@ -307,50 +447,31 @@ abstract class BaseRepository
 }
 ```
 
----
+Child repository:
 
-# 6. Repository Rules
-
-## 6.1 Repository Hanya Untuk Data Access
-
-Repository hanya bertanggung jawab untuk:
-
-- query database
-- eager loading
-- filtering
-- pagination
-- sorting
-
-Repository DILARANG:
-
-- business logic
-- manipulasi response
-- validasi bisnis
-
----
-
-## 6.2 Child Repository Example
-
-```php id="jlwm90"
+```php
 <?php
+
+declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\Models\User;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 
-class UserRepository extends BaseRepository
+class ProductRepository extends BaseRepository
 {
     protected function model(): Model
     {
-        return new User();
+        return new Product();
     }
 
-    public function findByEmail(
-        string $email
-    ): ?User {
+    public function findSellableByBarcode(string $barcode): ?Product
+    {
         return $this->query()
-            ->where('email', $email)
+            ->with('units')
+            ->where('barcode', $barcode)
+            ->where('stock', '>', 0)
             ->first();
     }
 }
@@ -358,65 +479,42 @@ class UserRepository extends BaseRepository
 
 ---
 
-# 7. BaseService Pattern
+## 9. BaseService Pattern
 
-## 7.1 Semua Service WAJIB Extends BaseService
+`BaseService` boleh digunakan untuk service yang membutuhkan standardized execution flow.
 
-Semua service memiliki flow standar:
+Tidak semua QueryService wajib extend `BaseService`.
 
-```text id="j4w7ib"
-execute()
-   ↓
-handle()
-   ↓
-success() / error()
-```
-
----
-
-## 7.2 BaseService Responsibilities
-
-BaseService bertanggung jawab untuk:
-
-- standardized flow
-- centralized error handling
-- centralized success response
-- logging
-
----
-
-## 7.3 BaseService Structure
-
-```php id="rq10vc"
+```php
 <?php
+
+declare(strict_types=1);
 
 namespace App\Services;
 
-use Throwable;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 abstract class BaseService
 {
-    public function execute(
-        mixed ...$payload
-    ): mixed {
+    public function execute(mixed ...$payload): mixed
+    {
         try {
-            $result = $this->handle(...$payload);
-
-            return $this->success($result);
+            return $this->success($this->handle(...$payload));
+        } catch (ValidationException|AuthorizationException|ModelNotFoundException $exception) {
+            throw $exception;
         } catch (Throwable $throwable) {
             return $this->error($throwable);
         }
     }
 
-    abstract protected function handle(
-        mixed ...$payload
-    ): mixed;
+    abstract protected function handle(mixed ...$payload): mixed;
 
-    protected function success(
-        mixed $data = null,
-        string $message = 'Success'
-    ): array {
+    protected function success(mixed $data = null, string $message = 'Success'): array
+    {
         return [
             'success' => true,
             'message' => $message,
@@ -424,9 +522,8 @@ abstract class BaseService
         ];
     }
 
-    protected function error(
-        Throwable $throwable
-    ): array {
+    protected function error(Throwable $throwable): array
+    {
         Log::error($throwable);
 
         return [
@@ -440,120 +537,67 @@ abstract class BaseService
 }
 ```
 
----
+Catatan:
 
-# 8. Service Rules
-
-## 8.1 Service Adalah Tempat Business Logic
-
-Semua business logic WAJIB berada di service.
-
-Contoh:
-
-- approval
-- transaction flow
-- data manipulation
-- calculation
-- domain validation
+- Untuk web/Inertia flows, service boleh mengembalikan model, collection, array payload, atau domain result.
+- Controller tetap menentukan redirect/Inertia/json response.
+- Jangan sembunyikan `ValidationException`, `AuthorizationException`, atau `ModelNotFoundException`.
 
 ---
 
-## 8.2 Service Tidak Boleh Query Langsung
+## 10. DTO Rules
 
-BENAR:
+DTO tidak wajib untuk semua request.
 
-```php id="oqfmqy"
-$this->userRepository->findById($id);
+Gunakan DTO jika:
+
+- payload kompleks
+- payload dipakai lintas method/service
+- butuh type safety tinggi
+- struktur data domain penting
+- ada nested items
+- ada calculation context
+
+Domain yang direkomendasikan memakai DTO:
+
+- transaction checkout
+- cart mutation dengan pricing context
+- sales return
+- stock opname
+- product with units
+- payment webhook
+- purchase/goods receiving
+
+Untuk CRUD kecil, service boleh menerima array tervalidasi dari FormRequest.
+
+Benar untuk CRUD kecil:
+
+```php
+$service->execute($request->validated());
 ```
 
-SALAH:
+Benar untuk domain kompleks:
 
-```php id="xmr7e2"
-User::find($id);
+```php
+$service->execute(CheckoutTransactionDto::fromRequest($request));
 ```
 
----
+DTO example:
 
-## 8.3 Service Harus Single Responsibility
-
-Disarankan:
-
-```text id="f19z3y"
-CreateUserService
-UpdateUserService
-DeleteUserService
-```
-
-Hindari:
-
-```text id="v9jlwm"
-UserService
-```
-
-yang berisi terlalu banyak logic.
-
----
-
-## 8.4 Child Service Example
-
-```php id="08px6o"
+```php
 <?php
 
-namespace App\Services\User;
-
-use App\DTOs\CreateUserDto;
-use App\Models\User;
-use App\Repositories\UserRepository;
-use App\Services\BaseService;
-
-class CreateUserService extends BaseService
-{
-    public function __construct(
-        protected UserRepository $userRepository
-    ) {
-    }
-
-    protected function handle(
-        mixed ...$payload
-    ): User {
-        /** @var CreateUserDto $dto */
-        $dto = $payload[0];
-
-        return $this->userRepository->create([
-            'name' => strtoupper($dto->name),
-            'email' => $dto->email,
-        ]);
-    }
-}
-```
-
----
-
-# 9. DTO Rules
-
-## 9.1 Gunakan DTO Untuk Data Transfer
-
-DTO digunakan untuk:
-
-- type safety
-- readable payload
-- IDE autocomplete
-- clean parameter handling
-
----
-
-## 9.2 DTO Example
-
-```php id="26wdh6"
-<?php
+declare(strict_types=1);
 
 namespace App\DTOs;
 
-class CreateUserDto
+class CreateSupplierDto
 {
     public function __construct(
         public string $name,
-        public string $email,
+        public ?string $phone,
+        public ?string $email,
+        public ?string $address,
     ) {
     }
 }
@@ -561,128 +605,157 @@ class CreateUserDto
 
 ---
 
-# 10. Validation Rules
+## 11. Validation Rules
 
-## 10.1 Gunakan Form Request
+Gunakan FormRequest untuk validasi controller.
 
-VALID:
+FormRequest wajib dikelompokkan per domain.
 
-```php id="ewj8s5"
-StoreUserRequest
+Benar:
+
+```php
+App\Http\Requests\Supplier\StoreSupplierRequest
+App\Http\Requests\Category\UpdateCategoryRequest
+App\Http\Requests\Transaction\CheckoutTransactionRequest
 ```
 
-INVALID:
+Hindari validasi inline di controller:
 
-```php id="glc2z5"
+```php
 $request->validate([...]);
 ```
 
+Pengecualian hanya untuk controller framework/auth bawaan atau perubahan sangat kecil yang belum sempat direfactor.
+
 ---
 
-# 11. Response Rules
+## 12. Response Rules
 
-## 11.1 Gunakan Standardized Response
+Controller bertanggung jawab pada response akhir:
 
-Format response:
+- Inertia render
+- redirect
+- back with flash message
+- JSON response
+- file/pdf response
 
-```json id="06m6qf"
+Service tidak boleh bergantung pada Inertia atau redirect.
+
+Format JSON API internal yang direkomendasikan:
+
+```json
 {
-    "success": true,
-    "message": "Success",
-    "data": {}
+  "success": true,
+  "message": "Success",
+  "data": {}
 }
 ```
 
----
-
-## 11.2 Gunakan API Resource Jika Dibutuhkan
-
-Untuk transformasi kompleks gunakan Resource.
-
-```php id="fyavrb"
-return new UserResource($user);
-```
+Gunakan API Resource jika transformasi response kompleks atau dipakai lintas endpoint.
 
 ---
 
-# 12. Database Rules
+## 13. Database Rules
 
-## 12.1 Gunakan Transaction
+Gunakan database transaction untuk workflow mutation yang menyentuh lebih dari satu tabel.
 
-```php id="7rbrk7"
+```php
 DB::transaction(function () {
     //
 });
 ```
 
+Transaction boundary sebaiknya berada di Service, bukan Controller.
+
+Gunakan locking untuk flow sensitif:
+
+- checkout transaction
+- cashier shift close/open
+- stock mutation
+- sales return completion
+- payment confirmation
+- receivable/payable payment
+
+Hindari N+1 query dengan eager loading.
+
 ---
 
-## 12.2 Hindari N+1 Query
+## 14. Enum Rules
 
-WAJIB eager loading.
+Gunakan PHP Enum untuk static value yang penting dan stabil.
 
----
-
-# 13. Enum Rules
-
-Gunakan PHP Enum untuk static value.
-
-```php id="s03nry"
-enum UserStatus: string
+```php
+enum PaymentStatus: string
 {
-    case ACTIVE = 'active';
-    case INACTIVE = 'inactive';
+    case PAID = 'paid';
+    case PENDING = 'pending';
+    case UNPAID = 'unpaid';
 }
 ```
 
+Enum direkomendasikan untuk status domain besar seperti payment, shift, return, stock mutation, dan order status.
+
 ---
 
-# 14. Error Handling
+## 15. Error Handling
 
-## 14.1 Gunakan Custom Exception
+Gunakan custom exception untuk error domain penting.
 
-```php id="n6zx4z"
-throw new UserNotFoundException();
+```php
+throw new InsufficientStockException();
 ```
 
----
+Hindari generic exception untuk business rule.
 
-## 14.2 Jangan Gunakan Generic Exception
-
-SALAH:
-
-```php id="0t2qt0"
+```php
 throw new Exception('Error');
 ```
 
+Gunakan `ValidationException::withMessages()` untuk error input/domain yang harus kembali ke form.
+
 ---
 
-# 15. Query Rules
+## 16. Query Rules
 
-## 15.1 DILARANG Query di View
+Dilarang query di:
 
-SALAH:
+- Controller
+- Blade/View
+- React page
 
-```blade id="rl7wux"
-@foreach (User::all() as $user)
+Query hanya boleh berada di:
+
+- QueryService untuk read-only lookup kecil
+- Repository untuk query reusable/kompleks/domain-heavy
+- Model relationship/scope untuk reusable local query behavior
+
+Model scope boleh dipakai untuk kondisi reusable yang melekat pada model.
+
+Contoh:
+
+```php
+$query->active();
+$query->open();
+$query->held();
 ```
 
 ---
 
-# 16. Security Rules
+## 17. Security Rules
 
-WAJIB:
+Wajib:
 
 - validasi semua input
 - gunakan mass assignment protection
-- gunakan authorization policy
+- gunakan permission/policy sesuai kebutuhan
 - sanitize upload file
 - jangan expose stack trace production
 - jangan gunakan `env()` selain di config
+- jangan bypass middleware permission di route dashboard
 
 ---
 
-# 17. Logging Rules
+## 18. Logging Rules
 
 Gunakan logging untuk:
 
@@ -690,14 +763,24 @@ Gunakan logging untuk:
 - external API
 - transaksi penting
 - authentication issue
+- perubahan data kritikal
+
+Audit log direkomendasikan untuk:
+
+- user/role/permission changes
+- transaction payment confirmation
+- stock mutation
+- sales return
+- cashier shift open/close
+- payment settings
 
 ---
 
-# 18. API Standards
+## 19. API Standards
 
-## 18.1 Gunakan RESTful Naming
+Gunakan RESTful naming untuk endpoint API.
 
-```text id="7k5phq"
+```text
 GET    /users
 POST   /users
 GET    /users/{id}
@@ -705,201 +788,239 @@ PUT    /users/{id}
 DELETE /users/{id}
 ```
 
----
-
-# 19. Git Standards
-
-## 19.1 Branch Naming
-
-```text id="vw0azx"
-feature/user-management
-fix/login-validation
-hotfix/payment-bug
-```
+Untuk Inertia dashboard, route boleh mengikuti kebutuhan UX, tetapi tetap gunakan nama route yang jelas dan konsisten.
 
 ---
 
-## 19.2 Commit Naming
+## 20. Testing Rules
 
-Gunakan Conventional Commit.
+Wajib:
 
-```text id="kr5cgf"
-feat: add create user service
-fix: resolve login validation
-refactor: improve base repository
-```
+- feature test untuk endpoint penting
+- unit test untuk service domain penting
+- mock repository saat testing service jika repository dipakai
+- test QueryService jika query-nya punya filter/sorting/edge case penting
+
+Prioritaskan test untuk:
+
+- checkout transaction
+- sales return
+- stock opname
+- payment webhook
+- cashier shift
+- receivable/payable payment
+- authorization consistency
 
 ---
 
-# 20. Testing Rules
+## 21. Clean Code Rules
 
-WAJIB:
-
-- feature test untuk endpoint
-- unit test untuk service
-- mock repository saat testing service
-
----
-
-# 21. Clean Code Rules
-
-WAJIB:
+Wajib:
 
 - meaningful naming
 - single responsibility
+- early return
 - hindari nested terlalu dalam
-- gunakan early return
 - hindari duplicated code
+- hapus dead code
+- komentar hanya untuk logic yang tidak obvious
+
+Service kecil lebih baik daripada god service.
+
+Repository kecil lebih baik daripada query tersebar di banyak tempat, tetapi repository kosong yang hanya membungkus satu query sederhana tidak wajib dibuat.
 
 ---
 
-# 22. Architecture Flow
+## 22. Architecture Flow
 
-```text id="l9gkqc"
+### 22.1 Simple Lookup
+
+Untuk read-only lookup kecil:
+
+```text
 Request
-   ↓
+  |
 Controller
-   ↓
-DTO
-   ↓
-Service
-   ↓
-Repository
-   ↓
+  |
+FormRequest
+  |
+RegionQueryService
+  |
 Model
-   ↓
+  |
 Database
 ```
 
+### 22.2 Domain Command
+
+Untuk mutation atau business workflow:
+
+```text
+Request
+  |
+Controller
+  |
+FormRequest
+  |
+DTO or validated array
+  |
+Command Service
+  |
+Repository
+  |
+Model
+  |
+Database
+```
+
+### 22.3 Read Page Payload
+
+Untuk page Inertia:
+
+```text
+Request
+  |
+Controller
+  |
+IndexQueryService
+  |
+Model or Repository
+  |
+Inertia props
+```
+
+Controller tetap yang memanggil `Inertia::render()`.
+
 ---
 
-# 23. Full Example Flow
+## 23. Full Example Flow
 
-## Request
+### Simple Region Lookup
 
-```text id="2qff1v"
-StoreUserRequest
+```text
+GetRegenciesRequest
+  |
+RegionController
+  |
+RegionQueryService
+  |
+Laravolt City Model
 ```
 
-↓
+### Supplier Create
 
-## DTO
-
-```text id="k2h4kl"
-CreateUserDto
+```text
+StoreSupplierRequest
+  |
+SupplierController
+  |
+CreateSupplierService
+  |
+Supplier Model or SupplierRepository
 ```
 
-↓
+Untuk supplier sederhana, service boleh memakai Model langsung jika belum ada kebutuhan repository reusable.
 
-## Service
+### Transaction Checkout
 
-```text id="9x7klh"
-CreateUserService
+```text
+CheckoutTransactionRequest
+  |
+TransactionController
+  |
+CheckoutTransactionDto
+  |
+CheckoutTransactionService
+  |
+CartRepository / ProductRepository / TransactionRepository
+  |
+Models
 ```
 
-↓
-
-## Repository
-
-```text id="6c73dl"
-UserRepository
-```
-
-↓
-
-## Model
-
-```text id="2z7j4f"
-User
-```
+Untuk transaksi, repository direkomendasikan karena domain kompleks dan butuh locking/transaction boundary.
 
 ---
 
-# 24. Forbidden Rules
+## 24. Forbidden Rules
 
-DILARANG:
+Dilarang:
 
 - fat controller
-- god service
+- controller query Model langsung
+- controller memanggil Repository langsung
 - business logic di controller
-- query database di controller
-- query database di blade
+- mutation workflow di QueryService
+- query database di Blade/View
 - duplicated code
-- hardcoded string
+- hardcoded string untuk domain status penting
 - menggunakan `env()` selain di config
 - facade berlebihan dalam service
+- god service
+- repository tanpa nilai tambah yang dipaksakan untuk semua model
+- DTO kosong yang hanya menyalin array tanpa kebutuhan type safety
 
 ---
 
-# 25. Recommended Packages
+## 25. Recommended Packages
 
-## Development
+Development:
 
 - laravel/pint
 - larastan/larastan
 - barryvdh/laravel-debugbar
 
----
-
-## Permission
+Permission:
 
 - spatie/laravel-permission
 
----
-
-## Query Builder
+Query Builder:
 
 - spatie/laravel-query-builder
 
----
-
-## Activity Log
+Activity Log:
 
 - spatie/laravel-activitylog
 
 ---
 
-# 26. Final Principles
+## 26. Git Standards
 
-Code harus:
+Gunakan branch dan commit yang jelas.
 
-- readable
-- maintainable
-- scalable
-- reusable
-- predictable
-- testable
+Branch examples:
+
+```text
+feature/service-repository-foundation
+refactor/transaction-services
+fix/payment-webhook-status
+```
+
+Commit examples:
+
+```text
+feat: add pragmatic service repository foundation
+refactor: move category logic into services
+fix: preserve payment webhook status mapping
+```
+
+---
+
+## 27. Final Principles
 
 Prioritas utama:
 
 1. Consistency
 2. Simplicity
 3. Maintainability
-4. Scalability
-5. Readability
+4. Testability
+5. Scalability
+6. Readability
 
----
+Gunakan service repository pattern secara pragmatis:
 
-# 27. Conclusion
+- domain kompleks memakai service + repository + DTO jika perlu
+- lookup kecil memakai QueryService
+- CRUD kecil boleh memakai service + validated array
+- controller selalu tipis dan hanya bicara dengan service
 
-Arsitektur Base Service Repository Pattern digunakan untuk:
-
-- standardisasi service flow
-- centralized error handling
-- reusable CRUD logic
-- clean business logic separation
-- scalable enterprise architecture
-
-Pattern ini sangat cocok untuk:
-
-- ERP
-- POS
-- HRIS
-- Campus System
-- Finance System
-- Enterprise API
-
-```
-
-```
-````
+Pattern ini cocok untuk POS karena domain transaksi, inventory, payment, retur, shift, piutang, hutang, loyalty, dan audit log terus berkembang. Namun pattern tidak boleh dipakai secara kaku sampai membuat class yang tidak punya nilai nyata.
