@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Requests;
+declare(strict_types=1);
+
+namespace App\Http\Requests\StockOpname;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreStockOpnameRequest extends FormRequest
+class StoreStockOpnameItemRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +16,7 @@ class StoreStockOpnameRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'product_id' => ['required', 'integer', 'exists:products,id'],
         ];
     }
 }
