@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Requests;
+declare(strict_types=1);
+
+namespace App\Http\Requests\SalesReturn;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateSalesReturnRequest extends FormRequest
+class StoreSalesReturnRequest extends FormRequest
 {
     public function authorize(): bool
     {
