@@ -1,141 +1,49 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RoleRequest;
-use App\Services\AuditLogService;
-use Illuminate\Http\Request;
+use App\Http\Requests\Role\IndexRoleRequest;
+use App\Http\Requests\Role\StoreRoleRequest;
+use App\Http\Requests\Role\UpdateRoleRequest;
+use App\Services\Roles\CreateRoleService;
+use App\Services\Roles\DeleteRoleService;
+use App\Services\Roles\RoleIndexQueryService;
+use App\Services\Roles\UpdateRoleService;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Permission;
+use Inertia\Response;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    public function __construct(
-        private readonly AuditLogService $auditLogService
-    ) {}
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request)
+    public function index(IndexRoleRequest $request, RoleIndexQueryService $service): Response
     {
-        // get all role data
-        $roles = Role::query()
-            ->with('permissions')
-            ->when(request()->search, fn ($query) => $query->where('name', 'like', '%'.request()->search.'%'))
-            ->select('id', 'name')
-            ->latest()
-            ->paginate(7)
-            ->withQueryString();
-
-        // get all permission data
-        $permissions = Permission::query()
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
-
-        // render view
-        return Inertia::render('Dashboard/Roles/Index', [
-            'roles' => $roles,
-            'permissions' => $permissions,
-        ]);
+        return Inertia::render('Dashboard/Roles/Index', $service->execute($request->search()));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(RoleRequest $request)
+    public function store(StoreRoleRequest $request, CreateRoleService $service): RedirectResponse
     {
-        // create new role data
-        $role = Role::create(['name' => $request->name]);
+        $service->execute($request->validated());
 
-        // give permissions to role
-        $role->givePermissionTo($request->selectedPermission);
-
-        $this->auditLogService->log(
-            event: 'role.created',
-            module: 'roles',
-            auditable: $role,
-            description: 'Role baru dibuat.',
-            after: [
-                'name' => $role->name,
-                'permissions' => $this->auditLogService->permissionNames($request->selectedPermission),
-            ],
-        );
-
-        // render view
         return back();
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(RoleRequest $request, Role $role)
-    {
-        $beforePermissions = $role->permissions()->pluck('name')->all();
-        $before = [
-            'name' => $role->name,
-            'permissions' => array_values($beforePermissions),
-        ];
+    public function update(
+        UpdateRoleRequest $request,
+        Role $role,
+        UpdateRoleService $service
+    ): RedirectResponse {
+        $service->execute($role, $request->validated());
 
-        // update role data
-        $role->update(['name' => $request->name]);
-
-        // sync role permissions
-        $role->syncPermissions($request->selectedPermission);
-
-        $afterPermissions = $this->auditLogService->permissionNames($request->selectedPermission);
-
-        $this->auditLogService->log(
-            event: 'role.updated',
-            module: 'roles',
-            auditable: $role,
-            description: 'Role diperbarui.',
-            before: $before,
-            after: [
-                'name' => $role->fresh()->name,
-                'permissions' => array_values($afterPermissions),
-            ],
-        );
-
-        if ($beforePermissions !== $afterPermissions) {
-            $this->auditLogService->log(
-                event: 'role.permission_changed',
-                module: 'roles',
-                auditable: $role,
-                description: 'Permission role diperbarui.',
-                before: ['permissions' => array_values($beforePermissions)],
-                after: ['permissions' => array_values($afterPermissions)],
-            );
-        }
-
-        // render view
         return back();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Role $role)
+    public function destroy(Role $role, DeleteRoleService $service): RedirectResponse
     {
-        $before = [
-            'name' => $role->name,
-            'permissions' => $role->permissions()->pluck('name')->all(),
-        ];
+        $service->execute($role);
 
-        // delete role data
-        $role->delete();
-
-        $this->auditLogService->log(
-            event: 'role.deleted',
-            module: 'roles',
-            auditable: $role,
-            description: 'Role dihapus.',
-            before: $before,
-        );
-
-        // render view
         return back();
     }
 }
