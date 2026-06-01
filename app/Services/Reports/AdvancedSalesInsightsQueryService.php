@@ -30,10 +30,12 @@ class AdvancedSalesInsightsQueryService
             ->selectRaw('COUNT(*) as orders_count, COALESCE(SUM(grand_total), 0) as revenue_total, COALESCE(SUM(discount), 0) as manual_discount_total')
             ->first();
 
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression('transaction_details');
         $itemsSold = $transactionIds->isNotEmpty()
             ? DB::table('transaction_details')
                 ->whereIn('transaction_id', $transactionIds)
-                ->sum('qty')
+                ->selectRaw("COALESCE(SUM({$soldBaseQuantity}), 0) as items_sold")
+                ->value('items_sold')
             : 0;
 
         $profitTotal = $transactionIds->isNotEmpty()

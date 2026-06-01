@@ -18,18 +18,21 @@ class SalesPerformanceInsightsQueryService
 
     public function topSellingProducts(array $filters): array
     {
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
+        $lineBuyCost = $this->repository->lineBuyCostExpression();
+
         return $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('
+            ->selectRaw("
                 td.product_id,
                 p.title as product_title,
                 p.sku as product_sku,
                 c.name as category_name,
                 p.stock as current_stock,
-                SUM(td.qty) as qty_sold,
+                SUM({$soldBaseQuantity}) as qty_sold,
                 SUM(td.price) as revenue_total,
-                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - (p.buy_price * td.qty)) as profit_total,
+                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - ({$lineBuyCost})) as profit_total,
                 MAX(t.created_at) as last_sold_at
-            ')
+            ")
             ->joinSub(
                 DB::table('transaction_details')
                     ->selectRaw('transaction_id, SUM(price) as subtotal_after_promo')
@@ -58,14 +61,17 @@ class SalesPerformanceInsightsQueryService
 
     public function lowPerformingProducts(array $filters): array
     {
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
+        $lineBuyCost = $this->repository->lineBuyCostExpression();
+
         $salesSubquery = $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('
+            ->selectRaw("
                 td.product_id,
-                SUM(td.qty) as qty_sold,
+                SUM({$soldBaseQuantity}) as qty_sold,
                 SUM(td.price) as revenue_total,
-                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - (p.buy_price * td.qty)) as profit_total,
+                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - ({$lineBuyCost})) as profit_total,
                 MAX(t.created_at) as last_sold_at
-            ')
+            ")
             ->joinSub(
                 DB::table('transaction_details')
                     ->selectRaw('transaction_id, SUM(price) as subtotal_after_promo')
@@ -112,15 +118,18 @@ class SalesPerformanceInsightsQueryService
 
     public function marginByProduct(array $filters): array
     {
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
+        $lineBuyCost = $this->repository->lineBuyCostExpression();
+
         return $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('
+            ->selectRaw("
                 td.product_id,
                 p.title as product_title,
                 c.name as category_name,
-                SUM(td.qty) as qty_sold,
+                SUM({$soldBaseQuantity}) as qty_sold,
                 SUM(td.price) as revenue_total,
-                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - (p.buy_price * td.qty)) as profit_total
-            ')
+                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - ({$lineBuyCost})) as profit_total
+            ")
             ->joinSub(
                 DB::table('transaction_details')
                     ->selectRaw('transaction_id, SUM(price) as subtotal_after_promo')
@@ -148,14 +157,17 @@ class SalesPerformanceInsightsQueryService
 
     public function marginByCategory(array $filters): array
     {
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
+        $lineBuyCost = $this->repository->lineBuyCostExpression();
+
         return $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('
+            ->selectRaw("
                 p.category_id,
-                COALESCE(c.name, \'Tanpa Kategori\') as category_name,
-                SUM(td.qty) as qty_sold,
+                COALESCE(c.name, 'Tanpa Kategori') as category_name,
+                SUM({$soldBaseQuantity}) as qty_sold,
                 SUM(td.price) as revenue_total,
-                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - (p.buy_price * td.qty)) as profit_total
-            ')
+                SUM((td.price - ROUND((COALESCE(t.discount, 0) * td.price) / NULLIF(tx.subtotal_after_promo, 0))) - ({$lineBuyCost})) as profit_total
+            ")
             ->joinSub(
                 DB::table('transaction_details')
                     ->selectRaw('transaction_id, SUM(price) as subtotal_after_promo')
@@ -222,12 +234,14 @@ class SalesPerformanceInsightsQueryService
 
     public function cashierPerformance(array $filters): array
     {
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
+
         $transactionsByCashier = $this->repository->applyTransactionFilters(Transaction::query(), $filters)
             ->selectRaw('cashier_id, COUNT(*) as orders_count, COALESCE(SUM(grand_total), 0) as revenue_total')
             ->groupBy('cashier_id');
 
         $itemsByCashier = $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('t.cashier_id, COALESCE(SUM(td.qty), 0) as items_sold')
+            ->selectRaw("t.cashier_id, COALESCE(SUM({$soldBaseQuantity}), 0) as items_sold")
             ->groupBy('t.cashier_id');
 
         $profitByCashier = $this->repository->applyTransactionFilters(Transaction::query(), $filters)

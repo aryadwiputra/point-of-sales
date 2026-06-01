@@ -32,12 +32,26 @@ class AdvancedSalesInsightsRepository
         return DB::table('transaction_details as td')
             ->join('transactions as t', 't.id', '=', 'td.transaction_id')
             ->join('products as p', 'p.id', '=', 'td.product_id')
+            ->leftJoin('product_units as pu', 'pu.id', '=', 'td.product_unit_id')
             ->leftJoin('categories as c', 'c.id', '=', 'p.category_id')
             ->when($filters['cashier_id'] ?? null, fn ($query, $cashierId) => $query->where('t.cashier_id', $cashierId))
             ->when($filters['customer_id'] ?? null, fn ($query, $customerId) => $query->where('t.customer_id', $customerId))
             ->when($filters['start_date'] ?? null, fn ($query, $startDate) => $query->whereDate('t.created_at', '>=', $startDate))
             ->when($filters['end_date'] ?? null, fn ($query, $endDate) => $query->whereDate('t.created_at', '<=', $endDate))
             ->when($filters['category_id'] ?? null, fn ($query, $categoryId) => $query->where('p.category_id', $categoryId));
+    }
+
+    public function soldBaseQuantityExpression(string $detailAlias = 'td'): string
+    {
+        return "{$detailAlias}.qty * COALESCE({$detailAlias}.unit_conversion_qty, 1)";
+    }
+
+    public function lineBuyCostExpression(
+        string $detailAlias = 'td',
+        string $productAlias = 'p',
+        string $productUnitAlias = 'pu'
+    ): string {
+        return "COALESCE({$detailAlias}.unit_buy_price, {$productUnitAlias}.buy_price, {$productAlias}.buy_price * COALESCE({$detailAlias}.unit_conversion_qty, 1)) * {$detailAlias}.qty";
     }
 
     public function applyDateRangeFilter($query, string $column, array $filters): void

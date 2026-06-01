@@ -182,6 +182,7 @@ class CheckoutTransactionService
                 $unitPrice = (int) data_get($pricingItem, 'effective_unit_price', $cart->product->sell_price);
                 $unit = $cart->productUnit;
                 $unitConversionQty = (float) ($cart->unit_conversion_qty ?: $unit?->conversion_qty ?: 1);
+                $unitBuyPrice = (int) ($unit?->buy_price ?? $cart->product->buy_price);
 
                 $transaction->details()->create([
                     'transaction_id' => $transaction->id,
@@ -192,6 +193,7 @@ class CheckoutTransactionService
                     'qty' => $cart->qty,
                     'base_unit_price' => $baseUnitPrice,
                     'unit_price' => $unitPrice,
+                    'unit_buy_price' => $unitBuyPrice,
                     'price' => $lineTotal,
                     'discount_total' => $linePromoDiscount,
                     'pricing_rule_id' => data_get($pricingItem, 'pricing_rule.id'),
@@ -201,7 +203,7 @@ class CheckoutTransactionService
                     'pricing_group_label' => data_get($pricingItem, 'pricing_group_label'),
                 ]);
 
-                $totalBuyPrice = ($unit?->buy_price ?? $cart->product->buy_price) * (float) $cart->qty;
+                $totalBuyPrice = $unitBuyPrice * (float) $cart->qty;
                 $lineShare = $subtotalAfterPromo > 0 ? $lineTotal / $subtotalAfterPromo : 0;
                 $allocatedManualDiscount = (int) round($appliedManualDiscount * $lineShare);
                 $netSellPrice = max(0, $lineTotal - $allocatedManualDiscount);

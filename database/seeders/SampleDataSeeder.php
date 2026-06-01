@@ -537,6 +537,7 @@ class SampleDataSeeder extends Seeder
                     'qty' => $item['qty'],
                     'base_unit_price' => $item['product']->sell_price,
                     'unit_price' => $item['unit']->sell_price,
+                    'unit_buy_price' => $item['unit']->buy_price,
                     'price' => $item['line_total'],
                 ]);
 

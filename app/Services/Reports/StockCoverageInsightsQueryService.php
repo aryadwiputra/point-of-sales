@@ -17,14 +17,15 @@ class StockCoverageInsightsQueryService
     public function execute(array $filters): array
     {
         $windowDays = $this->salesWindowDays($filters);
+        $soldBaseQuantity = $this->repository->soldBaseQuantityExpression();
 
         $salesSubquery = $this->repository->detailMetricsQuery($filters)
-            ->selectRaw('
+            ->selectRaw("
                 td.product_id,
-                SUM(td.qty) as qty_sold,
+                SUM({$soldBaseQuantity}) as qty_sold,
                 SUM(td.price) as revenue_total,
                 MAX(t.created_at) as last_sold_at
-            ')
+            ")
             ->groupBy('td.product_id');
 
         $rows = Product::query()
