@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Requests\CrmReminder;
+namespace App\Http\Requests\CrmCampaign;
 
 use App\Models\CustomerCampaign;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class IndexCrmReminderRequest extends FormRequest
+class IndexCrmCampaignRequest extends FormRequest
 {
     public function authorize(): bool
     {
