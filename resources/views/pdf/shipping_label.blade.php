@@ -196,13 +196,13 @@
                             {{ Str::limit($transaction->customer->address ?? 'No Address', 80) }}</div>
                         <div class="text-small text-muted" style="margin-top:2pt;">
                             {{ $transaction->customer->village_name ?? '-' }}
-                            @if ($transaction->customer->district_name)
+                            @if ($transaction->customer?->district_name)
                                 , {{ $transaction->customer->district_name }}
                             @endif
-                            @if ($transaction->customer->regency_name)
+                            @if ($transaction->customer?->regency_name)
                                 , {{ $transaction->customer->regency_name }}
                             @endif
-                            @if ($transaction->customer->province_name)
+                            @if ($transaction->customer?->province_name)
                                 , {{ $transaction->customer->province_name }}
                             @endif
                         </div>
