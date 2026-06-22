@@ -17,6 +17,7 @@ class Product extends Model
         'buy_price' => 'integer',
         'sell_price' => 'integer',
         'stock' => 'integer',
+        'tax_rate' => 'decimal:2',
     ];
 
     protected $fillable = [
@@ -29,6 +30,8 @@ class Product extends Model
         'sell_price',
         'category_id',
         'stock',
+        'tax_type',
+        'tax_rate',
     ];
 
     public function category()

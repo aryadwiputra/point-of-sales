@@ -25,6 +25,8 @@ class Transaction extends Model
         'shipping_cost' => 'integer',
         'grand_total' => 'integer',
         'bank_account_id' => 'integer',
+        'tax_rate' => 'decimal:2',
+        'tax_total' => 'integer',
     ];
 
     /**
@@ -54,6 +56,9 @@ class Transaction extends Model
         'payment_reference',
         'payment_url',
         'bank_account_id',
+        'tax_rate',
+        'tax_total',
+        'customer_npwp',
     ];
 
     /**

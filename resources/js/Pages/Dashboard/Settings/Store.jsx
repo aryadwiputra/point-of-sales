@@ -12,6 +12,8 @@ import {
     IconWorld,
     IconMail,
     IconPhoto,
+    IconFileCertificate,
+    IconReceiptTax,
 } from "@tabler/icons-react";
 
 export default function Store({ settings }) {
@@ -23,6 +25,9 @@ export default function Store({ settings }) {
         store_email: settings.store_email || "",
         store_website: settings.store_website || "",
         store_city: settings.store_city || "",
+        store_npwp: settings.store_npwp || "",
+        store_nib: settings.store_nib || "",
+        tax_default_rate: settings.tax_default_rate || "11.00",
     });
 
     const [logoPreview, setLogoPreview] = useState(settings.store_logo || null);
@@ -153,6 +158,47 @@ export default function Store({ settings }) {
                                     icon={<IconWorld size={16} />}
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Tax & Legal Section */}
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                            <IconReceiptTax size={20} className="text-primary-500" />
+                            Informasi Pajak & Legal
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input
+                                label="NPWP Toko"
+                                value={data.store_npwp}
+                                errors={errors.store_npwp}
+                                onChange={(e) => setData("store_npwp", e.target.value)}
+                                placeholder="XX.XXX.XXX.X-XXX.XXX"
+                                icon={<IconFileCertificate size={16} />}
+                            />
+                            <Input
+                                label="NIB"
+                                value={data.store_nib}
+                                errors={errors.store_nib}
+                                onChange={(e) => setData("store_nib", e.target.value)}
+                                placeholder="Nomor Induk Berusaha"
+                            />
+                        </div>
+                        <div className="mt-4">
+                            <Input
+                                label="Tarif PPN Default (%)"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                value={data.tax_default_rate}
+                                errors={errors.tax_default_rate}
+                                onChange={(e) => setData("tax_default_rate", e.target.value)}
+                                placeholder="11.00"
+                            />
+                            <p className="mt-1 text-xs text-slate-400">
+                                Tarif default untuk produk baru. Dapat diubah per produk.
+                            </p>
                         </div>
                     </div>
 

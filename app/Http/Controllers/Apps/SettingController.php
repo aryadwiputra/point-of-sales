@@ -62,6 +62,9 @@ class SettingController extends Controller
             'store_email' => Setting::get('store_email', ''),
             'store_website' => Setting::get('store_website', ''),
             'store_city' => Setting::get('store_city', ''),
+            'store_npwp' => Setting::get('store_npwp', ''),
+            'store_nib' => Setting::get('store_nib', ''),
+            'tax_default_rate' => Setting::get('tax_default_rate', '11.00'),
         ];
 
         return Inertia::render('Dashboard/Settings/Store', [
@@ -82,6 +85,9 @@ class SettingController extends Controller
             'store_website' => 'nullable|string|max:255',
             'store_city' => 'nullable|string|max:255',
             'store_logo' => 'nullable|image|max:2048',
+            'store_npwp' => 'nullable|string|max:20',
+            'store_nib' => 'nullable|string|max:30',
+            'tax_default_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $before = [
@@ -112,6 +118,9 @@ class SettingController extends Controller
         Setting::set('store_website', $request->store_website, 'Website toko');
         Setting::set('store_city', $request->store_city, 'Kota/Kabupaten toko');
         Setting::set('store_logo', $logoPath, 'Logo toko');
+        Setting::set('store_npwp', $request->store_npwp, 'NPWP Toko');
+        Setting::set('store_nib', $request->store_nib, 'NIB Toko');
+        Setting::set('tax_default_rate', $request->tax_default_rate, 'Default tarif PPN (%)');
 
         $this->auditLogService->log(
             event: 'store.setting.updated',
@@ -127,6 +136,8 @@ class SettingController extends Controller
                 'store_website' => $request->store_website,
                 'store_city' => $request->store_city,
                 'store_logo_changed' => $logoChanged,
+                'store_npwp' => $request->store_npwp ? '***' : null,
+                'tax_default_rate' => $request->tax_default_rate,
             ],
         );
 
