@@ -42,6 +42,7 @@ class TransactionController extends Controller
     {
         $userId = auth()->user()->id;
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($userId);
+        $warehouseId = $activeShift?->warehouse_id;
 
         // Get active cart items (not held)
         $carts = Cart::with('product')
@@ -76,10 +77,15 @@ class TransactionController extends Controller
         // get all customers
         $customers = Customer::latest()->get();
 
-        // get all products with categories for product grid
+        // get products with stock > 0 in active warehouse
         $products = Product::with('category:id,name')
             ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id')
-            ->where('stock', '>', 0)
+            ->when($warehouseId, function ($q) use ($warehouseId) {
+                $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
+                    ->where('product_warehouse.stock', '>', 0));
+            }, function ($q) {
+                $q->where('stock', '>', 0);
+            })
             ->orderBy('title')
             ->get();
         $pricingBadges = $this->pricingService->previewProducts($products, null);
@@ -146,13 +152,22 @@ class TransactionController extends Controller
      */
     public function searchProduct(Request $request)
     {
-        // find product by barcode
-        $product = Product::where('barcode', $request->barcode)->first();
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
+        $warehouseId = $activeShift?->warehouse_id;
+
+        $product = Product::where('barcode', $request->barcode)
+            ->whereHas('warehouses', fn ($q) => $q->where('product_warehouse.warehouse_id', $warehouseId))
+            ->first();
 
         if ($product) {
+            $pivotStock = $product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0;
+
             return response()->json([
                 'success' => true,
-                'data' => $product,
+                'data' => [
+                    ...$product->toArray(),
+                    'stock' => $pivotStock,
+                ],
             ]);
         }
 
@@ -206,37 +221,35 @@ class TransactionController extends Controller
      */
     public function addToCart(Request $request)
     {
-        // Cari produk berdasarkan ID yang diberikan
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
+        $warehouseId = $activeShift?->warehouse_id;
+
         $product = Product::whereId($request->product_id)->first();
 
-        // Jika produk tidak ditemukan, redirect dengan pesan error
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
         }
 
-        // Cek stok produk
-        if ($product->stock < $request->qty) {
+        $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
+        $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+
+        if ($availableStock < $request->qty) {
             return redirect()->back()->with('error', 'Out of Stock Product!.');
         }
 
-        // Cek keranjang
         $cart = Cart::with('product')
             ->where('product_id', $request->product_id)
             ->where('cashier_id', auth()->user()->id)
             ->first();
 
         if ($cart) {
-            // Tingkatkan qty
             $cart->increment('qty', $request->qty);
-
-            // Jumlahkan harga * kuantitas
             $cart->price = $cart->product->sell_price * $cart->qty;
-
             $cart->save();
         } else {
-            // Insert ke keranjang
             Cart::create([
                 'cashier_id' => auth()->user()->id,
+                'warehouse_id' => $warehouseId,
                 'product_id' => $request->product_id,
                 'qty' => $request->qty,
                 'price' => $request->sell_price * $request->qty,
@@ -280,6 +293,9 @@ class TransactionController extends Controller
             'qty' => 'required|integer|min:1',
         ]);
 
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
+        $warehouseId = $activeShift?->warehouse_id;
+
         $cart = Cart::with('product')->whereId($cart_id)
             ->where('cashier_id', auth()->user()->id)
             ->first();
@@ -291,11 +307,14 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        // Check stock availability
-        if ($cart->product->stock < $request->qty) {
+        // Check stock availability in warehouse
+        $warehouseProduct = $cart->product->warehouses()->where('warehouse_id', $warehouseId)->first();
+        $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+
+        if ($availableStock < $request->qty) {
             return response()->json([
                 'success' => false,
-                'message' => 'Stok tidak mencukupi. Tersedia: '.$cart->product->stock,
+                'message' => 'Stok tidak mencukupi. Tersedia: '.$availableStock,
             ], 422);
         }
 
@@ -561,6 +580,7 @@ class TransactionController extends Controller
             $transaction = Transaction::create([
                 'cashier_id' => auth()->user()->id,
                 'cashier_shift_id' => $activeShift->id,
+                'warehouse_id' => $activeShift->warehouse_id,
                 'customer_id' => $request->customer_id,
                 'invoice' => $invoice,
                 'cash' => $cashAmount,
@@ -612,8 +632,13 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
-                $product->stock = $product->stock - $cart->qty;
-                $product->save();
+                \App\Models\ProductWarehouse::where([
+                    'product_id' => $product->id,
+                    'warehouse_id' => $activeShift->warehouse_id,
+                ])->decrement('stock', $cart->qty);
+
+                // sync legacy stock field for backward compat
+                $product->decrement('stock', $cart->qty);
             }
 
             Cart::where('cashier_id', auth()->user()->id)->active()->delete();

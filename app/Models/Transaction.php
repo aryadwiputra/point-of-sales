@@ -35,6 +35,7 @@ class Transaction extends Model
     protected $fillable = [
         'cashier_id',
         'cashier_shift_id',
+        'warehouse_id',
         'customer_id',
         'invoice',
         'cash',
@@ -88,6 +89,11 @@ class Transaction extends Model
     public function cashierShift()
     {
         return $this->belongsTo(CashierShift::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     /**

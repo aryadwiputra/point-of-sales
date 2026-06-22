@@ -15,7 +15,7 @@ class StockMutationService
         private readonly AuditLogService $auditLogService
     ) {}
 
-    public function recordInitialStock(Product $product, ?int $userId = null): ?StockMutation
+    public function recordInitialStock(Product $product, ?int $userId = null, ?int $warehouseId = null): ?StockMutation
     {
         $initialStock = (int) $product->stock;
 
@@ -25,6 +25,7 @@ class StockMutationService
 
         $mutation = StockMutation::create([
             'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
             'reference_type' => 'product_create',
             'reference_id' => $product->id,
             'mutation_type' => 'in',
