@@ -327,6 +327,7 @@ class StockOpnameTest extends TestCase
             'buy_price' => 45000,
             'sell_price' => 60000,
             'stock' => $stock,
+            'tax_rate' => 0,
         ]);
     }
 }

@@ -432,6 +432,7 @@ class AdvancedSalesInsightsTest extends TestCase
             'sell_price' => $sellPrice,
             'category_id' => $category->id,
             'stock' => $stock,
+            'tax_rate' => 0,
         ]);
     }
 

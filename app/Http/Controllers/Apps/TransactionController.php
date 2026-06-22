@@ -597,6 +597,9 @@ class TransactionController extends Controller
                 'payment_method' => $isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash'),
                 'payment_status' => $isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending'),
                 'bank_account_id' => $paymentGateway === 'bank_transfer' ? $request->bank_account_id : null,
+                'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
+                'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
+                'customer_npwp' => $request->customer_npwp,
             ]);
 
             foreach ($carts as $cart) {

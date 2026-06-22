@@ -401,6 +401,7 @@ class PricingRuleTest extends TestCase
             'buy_price' => 45000,
             'sell_price' => 60000,
             'stock' => 25,
+            'tax_rate' => 0,
         ]);
     }
 }
