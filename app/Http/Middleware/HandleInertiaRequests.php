@@ -37,7 +37,8 @@ class HandleInertiaRequests extends Middleware
         if ($request->user()) {
             $userId = $request->user()->id;
 
-            $lowStockNotifications = Product::where('stock', '<=', 0)
+            $lowStockNotifications = Product::where('min_stock', '>', 0)
+                ->whereColumn('stock', '<=', 'min_stock')
                 ->whereNotExists(function ($query) use ($userId) {
                     $query->selectRaw('1')
                         ->from('product_notification_reads as pr')
