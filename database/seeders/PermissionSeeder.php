@@ -134,6 +134,12 @@ class PermissionSeeder extends Seeder
         $create('stock-transfers-receive');
         $create('stock-transfers-cancel');
 
+        // import/export
+        $create('products-import');
+        $create('products-export');
+        $create('customers-import');
+        $create('customers-export');
+
         // warehouses
         $create('warehouses-access');
         $create('warehouses-create');

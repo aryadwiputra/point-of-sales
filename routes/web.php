@@ -9,6 +9,7 @@ use App\Http\Controllers\Apps\CustomerController;
 use App\Http\Controllers\Apps\CustomerSegmentController;
 use App\Http\Controllers\Apps\CustomerVoucherController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
+use App\Http\Controllers\Apps\ImportExportController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\PaymentSettingController;
 use App\Http\Controllers\Apps\PricingRuleController;
@@ -86,6 +87,14 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
         ->middlewareFor(['create', 'store'], 'permission:products-create')
         ->middlewareFor(['edit', 'update'], 'permission:products-edit')
         ->middlewareFor('destroy', 'permission:products-delete');
+
+    // import/export
+    Route::get('/export/products', [ImportExportController::class, 'exportProducts'])->middleware('permission:products-export')->name('export.products');
+    Route::get('/export/customers', [ImportExportController::class, 'exportCustomers'])->middleware('permission:customers-export')->name('export.customers');
+    Route::get('/export/transactions', [ImportExportController::class, 'exportTransactions'])->middleware('permission:transactions-access')->name('export.transactions');
+    Route::post('/import/products', [ImportExportController::class, 'importProducts'])->middleware('permission:products-import')->name('import.products');
+    Route::post('/import/customers', [ImportExportController::class, 'importCustomers'])->middleware('permission:customers-import')->name('import.customers');
+    Route::get('/import/template/{type}', [ImportExportController::class, 'downloadTemplate'])->name('import.template');
     Route::resource('pricing-rules', PricingRuleController::class)
         ->except(['show'])
         ->middlewareFor('index', 'permission:pricing-rules-access')
