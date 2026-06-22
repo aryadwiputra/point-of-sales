@@ -17,6 +17,7 @@ use App\Http\Controllers\Apps\PurchaseOrderController;
 use App\Http\Controllers\Apps\SalesReturnController;
 use App\Http\Controllers\Apps\StockMutationController;
 use App\Http\Controllers\Apps\StockOpnameController;
+use App\Http\Controllers\Apps\StockTransferController;
 use App\Http\Controllers\Apps\SupplierReturnController;
 use App\Http\Controllers\Apps\TransactionController;
 use App\Http\Controllers\Apps\WarehouseController;
@@ -214,6 +215,15 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/goods-receivings/create', [GoodsReceivingController::class, 'create'])->middleware('permission:goods-receivings-create')->name('goods-receivings.create');
     Route::post('/goods-receivings', [GoodsReceivingController::class, 'store'])->middleware('permission:goods-receivings-create')->name('goods-receivings.store');
     Route::get('/goods-receivings/{goodsReceiving}', [GoodsReceivingController::class, 'show'])->middleware('permission:goods-receivings-access')->name('goods-receivings.show');
+
+    // route stock transfers
+    Route::get('/stock-transfers', [StockTransferController::class, 'index'])->middleware('permission:stock-transfers-access')->name('stock-transfers.index');
+    Route::get('/stock-transfers/create', [StockTransferController::class, 'create'])->middleware('permission:stock-transfers-create')->name('stock-transfers.create');
+    Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware('permission:stock-transfers-create')->name('stock-transfers.store');
+    Route::get('/stock-transfers/{stockTransfer}', [StockTransferController::class, 'show'])->middleware('permission:stock-transfers-access')->name('stock-transfers.show');
+    Route::post('/stock-transfers/{stockTransfer}/send', [StockTransferController::class, 'send'])->middleware('permission:stock-transfers-send')->name('stock-transfers.send');
+    Route::post('/stock-transfers/{stockTransfer}/receive', [StockTransferController::class, 'receive'])->middleware('permission:stock-transfers-receive')->name('stock-transfers.receive');
+    Route::post('/stock-transfers/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])->middleware('permission:stock-transfers-cancel')->name('stock-transfers.cancel');
 
     // route supplier returns
     Route::get('/supplier-returns', [SupplierReturnController::class, 'index'])->middleware('permission:supplier-returns-access')->name('supplier-returns.index');

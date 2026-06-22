@@ -34,6 +34,7 @@ import {
     IconTruckDelivery,
     IconTruckReturn,
     IconSpeakerphone,
+    IconArrowsLeftRight,
 } from "@tabler/icons-react";
 import hasAnyPermission from "./Permission";
 import React from "react";
@@ -150,6 +151,13 @@ export default function Menu() {
                         <IconChartArrowsVertical size={20} strokeWidth={1.5} />
                     ),
                     permissions: hasAnyPermission(["stock-mutations-access"]),
+                },
+                {
+                    title: "Transfer Stok",
+                    href: route("stock-transfers.index"),
+                    active: url.startsWith("/dashboard/stock-transfers"),
+                    icon: <IconArrowsLeftRight size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["stock-transfers-access"]),
                 },
             ],
         },
