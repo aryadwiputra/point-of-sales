@@ -166,6 +166,10 @@ export default function Index({
         () => Number(pricingPreview?.summary?.loyalty_discount_total ?? 0),
         [pricingPreview]
     );
+    const taxTotal = useMemo(
+        () => Number(pricingPreview?.summary?.tax_total ?? 0),
+        [pricingPreview]
+    );
     const subtotal = useMemo(
         () => Number(pricingPreview?.summary?.subtotal_after_promo ?? 0),
         [pricingPreview]
@@ -200,6 +204,7 @@ export default function Index({
                     loyalty_discount_total: 0,
                     manual_discount_total: 0,
                     shipping_cost: 0,
+                    tax_total: 0,
                     grand_total: 0,
                 },
             });
@@ -1366,6 +1371,14 @@ export default function Index({
                                 <span className="text-slate-500">Ongkir</span>
                                 <span className="font-medium">
                                     +{formatPrice(shipping)}
+                                </span>
+                            </div>
+                        )}
+                        {taxTotal > 0 && (
+                            <div className="flex justify-between items-center mb-2 text-sm">
+                                <span className="text-slate-500">PPN</span>
+                                <span className="font-medium">
+                                    +{formatPrice(taxTotal)}
                                 </span>
                             </div>
                         )}

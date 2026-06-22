@@ -104,6 +104,7 @@ export default function PaymentPanel({
     voucherDiscount = 0,
     loyaltyDiscount = 0,
     discount = 0,
+    taxTotal = 0,
     discountInput = "",
     onDiscountChange,
     redeemPointsInput = "",
@@ -211,6 +212,16 @@ export default function PaymentPanel({
                             - {formatPrice(discount)}
                         </span>
                     </div>
+                    {taxTotal > 0 && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-slate-500 dark:text-slate-400">
+                                PPN
+                            </span>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                                {formatPrice(taxTotal)}
+                            </span>
+                        </div>
+                    )}
                     <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
                     <div className="flex justify-between">
                         <span className="text-base font-semibold text-slate-800 dark:text-white">

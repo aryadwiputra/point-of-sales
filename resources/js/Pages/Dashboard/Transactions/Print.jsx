@@ -59,7 +59,8 @@ export default function Print({ transaction }) {
     const baseSubtotal =
         (transaction?.grand_total || 0) +
         (transaction?.discount || 0) -
-        (transaction?.shipping_cost || 0) +
+        (transaction?.shipping_cost || 0) -
+        (transaction?.tax_total || 0) +
         promoDiscountTotal +
         loyaltyDiscountTotal +
         voucherDiscountTotal;
@@ -618,6 +619,15 @@ export default function Print({ transaction }) {
                                                 {formatPrice(
                                                     transaction.shipping_cost
                                                 )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {transaction.tax_total > 0 && (
+                                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                            <span>PPN {transaction.tax_rate ? Number(transaction.tax_rate).toFixed(0) : "11"}%</span>
+                                            <span>
+                                                +{" "}
+                                                {formatPrice(transaction.tax_total)}
                                             </span>
                                         </div>
                                     )}

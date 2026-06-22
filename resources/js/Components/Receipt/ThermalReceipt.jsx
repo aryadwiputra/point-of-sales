@@ -46,7 +46,8 @@ export default function ThermalReceipt({
     const subtotal =
         (transaction?.grand_total || 0) +
         (transaction?.discount || 0) -
-        (transaction?.shipping_cost || 0) +
+        (transaction?.shipping_cost || 0) -
+        (transaction?.tax_total || 0) +
         promoDiscount +
         loyaltyDiscount +
         voucherDiscount;
@@ -199,6 +200,12 @@ export default function ThermalReceipt({
                     <div className="flex justify-between">
                         <span>Ongkir</span>
                         <span>{formatPrice(shipping)}</span>
+                    </div>
+                )}
+                {Number(transaction?.tax_total || 0) > 0 && (
+                    <div className="flex justify-between">
+                        <span>PPN {Number(transaction?.tax_rate || 11).toFixed(0)}%</span>
+                        <span>{formatPrice(transaction?.tax_total)}</span>
                     </div>
                 )}
                 <div className="flex justify-between font-bold text-sm">
@@ -358,7 +365,8 @@ export function ThermalReceipt58mm({
                     {formatPrice(
                         (transaction?.grand_total || 0) +
                             (transaction?.discount || 0) -
-                            (transaction?.shipping_cost || 0) +
+                            (transaction?.shipping_cost || 0) -
+                            (transaction?.tax_total || 0) +
                             promoDiscount +
                             loyaltyDiscount +
                             voucherDiscount
@@ -393,6 +401,12 @@ export function ThermalReceipt58mm({
                 <div className="flex justify-between">
                     <span>Ongkir</span>
                     <span>{formatPrice(transaction?.shipping_cost)}</span>
+                </div>
+            )}
+            {Number(transaction?.tax_total || 0) > 0 && (
+                <div className="flex justify-between">
+                    <span>PPN</span>
+                    <span>{formatPrice(transaction?.tax_total)}</span>
                 </div>
             )}
             <div className="flex justify-between font-bold">

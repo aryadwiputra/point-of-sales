@@ -320,6 +320,14 @@
                             + {{ number_format($shipping, 0, ',', '.') }}
                         </td>
                     </tr>
+                    @if (($transaction->tax_total ?? 0) > 0)
+                        <tr>
+                            <td style="color:#475569;">PPN {{ number_format($transaction->tax_rate ?? 11, 0) }}%</td>
+                            <td class="right" style="font-weight:600;">
+                                + {{ number_format($transaction->tax_total, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @endif
                     <tr>
                         <td style="font-weight:700; font-size:13px;">Total</td>
                         <td class="right" style="font-weight:800; font-size:13px;">
