@@ -8,10 +8,11 @@ Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
 
 **Branch structure:**
 - `main` — production. Protected. PR only from `development`.
-- `development` — integration branch. Feature branches merge here.
+- `development` — integration branch. Feature branches merge here via PR.
 - `release/*` — release candidates. Created from `development`, merged to `main` + tagged.
 - `revamp-frontend` — legacy UI overhaul branch (inactive).
-- `feature/*` — individual feature work.
+- `feature/*` — individual feature work. Branch from `development`, PR to `development`.
+- `fix/*` — hotfixes. Branch from `main`, PR to `main` + `development`.
 
 **Tags follow semver:** `v1.0.0`, `v1.1.0`, etc.
 
