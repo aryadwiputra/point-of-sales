@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\GoodsReceiving;
 use App\Models\GoodsReceivingItem;
 use App\Models\Payable;
+use App\Models\ProductBatch;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -64,6 +65,18 @@ class GoodsReceivingService
                         'product_id' => $product->id,
                         'warehouse_id' => $order->warehouse_id,
                     ])->increment('stock', $qtyReceived);
+                }
+
+                // Create batch record
+                if (! empty($item['batch_number'])) {
+                    ProductBatch::create([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $order->warehouse_id ?? 1,
+                        'batch_number' => $item['batch_number'],
+                        'expired_at' => $item['expired_at'] ?? null,
+                        'received_at' => now(),
+                        'stock' => $qtyReceived,
+                    ]);
                 }
 
                 $this->stockMutationService->recordPurchaseInbound(

@@ -57,6 +57,11 @@ class TransactionDetail extends Model
         return $this->belongsTo(Unit::class);
     }
 
+    public function batch()
+    {
+        return $this->belongsTo(ProductBatch::class, 'product_batch_id');
+    }
+
     public function pricingRule()
     {
         return $this->belongsTo(PricingRule::class);

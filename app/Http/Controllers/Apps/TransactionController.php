@@ -621,7 +621,7 @@ class TransactionController extends Controller
                 $baseUnitPrice = (int) data_get($pricingItem, 'base_unit_price', $cart->product->sell_price);
                 $unitPrice = (int) data_get($pricingItem, 'effective_unit_price', $cart->product->sell_price);
 
-                $transaction->details()->create([
+                $detail = $transaction->details()->create([
                     'transaction_id' => $transaction->id,
                     'product_id' => $cart->product_id,
                     'unit_id' => $cart->unit_id,
@@ -656,7 +656,6 @@ class TransactionController extends Controller
                     'warehouse_id' => $activeShift->warehouse_id,
                 ])->decrement('stock', $baseQty);
 
-                // sync legacy stock field for backward compat
                 $product->decrement('stock', $baseQty);
             }
 
