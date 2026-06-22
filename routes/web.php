@@ -11,6 +11,7 @@ use App\Http\Controllers\Apps\CustomerVoucherController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
 use App\Http\Controllers\Apps\DiscountApprovalController;
+use App\Http\Controllers\Apps\PriceListController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\PaymentSettingController;
 use App\Http\Controllers\Apps\PricingRuleController;
@@ -289,6 +290,16 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::delete('/settings/bank-accounts/{bankAccount}', [\App\Http\Controllers\Apps\BankAccountController::class, 'destroy'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.destroy');
     Route::patch('/settings/bank-accounts/{bankAccount}/toggle', [\App\Http\Controllers\Apps\BankAccountController::class, 'toggleActive'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.toggle');
     Route::post('/settings/bank-accounts/order', [\App\Http\Controllers\Apps\BankAccountController::class, 'updateOrder'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.order');
+
+    // settings price lists
+    Route::resource('/settings/price-lists', PriceListController::class)
+        ->except(['create', 'edit'])
+        ->middlewareFor('index', 'permission:price-lists-access')
+        ->middlewareFor('store', ['permission:price-lists-create', 'step_up'])
+        ->middlewareFor('update', ['permission:price-lists-update', 'step_up'])
+        ->middlewareFor('destroy', ['permission:price-lists-delete', 'step_up']);
+    Route::post('/settings/price-lists/{priceList}/items', [PriceListController::class, 'updateItem'])->middleware(['permission:price-lists-update', 'step_up'])->name('price-lists.items.update');
+    Route::delete('/settings/price-lists/{priceList}/items/{productId}', [PriceListController::class, 'destroyItem'])->middleware(['permission:price-lists-update', 'step_up'])->name('price-lists.items.destroy');
 
     // settings warehouses
     Route::resource('/settings/warehouses', WarehouseController::class)

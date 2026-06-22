@@ -36,6 +36,7 @@ import {
     IconSpeakerphone,
     IconArrowsLeftRight,
     IconAlertCircle,
+    IconListDetails,
 } from "@tabler/icons-react";
 import hasAnyPermission from "./Permission";
 import React from "react";
@@ -383,6 +384,13 @@ export default function Menu() {
                     active: url === "/dashboard/settings/target",
                     icon: <IconChartInfographic size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["dashboard-access"]),
+                },
+                {
+                    title: "Price List",
+                    href: route("price-lists.index"),
+                    active: url.startsWith("/dashboard/settings/price-lists"),
+                    icon: <IconListDetails size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["price-lists-access"]),
                 },
                 {
                     title: "Gudang / Cabang",
