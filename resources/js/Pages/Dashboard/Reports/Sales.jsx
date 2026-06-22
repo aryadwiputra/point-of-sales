@@ -49,6 +49,7 @@ const defaultFilterState = {
     invoice: "",
     cashier_id: "",
     customer_id: "",
+    warehouse_id: "",
 };
 
 const formatCurrency = (value = 0) =>
@@ -61,7 +62,7 @@ const formatCurrency = (value = 0) =>
 const castFilterString = (value) =>
     typeof value === "number" ? String(value) : value ?? "";
 
-const Sales = ({ transactions, summary, filters, cashiers, customers }) => {
+const Sales = ({ transactions, summary, filters, cashiers, customers, warehouses = [] }) => {
     const [showFilters, setShowFilters] = useState(false);
     const [filterData, setFilterData] = useState({
         ...defaultFilterState,
@@ -70,6 +71,7 @@ const Sales = ({ transactions, summary, filters, cashiers, customers }) => {
         invoice: castFilterString(filters?.invoice),
         cashier_id: castFilterString(filters?.cashier_id),
         customer_id: castFilterString(filters?.customer_id),
+        warehouse_id: castFilterString(filters?.warehouse_id),
     });
 
     const cashierFromFilters = useMemo(
@@ -154,7 +156,8 @@ const Sales = ({ transactions, summary, filters, cashiers, customers }) => {
         filterData.start_date ||
         filterData.end_date ||
         filterData.cashier_id ||
-        filterData.customer_id;
+        filterData.customer_id ||
+        filterData.warehouse_id;
 
     const safeSummary = {
         orders_count: summary?.orders_count ?? 0,

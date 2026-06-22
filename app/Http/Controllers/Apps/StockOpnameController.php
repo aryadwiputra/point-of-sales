@@ -35,10 +35,11 @@ class StockOpnameController extends Controller
             'status' => $request->input('status'),
             'date_from' => $request->input('date_from'),
             'date_to' => $request->input('date_to'),
+            'warehouse_id' => $request->input('warehouse_id'),
         ];
 
         $stockOpnames = StockOpname::query()
-            ->with(['creator:id,name', 'finalizer:id,name'])
+            ->with(['creator:id,name', 'finalizer:id,name', 'warehouse:id,code,name'])
             ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($builder) use ($search) {
                     $builder
@@ -49,6 +50,7 @@ class StockOpnameController extends Controller
             ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))
             ->when($filters['date_from'], fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'], fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
+            ->when($filters['warehouse_id'], fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
             ->withCount('items')
             ->latest()
             ->paginate(10)
@@ -57,6 +59,7 @@ class StockOpnameController extends Controller
         return Inertia::render('Dashboard/StockOpnames/Index', [
             'stockOpnames' => $stockOpnames,
             'filters' => $filters,
+            'warehouses' => Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']),
         ]);
     }
 

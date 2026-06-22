@@ -11,6 +11,7 @@ use App\Models\PaymentSetting;
 use App\Models\Product;
 use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
@@ -701,11 +702,13 @@ class TransactionController extends Controller
             'invoice' => $request->input('invoice'),
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
+            'warehouse_id' => $request->input('warehouse_id'),
         ];
 
         $query = Transaction::query()
             ->with([
                 'cashier:id,name',
+                'warehouse:id,code,name',
                 'cashierShift:id,opened_at,status',
                 'customer:id,name',
                 'receivable',
@@ -731,9 +734,13 @@ class TransactionController extends Controller
             })
             ->when($filters['end_date'], function (Builder $builder, $date) {
                 $builder->whereDate('created_at', '<=', $date);
+            })
+            ->when($filters['warehouse_id'], function (Builder $builder, $warehouseId) {
+                $builder->where('warehouse_id', $warehouseId);
             });
 
         $transactions = $query->paginate(10)->withQueryString();
+        $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
         $transactions->through(function (Transaction $transaction) use ($salesReturnTablesReady) {
             $canCreateSalesReturn = false;
 
@@ -764,6 +771,7 @@ class TransactionController extends Controller
             'transactions' => $transactions,
             'filters' => $filters,
             'salesReturnFeatureReady' => $salesReturnTablesReady,
+            'warehouses' => $warehouses,
         ]);
     }
 

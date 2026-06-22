@@ -13,7 +13,7 @@ const formatDateTime = (value) =>
           }).format(new Date(value))
         : "-";
 
-export default function Index({ stockMutations, products, filters }) {
+export default function Index({ stockMutations, products, warehouses = [], filters }) {
     const updateFilter = (key, value) => {
         router.get(
             route("stock-mutations.index"),
@@ -41,7 +41,7 @@ export default function Index({ stockMutations, products, filters }) {
                 </p>
             </div>
 
-            <div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
+            <div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-5">
                 <select
                     value={filters.product_id || ""}
                     onChange={(event) =>
@@ -68,6 +68,17 @@ export default function Index({ stockMutations, products, filters }) {
                     <option value="in">In</option>
                     <option value="out">Out</option>
                     <option value="adjustment">Adjustment</option>
+                </select>
+
+                <select
+                    value={filters.warehouse_id || ""}
+                    onChange={(event) => updateFilter("warehouse_id", event.target.value)}
+                    className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                >
+                    <option value="">Semua Gudang</option>
+                    {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>{w.code} — {w.name}</option>
+                    ))}
                 </select>
 
                 <input
@@ -97,6 +108,7 @@ export default function Index({ stockMutations, products, filters }) {
                             <Table.Th>Tipe</Table.Th>
                             <Table.Th>Qty</Table.Th>
                             <Table.Th>Before / After</Table.Th>
+                            <Table.Th>Gudang</Table.Th>
                             <Table.Th>Referensi</Table.Th>
                             <Table.Th>Dibuat Oleh</Table.Th>
                             <Table.Th>Waktu</Table.Th>
@@ -128,6 +140,7 @@ export default function Index({ stockMutations, products, filters }) {
                                     <Table.Td>
                                         {mutation.stock_before} → {mutation.stock_after}
                                     </Table.Td>
+                                    <Table.Td>{mutation.warehouse?.name || "-"}</Table.Td>
                                     <Table.Td>
                                         <div>
                                             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -143,8 +156,8 @@ export default function Index({ stockMutations, products, filters }) {
                                 </tr>
                             ))
                         ) : (
-                            <Table.Empty
-                                colSpan={7}
+                                <Table.Empty
+                                    colSpan={8}
                                 message={
                                     <div className="text-slate-500 dark:text-slate-400">
                                         Belum ada mutasi stok.

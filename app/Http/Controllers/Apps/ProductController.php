@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
@@ -23,16 +24,17 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        // get products
-        $products = Product::when(request()->search, function ($products) {
-            $products = $products->where('title', 'like', '%'.request()->search.'%');
+        $products = Product::when($request->search, function ($products, $search) {
+            $products = $products->where('title', 'like', '%'.$search.'%');
         })->with('category')->latest()->paginate(5);
 
-        // return inertia
+        $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
+
         return Inertia::render('Dashboard/Products/Index', [
             'products' => $products,
+            'warehouses' => $warehouses,
         ]);
     }
 

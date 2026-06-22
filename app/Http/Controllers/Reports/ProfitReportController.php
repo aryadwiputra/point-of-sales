@@ -8,6 +8,7 @@ use App\Models\Profit;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,11 +22,12 @@ class ProfitReportController extends Controller
             'invoice' => $request->input('invoice'),
             'cashier_id' => $request->input('cashier_id'),
             'customer_id' => $request->input('customer_id'),
+            'warehouse_id' => $request->input('warehouse_id'),
         ];
 
         $baseQuery = $this->applyFilters(
             Transaction::query()
-                ->with(['cashier:id,name', 'customer:id,name'])
+                ->with(['cashier:id,name', 'customer:id,name', 'warehouse:id,code,name'])
                 ->withSum('profits as total_profit', 'total')
                 ->withSum('details as total_items', 'qty'),
             $filters
@@ -68,6 +70,7 @@ class ProfitReportController extends Controller
             'filters' => $filters,
             'cashiers' => User::select('id', 'name')->orderBy('name')->get(),
             'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
+            'warehouses' => Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']),
         ]);
     }
 
@@ -78,6 +81,7 @@ class ProfitReportController extends Controller
             ->when($filters['cashier_id'] ?? null, fn ($q, $cashier) => $q->where('cashier_id', $cashier))
             ->when($filters['customer_id'] ?? null, fn ($q, $customer) => $q->where('customer_id', $customer))
             ->when($filters['start_date'] ?? null, fn ($q, $start) => $q->whereDate('created_at', '>=', $start))
-            ->when($filters['end_date'] ?? null, fn ($q, $end) => $q->whereDate('created_at', '<=', $end));
+            ->when($filters['end_date'] ?? null, fn ($q, $end) => $q->whereDate('created_at', '<=', $end))
+            ->when($filters['warehouse_id'] ?? null, fn ($q, $warehouse) => $q->where('warehouse_id', $warehouse));
     }
 }

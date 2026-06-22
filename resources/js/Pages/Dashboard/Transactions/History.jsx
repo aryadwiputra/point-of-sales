@@ -24,6 +24,7 @@ const defaultFilters = {
     invoice: "",
     start_date: "",
     end_date: "",
+    warehouse_id: "",
 };
 
 const formatCurrency = (value = 0) =>
@@ -33,7 +34,7 @@ const formatCurrency = (value = 0) =>
         minimumFractionDigits: 0,
     }).format(value);
 
-const History = ({ transactions, filters }) => {
+const History = ({ transactions, filters, warehouses = [] }) => {
     const { can } = useAuthorization();
     const canCreateSalesReturn = can("sales-returns-create");
     const canConfirmPayment = can("transactions-confirm-payment");
@@ -89,7 +90,7 @@ const History = ({ transactions, filters }) => {
         : rows.length || 1;
 
     const hasActiveFilters =
-        filterData.invoice || filterData.start_date || filterData.end_date;
+        filterData.invoice || filterData.start_date || filterData.end_date || filterData.warehouse_id;
 
     return (
         <>
@@ -188,6 +189,21 @@ const History = ({ transactions, filters }) => {
                                         }
                                         className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        Gudang / Cabang
+                                    </label>
+                                    <select
+                                        value={filterData.warehouse_id}
+                                        onChange={(e) => handleChange("warehouse_id", e.target.value)}
+                                        className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                    >
+                                        <option value="">Semua Gudang</option>
+                                        {warehouses.map((w) => (
+                                            <option key={w.id} value={w.id}>{w.code} — {w.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="flex items-end gap-2">
                                     <button
