@@ -127,6 +127,12 @@ class PermissionSeeder extends Seeder
         $create('supplier-returns-create');
         $create('supplier-returns-update');
 
+        // warehouses
+        $create('warehouses-access');
+        $create('warehouses-create');
+        $create('warehouses-update');
+        $create('warehouses-delete');
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

@@ -19,6 +19,7 @@ use App\Http\Controllers\Apps\StockMutationController;
 use App\Http\Controllers\Apps\StockOpnameController;
 use App\Http\Controllers\Apps\SupplierReturnController;
 use App\Http\Controllers\Apps\TransactionController;
+use App\Http\Controllers\Apps\WarehouseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
@@ -268,6 +269,15 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::delete('/settings/bank-accounts/{bankAccount}', [\App\Http\Controllers\Apps\BankAccountController::class, 'destroy'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.destroy');
     Route::patch('/settings/bank-accounts/{bankAccount}/toggle', [\App\Http\Controllers\Apps\BankAccountController::class, 'toggleActive'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.toggle');
     Route::post('/settings/bank-accounts/order', [\App\Http\Controllers\Apps\BankAccountController::class, 'updateOrder'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.order');
+
+    // settings warehouses
+    Route::resource('/settings/warehouses', WarehouseController::class)
+        ->except('show')
+        ->names('settings.warehouses')
+        ->middlewareFor('index', 'permission:warehouses-access')
+        ->middlewareFor('store', 'permission:warehouses-create')
+        ->middlewareFor('update', 'permission:warehouses-update')
+        ->middlewareFor('destroy', 'permission:warehouses-delete');
 
     // confirm payment for bank transfer
     Route::patch('/transactions/{transaction}/confirm-payment', [TransactionController::class, 'confirmPayment'])->middleware(['permission:transactions-confirm-payment', 'step_up'])->name('transactions.confirm-payment');

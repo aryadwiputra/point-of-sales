@@ -48,6 +48,7 @@ class RoleSeeder extends Seeder
         $this->createRoleWithPermissions('purchase-orders-access', '%purchase-orders%');
         $this->createRoleWithPermissions('goods-receivings-access', '%goods-receivings%');
         $this->createRoleWithPermissions('supplier-returns-access', '%supplier-returns%');
+        $this->createRoleWithPermissions('warehouses-access', '%warehouses%');
 
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
         $superAdminRole->syncPermissions(Permission::all());

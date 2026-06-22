@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
@@ -18,11 +19,6 @@ class Product extends Model
         'stock' => 'integer',
     ];
 
-    /**
-     * fillable
-     *
-     * @var array
-     */
     protected $fillable = [
         'image',
         'barcode',
@@ -35,14 +31,17 @@ class Product extends Model
         'stock',
     ];
 
-    /**
-     * category
-     *
-     * @return void
-     */
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class)
+            ->withPivot('stock')
+            ->using(ProductWarehouse::class)
+            ->withTimestamps();
     }
 
     public function stockOpnameItems()
@@ -65,9 +64,11 @@ class Product extends Model
         return $this->hasMany(PricingRule::class);
     }
 
-    /**
-     * image
-     */
+    public function stockTotal(): int
+    {
+        return (int) $this->warehouses()->sum('product_warehouse.stock');
+    }
+
     protected function image(): Attribute
     {
         return Attribute::make(

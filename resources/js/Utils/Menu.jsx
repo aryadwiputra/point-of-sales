@@ -363,6 +363,13 @@ export default function Menu() {
                     icon: <IconChartInfographic size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["dashboard-access"]),
                 },
+                {
+                    title: "Gudang / Cabang",
+                    href: route("settings.warehouses.index"),
+                    active: url === "/dashboard/settings/warehouses",
+                    icon: <IconBuildingWarehouse size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["warehouses-access"]),
+                },
             ],
         },
     ];
