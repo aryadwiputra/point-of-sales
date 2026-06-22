@@ -6,6 +6,7 @@ use App\Models\CashierShift;
 use App\Models\Payable;
 use App\Models\Product;
 use App\Models\Receivable;
+use App\Models\Transaction;
 use App\Services\CashierShiftService;
 use App\Services\PayableAgingService;
 use App\Services\ReceivableService;
@@ -33,9 +34,14 @@ class HandleInertiaRequests extends Middleware
         $stepUpFreshUntil = null;
         $payableAgingSummary = null;
         $receivableAgingSummary = null;
+        $pendingApprovalCount = 0;
 
         if ($request->user()) {
             $userId = $request->user()->id;
+
+            if ($request->user()->can('discounts-approve')) {
+                $pendingApprovalCount = Transaction::where('discount_approval_status', 'pending')->count();
+            }
 
             $lowStockNotifications = Product::where('min_stock', '>', 0)
                 ->whereColumn('stock', '<=', 'min_stock')
@@ -164,6 +170,7 @@ class HandleInertiaRequests extends Middleware
             'receivableAgingSummary' => $receivableAgingSummary,
             'activeCashierShift' => $activeCashierShift,
             'storeProfile' => $storeProfile,
+            'pendingApprovalCount' => $pendingApprovalCount,
             'security' => [
                 'warnings' => $securityWarnings,
                 'publicRegistrationEnabled' => config('security.auth.public_registration'),

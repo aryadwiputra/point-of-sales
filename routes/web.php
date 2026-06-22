@@ -10,6 +10,7 @@ use App\Http\Controllers\Apps\CustomerSegmentController;
 use App\Http\Controllers\Apps\CustomerVoucherController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
+use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\PaymentSettingController;
 use App\Http\Controllers\Apps\PricingRuleController;
@@ -300,6 +301,11 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
     // confirm payment for bank transfer
     Route::patch('/transactions/{transaction}/confirm-payment', [TransactionController::class, 'confirmPayment'])->middleware(['permission:transactions-confirm-payment', 'step_up'])->name('transactions.confirm-payment');
+
+    // discount approval
+    Route::get('/discount-approvals', [DiscountApprovalController::class, 'pending'])->middleware('permission:discounts-approve')->name('discount-approvals.pending');
+    Route::post('/discount-approvals/{transaction}/approve', [DiscountApprovalController::class, 'approve'])->middleware('permission:discounts-approve')->name('discount-approvals.approve');
+    Route::post('/discount-approvals/{transaction}/deny', [DiscountApprovalController::class, 'deny'])->middleware('permission:discounts-approve')->name('discount-approvals.deny');
 
     // reports
     Route::get('/reports/sales', [SalesReportController::class, 'index'])->middleware('permission:reports-access')->name('reports.sales.index');

@@ -35,6 +35,7 @@ import {
     IconTruckReturn,
     IconSpeakerphone,
     IconArrowsLeftRight,
+    IconAlertCircle,
 } from "@tabler/icons-react";
 import hasAnyPermission from "./Permission";
 import React from "react";
@@ -130,6 +131,18 @@ export default function Menu() {
                     active: url.startsWith("/dashboard/aging"),
                     icon: <IconChartBar size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["receivables-access"]),
+                },
+            ],
+        },
+        {
+            title: "Approval",
+            details: [
+                {
+                    title: "Approval Diskon",
+                    href: route("discount-approvals.pending"),
+                    active: url.startsWith("/dashboard/discount-approvals"),
+                    icon: <IconAlertCircle size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["discounts-approve"]),
                 },
             ],
         },

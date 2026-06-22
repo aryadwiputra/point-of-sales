@@ -11,29 +11,6 @@ class Transaction extends Model
 {
     use HasFactory;
 
-    protected $casts = [
-        'cashier_id' => 'integer',
-        'cashier_shift_id' => 'integer',
-        'customer_id' => 'integer',
-        'cash' => 'integer',
-        'change' => 'integer',
-        'discount' => 'integer',
-        'loyalty_points_earned' => 'integer',
-        'loyalty_points_redeemed' => 'integer',
-        'loyalty_discount_total' => 'integer',
-        'customer_voucher_discount' => 'integer',
-        'shipping_cost' => 'integer',
-        'grand_total' => 'integer',
-        'bank_account_id' => 'integer',
-        'tax_rate' => 'decimal:2',
-        'tax_total' => 'integer',
-    ];
-
-    /**
-     * fillable
-     *
-     * @var array
-     */
     protected $fillable = [
         'cashier_id',
         'cashier_shift_id',
@@ -59,13 +36,30 @@ class Transaction extends Model
         'tax_rate',
         'tax_total',
         'customer_npwp',
+        'discount_approved_by',
+        'discount_approved_at',
+        'discount_approval_status',
     ];
 
-    /**
-     * details
-     *
-     * @return void
-     */
+    protected $casts = [
+        'cashier_id' => 'integer',
+        'cashier_shift_id' => 'integer',
+        'customer_id' => 'integer',
+        'cash' => 'integer',
+        'change' => 'integer',
+        'discount' => 'integer',
+        'loyalty_points_earned' => 'integer',
+        'loyalty_points_redeemed' => 'integer',
+        'loyalty_discount_total' => 'integer',
+        'customer_voucher_discount' => 'integer',
+        'shipping_cost' => 'integer',
+        'grand_total' => 'integer',
+        'bank_account_id' => 'integer',
+        'tax_rate' => 'decimal:2',
+        'tax_total' => 'integer',
+        'discount_approved_at' => 'datetime',
+    ];
+
     public function details()
     {
         return $this->hasMany(TransactionDetail::class);
@@ -139,6 +133,29 @@ class Transaction extends Model
     public function campaignLogs()
     {
         return $this->hasMany(CustomerCampaignLog::class);
+    }
+
+    public function discountApprover()
+    {
+        return $this->belongsTo(User::class, 'discount_approved_by');
+    }
+
+    public function discountApprovalLogs()
+    {
+        return $this->hasMany(DiscountApprovalLog::class);
+    }
+
+    public function needsDiscountApproval(): bool
+    {
+        $threshold = (int) \App\Models\Setting::get('discount_approval_threshold', 0);
+        $percentThreshold = (int) \App\Models\Setting::get('discount_approval_percent_threshold', 0);
+
+        if ($threshold > 0 && $this->discount >= $threshold) return true;
+        if ($percentThreshold > 0 && $this->grand_total > 0) {
+            $percent = ($this->discount / $this->grand_total) * 100;
+            if ($percent >= $percentThreshold) return true;
+        }
+        return false;
     }
 
     /**

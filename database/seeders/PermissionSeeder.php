@@ -140,6 +140,9 @@ class PermissionSeeder extends Seeder
         $create('customers-import');
         $create('customers-export');
 
+        // discount approval
+        $create('discounts-approve');
+
         // warehouses
         $create('warehouses-access');
         $create('warehouses-create');

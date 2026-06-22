@@ -679,6 +679,25 @@ class TransactionController extends Controller
             return $transaction->fresh(['customer']);
         });
 
+        // Check if discount needs approval
+        if ($transaction->discount > 0 && $transaction->needsDiscountApproval()) {
+            $transaction->update([
+                'discount_approval_status' => 'pending',
+                'payment_status' => 'pending_approval',
+            ]);
+
+            \App\Models\DiscountApprovalLog::create([
+                'transaction_id' => $transaction->id,
+                'cashier_id' => auth()->id(),
+                'requested_discount' => $appliedManualDiscount,
+                'status' => 'pending',
+            ]);
+
+            return redirect()
+                ->route('transactions.print', $transaction->invoice)
+                ->with('info', 'Transaksi menunggu approval supervisor.');
+        }
+
         if ($paymentGateway) {
             try {
                 $paymentResponse = $paymentGatewayManager->createPayment($transaction, $paymentGateway, $paymentSetting);
