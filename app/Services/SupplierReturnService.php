@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SupplierReturn;
 use App\Models\SupplierReturnItem;
+use App\Models\ProductWarehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -31,6 +32,7 @@ class SupplierReturnService
         return DB::transaction(function () use ($data, $items, $userId) {
             $return = SupplierReturn::create([
                 'supplier_id' => $data['supplier_id'] ?? null,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'goods_receiving_id' => $data['goods_receiving_id'] ?? null,
                 'payable_id' => $data['payable_id'] ?? null,
                 'document_number' => $this->generateDocumentNumber(),
@@ -78,6 +80,14 @@ class SupplierReturnService
                 $product = $item->product;
                 $stockBefore = (int) $product->stock;
                 $product->decrement('stock', $item->qty_returned);
+
+                // Decrement pivot warehouse stock
+                if ($return->warehouse_id) {
+                    ProductWarehouse::where([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $return->warehouse_id,
+                    ])->decrement('stock', $item->qty_returned);
+                }
 
                 $this->stockMutationService->recordSupplierReturnOut(
                     product: $product,

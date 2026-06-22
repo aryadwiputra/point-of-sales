@@ -19,9 +19,10 @@ const formatCurrency = (value = 0) =>
         minimumFractionDigits: 0,
     }).format(value);
 
-export default function Create({ suppliers, products }) {
+export default function Create({ suppliers, products, warehouses = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         supplier_id: "",
+        warehouse_id: "",
         document_number: "",
         notes: "",
         items: [],
@@ -98,7 +99,7 @@ export default function Create({ suppliers, products }) {
                 <div className="space-y-6">
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                         <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Informasi PO</h2>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             <div>
                                 <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200">Supplier</label>
                                 <select
@@ -109,6 +110,19 @@ export default function Create({ suppliers, products }) {
                                     <option value="">Pilih Supplier</option>
                                     {suppliers.map((s) => (
                                         <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200">Tujuan Gudang</label>
+                                <select
+                                    value={data.warehouse_id}
+                                    onChange={(e) => setData("warehouse_id", e.target.value)}
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                >
+                                    <option value="">Pilih Gudang</option>
+                                    {warehouses.map((w) => (
+                                        <option key={w.id} value={w.id}>{w.code} — {w.name}</option>
                                     ))}
                                 </select>
                             </div>

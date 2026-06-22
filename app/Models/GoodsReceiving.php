@@ -12,6 +12,7 @@ class GoodsReceiving extends Model
     protected $fillable = [
         'purchase_order_id',
         'supplier_id',
+        'warehouse_id',
         'document_number',
         'notes',
         'received_by',
@@ -30,6 +31,11 @@ class GoodsReceiving extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function items()

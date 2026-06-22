@@ -12,6 +12,7 @@ class SalesReturn extends Model
     protected $fillable = [
         'code',
         'transaction_id',
+        'warehouse_id',
         'customer_id',
         'cashier_id',
         'cashier_shift_id',
@@ -53,6 +54,11 @@ class SalesReturn extends Model
     public function cashierShift()
     {
         return $this->belongsTo(CashierShift::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function items()

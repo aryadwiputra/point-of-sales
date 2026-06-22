@@ -30,6 +30,7 @@ class PurchaseOrderService
         return DB::transaction(function () use ($data, $items, $userId) {
             $order = PurchaseOrder::create([
                 'supplier_id' => $data['supplier_id'] ?? null,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
                 'document_number' => $data['document_number'] ?? $this->generateDocumentNumber(),
                 'status' => 'draft',
                 'notes' => $data['notes'] ?? null,

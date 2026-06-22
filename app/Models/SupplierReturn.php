@@ -11,6 +11,7 @@ class SupplierReturn extends Model
 
     protected $fillable = [
         'supplier_id',
+        'warehouse_id',
         'goods_receiving_id',
         'payable_id',
         'document_number',
@@ -27,6 +28,11 @@ class SupplierReturn extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function goodsReceiving()

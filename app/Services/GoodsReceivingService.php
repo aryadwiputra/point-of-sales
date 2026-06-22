@@ -34,6 +34,7 @@ class GoodsReceivingService
             $receiving = GoodsReceiving::create([
                 'purchase_order_id' => $order->id,
                 'supplier_id' => $order->supplier_id,
+                'warehouse_id' => $order->warehouse_id,
                 'document_number' => $this->generateDocumentNumber(),
                 'notes' => $notes,
                 'received_by' => $userId,
@@ -55,14 +56,21 @@ class GoodsReceivingService
                 $poItem->increment('qty_received', $qtyReceived);
 
                 $product = $poItem->product;
-                $stockBefore = (int) $product->stock;
-                $product->increment('stock', $qtyReceived);
+                // Decrement legacy stock
+                $product->decrement('stock', $qtyReceived);
+                // Increment warehouse pivot stock
+                if ($order->warehouse_id) {
+                    \App\Models\ProductWarehouse::where([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $order->warehouse_id,
+                    ])->increment('stock', $qtyReceived);
+                }
 
                 $this->stockMutationService->recordPurchaseInbound(
                     product: $product,
                     goodsReceiving: $receiving,
                     qty: $qtyReceived,
-                    stockBefore: $stockBefore,
+                    stockBefore: (int) $product->stock + $qtyReceived,
                     stockAfter: (int) $product->stock,
                     notes: 'Penerimaan dari PO '.$order->document_number,
                     userId: $userId,

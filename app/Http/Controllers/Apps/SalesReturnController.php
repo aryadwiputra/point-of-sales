@@ -234,6 +234,15 @@ class SalesReturnController extends Controller
                             'stock' => $stockAfter,
                         ]);
 
+                        // Restock to transaction warehouse
+                        $transactionWarehouseId = $salesReturn->transaction->warehouse_id;
+                        if ($transactionWarehouseId) {
+                            \App\Models\ProductWarehouse::where([
+                                'product_id' => $product->id,
+                                'warehouse_id' => $transactionWarehouseId,
+                            ])->increment('stock', (int) $item->qty_return);
+                        }
+
                         $this->stockMutationService->recordSalesReturnRestock(
                             product: $product,
                             salesReturn: $salesReturn,
@@ -264,6 +273,7 @@ class SalesReturnController extends Controller
 
             $salesReturn->update([
                 'cashier_shift_id' => $activeShift->id,
+                'warehouse_id' => $salesReturn->transaction->warehouse_id,
                 'return_type' => $settlement['return_type'],
                 'refund_amount' => $settlement['refund_amount'],
                 'credited_amount' => $settlement['credited_amount'],

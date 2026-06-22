@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
+use App\Models\Warehouse;
 use App\Services\PurchaseOrderService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -49,10 +50,12 @@ class PurchaseOrderController extends Controller
     {
         $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
         $products = Product::orderBy('title')->get(['id', 'title', 'sku', 'buy_price', 'stock']);
+        $warehouses = Warehouse::active()->orderBy('sort_order')->orderBy('code')->get(['id', 'code', 'name']);
 
         return Inertia::render('Dashboard/PurchaseOrders/Create', [
             'suppliers' => $suppliers,
             'products' => $products,
+            'warehouses' => $warehouses,
         ]);
     }
 
@@ -60,6 +63,7 @@ class PurchaseOrderController extends Controller
     {
         $data = $request->validate([
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
+            'warehouse_id' => ['nullable', 'exists:warehouses,id'],
             'document_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
@@ -79,6 +83,7 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder->load([
             'supplier:id,name,phone,email,address',
+            'warehouse:id,code,name',
             'items.product:id,title,sku,image',
             'goodsReceivings' => function ($q) {
                 $q->with('items.product:id,title,sku')->orderByDesc('received_at');

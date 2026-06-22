@@ -10,6 +10,7 @@ use App\Http\Requests\UpdateStockOpnameRequest;
 use App\Models\Product;
 use App\Models\StockOpname;
 use App\Models\StockOpnameItem;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\StockMutationService;
 use Illuminate\Http\RedirectResponse;
@@ -61,13 +62,18 @@ class StockOpnameController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Dashboard/StockOpnames/Create');
+        $warehouses = Warehouse::active()->orderBy('sort_order')->orderBy('code')->get(['id', 'code', 'name']);
+
+        return Inertia::render('Dashboard/StockOpnames/Create', [
+            'warehouses' => $warehouses,
+        ]);
     }
 
     public function store(StoreStockOpnameRequest $request): RedirectResponse
     {
         $stockOpname = StockOpname::create([
             'code' => $this->generateCode(),
+            'warehouse_id' => $request->validated('warehouse_id'),
             'notes' => $request->validated('notes'),
             'status' => 'draft',
             'created_by' => $request->user()?->id,
@@ -103,7 +109,18 @@ class StockOpnameController extends Controller
                 ->whereNotIn('id', $selectedProductIds)
                 ->orderBy('title')
                 ->limit(20)
-                ->get();
+                ->get()
+                ->map(function ($product) use ($stockOpname) {
+                    $pivotStock = 0;
+                    if ($stockOpname->warehouse_id) {
+                        $wh = $product->warehouses()->where('warehouse_id', $stockOpname->warehouse_id)->first();
+                        $pivotStock = $wh?->pivot->stock ?? 0;
+                    }
+                    return [
+                        ...$product->toArray(),
+                        'warehouse_stock' => $pivotStock,
+                    ];
+                });
 
         return Inertia::render('Dashboard/StockOpnames/Show', [
             'stockOpname' => $stockOpname,
@@ -133,9 +150,15 @@ class StockOpnameController extends Controller
             ]);
         }
 
+        $systemStock = 0;
+        if ($stockOpname->warehouse_id) {
+            $wh = $product->warehouses()->where('warehouse_id', $stockOpname->warehouse_id)->first();
+            $systemStock = $wh?->pivot->stock ?? 0;
+        }
+
         $stockOpname->items()->create([
             'product_id' => $product->id,
-            'system_stock' => $product->stock,
+            'system_stock' => $systemStock,
         ]);
 
         return back()->with('success', 'Produk berhasil ditambahkan ke stock opname.');
@@ -209,6 +232,14 @@ class StockOpnameController extends Controller
                 $product->update([
                     'stock' => $stockAfter,
                 ]);
+
+                // Update pivot stock for warehouse
+                if ($stockOpname->warehouse_id) {
+                    \App\Models\ProductWarehouse::where([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $stockOpname->warehouse_id,
+                    ])->update(['stock' => $stockAfter]);
+                }
 
                 $this->stockMutationService->recordStockOpnameAdjustment(
                     product: $product,

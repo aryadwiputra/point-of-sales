@@ -6,10 +6,11 @@ import Button from "@/Components/Dashboard/Button";
 import { IconArrowLeft, IconClipboardCheck } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
-export default function Create() {
+export default function Create({ warehouses = [] }) {
     const { errors } = usePage().props;
     const { data, setData, post, processing } = useForm({
         notes: "",
+        warehouse_id: warehouses.length > 0 ? warehouses[0].id : "",
     });
 
     const submit = (event) => {
@@ -40,6 +41,23 @@ export default function Create() {
 
             <form onSubmit={submit} className="max-w-3xl">
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="mb-4">
+                        <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            Gudang / Cabang
+                        </label>
+                        <select
+                            value={data.warehouse_id}
+                            onChange={(e) => setData("warehouse_id", e.target.value)}
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                            {warehouses.map((w) => (
+                                <option key={w.id} value={w.id}>
+                                    {w.code} — {w.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <Textarea
                         label="Catatan Sesi"
                         placeholder="Contoh: opname bulanan gudang depan"
