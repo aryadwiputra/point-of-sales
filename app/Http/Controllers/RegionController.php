@@ -1,41 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Laravolt\Indonesia\Models\City;
-use Laravolt\Indonesia\Models\District;
-use Laravolt\Indonesia\Models\Village;
+use App\Http\Requests\Region\GetDistrictsRequest;
+use App\Http\Requests\Region\GetRegenciesRequest;
+use App\Http\Requests\Region\GetVillagesRequest;
+use App\Services\Queries\RegionQueryService;
 
 class RegionController extends Controller
 {
-    public function regencies(Request $request)
+    public function regencies(GetRegenciesRequest $request, RegionQueryService $service)
     {
-        $request->validate(['province_id' => 'required|string']);
-
-        return City::where('province_code', $request->province_id)
-            ->select('code', 'name')
-            ->orderBy('name')
-            ->get();
+        return $service->regencies($request->validated('province_id'));
     }
 
-    public function districts(Request $request)
+    public function districts(GetDistrictsRequest $request, RegionQueryService $service)
     {
-        $request->validate(['regency_id' => 'required|string']);
-
-        return District::where('city_code', $request->regency_id)
-            ->select('code', 'name')
-            ->orderBy('name')
-            ->get();
+        return $service->districts($request->validated('regency_id'));
     }
 
-    public function villages(Request $request)
+    public function villages(GetVillagesRequest $request, RegionQueryService $service)
     {
-        $request->validate(['district_id' => 'required|string']);
-
-        return Village::where('district_code', $request->district_id)
-            ->select('code', 'name')
-            ->orderBy('name')
-            ->get();
+        return $service->villages($request->validated('district_id'));
     }
 }

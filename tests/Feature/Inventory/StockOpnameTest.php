@@ -243,14 +243,22 @@ class StockOpnameTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->put(route('products.update', $product), [
-                'barcode' => $product->barcode,
                 'sku' => $product->sku,
                 'title' => 'Produk Revisi',
                 'description' => $product->description,
                 'category_id' => $product->category_id,
-                'buy_price' => $product->buy_price,
-                'sell_price' => $product->sell_price,
                 'stock' => 999,
+                'product_units' => [
+                    [
+                        'id' => $product->baseUnit->id,
+                        'label' => 'pcs',
+                        'conversion_qty' => 1,
+                        'is_base_unit' => true,
+                        'buy_price' => $product->buy_price,
+                        'sell_price' => $product->sell_price,
+                        'barcode' => $product->barcode,
+                    ],
+                ],
             ]);
 
         $response->assertRedirect(route('products.index'));
@@ -275,14 +283,21 @@ class StockOpnameTest extends TestCase
             ->actingAs($user)
             ->post(route('products.store'), [
                 'image' => UploadedFile::fake()->image('product.png'),
-                'barcode' => 'BRCD-'.Str::upper(Str::random(8)),
                 'sku' => 'SKU-'.Str::upper(Str::random(8)),
                 'title' => 'Produk Baru',
                 'description' => 'Deskripsi produk baru',
                 'category_id' => $category->id,
-                'buy_price' => 10000,
-                'sell_price' => 15000,
                 'stock' => 15,
+                'product_units' => [
+                    [
+                        'label' => 'pcs',
+                        'conversion_qty' => 1,
+                        'is_base_unit' => true,
+                        'buy_price' => 10000,
+                        'sell_price' => 15000,
+                        'barcode' => 'BRCD-'.Str::upper(Str::random(8)),
+                    ],
+                ],
             ]);
 
         $product = Product::latest('id')->first();
@@ -317,7 +332,7 @@ class StockOpnameTest extends TestCase
             'image' => 'category.png',
         ]);
 
-        return Product::create([
+        $product = Product::create([
             'category_id' => $category->id,
             'image' => 'product.png',
             'barcode' => 'BRCD-'.Str::upper(Str::random(10)),
@@ -328,5 +343,16 @@ class StockOpnameTest extends TestCase
             'sell_price' => 60000,
             'stock' => $stock,
         ]);
+
+        $product->units()->create([
+            'label' => 'pcs',
+            'conversion_qty' => 1,
+            'is_base_unit' => true,
+            'buy_price' => 45000,
+            'sell_price' => 60000,
+            'barcode' => $product->barcode,
+        ]);
+
+        return $product->fresh('baseUnit');
     }
 }

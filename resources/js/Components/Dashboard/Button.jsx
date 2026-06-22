@@ -22,8 +22,8 @@ export default function Button({
             text: "Data yang dihapus tidak dapat dikembalikan!",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#6366f1",
-            cancelButtonColor: "#64748b",
+            confirmButtonColor: "#000000",
+            cancelButtonColor: "#71717a",
             confirmButtonText: "Ya, Hapus!",
             cancelButtonText: "Batal",
         }).then((result) => {
@@ -42,16 +42,21 @@ export default function Button({
     };
 
     const baseStyles =
-        "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 active:scale-[0.98]";
-    const sizeStyles = "px-4 py-2.5 text-sm rounded-xl";
-    const smallStyles = "px-3 py-2 rounded-xl";
+        "inline-flex min-h-touch items-center justify-center gap-2 rounded-full font-medium transition-all duration-200 active:scale-[0.98]";
+    const sizeStyles = "px-4 py-2.5 text-sm";
+    const smallStyles = "min-w-touch px-3 py-2 text-sm";
+    const defaultStyles =
+        "bg-ink text-white hover:bg-shade-70 disabled:cursor-not-allowed disabled:opacity-50";
+    const defaultDangerStyles =
+        "border border-danger-200 bg-danger-50 text-danger-600 hover:bg-danger-100 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300";
+    const resolvedClassName = className || defaultStyles;
 
     return (
         <>
             {type === "link" && (
                 <Link
                     href={href}
-                    className={`${baseStyles} ${sizeStyles} ${className}`}
+                    className={`${baseStyles} ${sizeStyles} ${resolvedClassName}`}
                 >
                     {icon}{" "}
                     <span
@@ -63,7 +68,7 @@ export default function Button({
             )}
             {type === "button" && (
                 <button
-                    className={`${baseStyles} ${sizeStyles} ${className}`}
+                    className={`${baseStyles} ${sizeStyles} ${resolvedClassName}`}
                     {...props}
                 >
                     {icon}{" "}
@@ -77,7 +82,7 @@ export default function Button({
             {type === "submit" && (
                 <button
                     type="submit"
-                    className={`${baseStyles} ${sizeStyles} ${className}`}
+                    className={`${baseStyles} ${sizeStyles} ${resolvedClassName}`}
                     {...props}
                 >
                     {icon}{" "}
@@ -91,7 +96,7 @@ export default function Button({
             {type === "delete" && (
                 <button
                     onClick={() => deleteData(url)}
-                    className={`${baseStyles} ${smallStyles} ${className}`}
+                    className={`${baseStyles} ${smallStyles} ${className || defaultDangerStyles}`}
                     {...props}
                 >
                     {icon} {label && <span>{label}</span>}
@@ -99,7 +104,7 @@ export default function Button({
             )}
             {type === "modal" && (
                 <button
-                    className={`${baseStyles} ${smallStyles} ${className}`}
+                    className={`${baseStyles} ${smallStyles} ${className || "border border-hairline-light bg-white text-ink hover:bg-canvas-cream dark:border-hairline-dark dark:bg-canvas-night-elevated dark:text-white"}`}
                     {...props}
                 >
                     {icon}
@@ -108,7 +113,7 @@ export default function Button({
             {type === "edit" && (
                 <Link
                     href={href}
-                    className={`${baseStyles} ${smallStyles} ${className}`}
+                    className={`${baseStyles} ${smallStyles} ${className || "border border-warning-200 bg-warning-50 text-warning-700 hover:bg-warning-100 dark:border-warning-900 dark:bg-warning-950/40 dark:text-warning-300"}`}
                     {...props}
                 >
                     {icon}
@@ -117,7 +122,7 @@ export default function Button({
             {type === "bulk" && (
                 <button
                     {...props}
-                    className={`${baseStyles} ${sizeStyles} ${className}`}
+                    className={`${baseStyles} ${sizeStyles} ${resolvedClassName}`}
                 >
                     {icon}{" "}
                     <span

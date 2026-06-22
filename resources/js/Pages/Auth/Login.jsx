@@ -36,7 +36,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
         <>
             <Head title="Masuk" />
 
-            <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
+            <div className="min-h-screen flex bg-canvas-cream dark:bg-canvas-night">
                 {/* Left - Form */}
                 <div className="flex-1 flex items-center justify-center p-8">
                     <div className="w-full max-w-md">
@@ -46,27 +46,27 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                 href="/"
                                 className="inline-flex items-center gap-3 mb-6"
                             >
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-ink text-white flex items-center justify-center">
                                     <IconShoppingCart
                                         size={24}
                                         className="text-white"
                                     />
                                 </div>
-                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                                <span className="text-2xl font-bold text-ink dark:text-white">
                                     Aplikasi Kasir
                                 </span>
                             </Link>
-                            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                            <h1 className="text-3xl font-bold text-ink dark:text-white">
                                 Selamat Datang Kembali
                             </h1>
-                            <p className="mt-2 text-slate-600 dark:text-slate-400">
+                            <p className="mt-2 text-shade-60 dark:text-slate-400">
                                 Masuk untuk mengakses dashboard Anda
                             </p>
                         </div>
 
                         {/* Status Message */}
                         {status && (
-                            <div className="mb-6 p-4 rounded-xl bg-success-50 dark:bg-success-950/50 text-success-700 dark:text-success-400 text-sm">
+                            <div className="mb-6 p-4 rounded-card bg-success-50 dark:bg-success-950/50 text-success-700 dark:text-success-400 text-sm">
                                 {status}
                             </div>
                         )}
@@ -79,13 +79,13 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                 setData={setData}
                             />
                             {errors.human && (
-                                <div className="rounded-xl bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:bg-danger-950/40 dark:text-danger-300">
+                                <div className="rounded-card bg-danger-50 px-4 py-3 text-sm text-danger-600 dark:bg-danger-950/40 dark:text-danger-300">
                                     {errors.human}
                                 </div>
                             )}
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Email
                                 </label>
                                 <div className="relative">
@@ -99,11 +99,11 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                             setData("email", e.target.value)
                                         }
                                         placeholder="nama@email.com"
-                                        className={`w-full h-12 pl-12 pr-4 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-4 rounded-md border ${
                                             errors.email
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                 </div>
                                 {errors.email && (
@@ -115,7 +115,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
 
                             {/* Password */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                <label className="block text-sm font-medium text-shade-70 dark:text-slate-300 mb-2">
                                     Password
                                 </label>
                                 <div className="relative">
@@ -131,11 +131,11 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                             setData("password", e.target.value)
                                         }
                                         placeholder="••••••••"
-                                        className={`w-full h-12 pl-12 pr-12 rounded-xl border-2 ${
+                                        className={`w-full h-12 pl-12 pr-12 rounded-md border ${
                                             errors.password
                                                 ? "border-danger-500 focus:border-danger-500"
-                                                : "border-slate-200 dark:border-slate-700 focus:border-primary-500"
-                                        } bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-primary-500/20 transition-all`}
+                                                : "border-hairline-light dark:border-hairline-dark focus:border-ink"
+                                        } bg-white dark:bg-canvas-night-elevated text-ink dark:text-white placeholder-slate-400 focus:ring-4 focus:ring-aloe-100/70 transition-all`}
                                     />
                                     <button
                                         type="button"
@@ -170,9 +170,9 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                                 e.target.checked
                                             )
                                         }
-                                        className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-500 focus:ring-primary-500"
+                                        className="w-4 h-4 rounded border-hairline-light dark:border-hairline-dark text-ink focus:ring-aloe-100"
                                     />
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                                    <span className="text-sm text-shade-60 dark:text-slate-400">
                                         Ingat saya
                                     </span>
                                 </label>
@@ -180,7 +180,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                 {canResetPassword && (
                                     <Link
                                         href={route("password.request")}
-                                        className="text-sm text-primary-500 hover:text-primary-600 font-medium"
+                                        className="text-sm text-ink hover:text-shade-70 font-medium"
                                     >
                                         Lupa Password?
                                     </Link>
@@ -191,7 +191,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold hover:from-primary-600 hover:to-primary-700 focus:ring-4 focus:ring-primary-500/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                className="w-full h-12 rounded-full bg-ink text-white font-semibold hover:bg-shade-70 focus:ring-4 focus:ring-aloe-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                             >
                                 {processing ? (
                                     <>
@@ -208,11 +208,11 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
 
                             {/* Register Link */}
                             {canRegister && (
-                                <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+                                <p className="text-center text-sm text-shade-60 dark:text-slate-400">
                                     Belum punya akun?{" "}
                                     <Link
                                         href="/register"
-                                        className="text-primary-500 hover:text-primary-600 font-semibold"
+                                        className="text-ink hover:text-shade-70 font-semibold"
                                     >
                                         Daftar Sekarang
                                     </Link>
@@ -223,15 +223,15 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                 </div>
 
                 {/* Right - Image/Decoration */}
-                <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary-500 to-primary-700 items-center justify-center p-12">
-                    <div className="max-w-md text-center text-white">
-                        <div className="w-24 h-24 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-8">
+                <div className="hidden lg:flex flex-1 bg-pistachio-100 dark:bg-canvas-night-elevated items-center justify-center p-12">
+                    <div className="max-w-md text-center text-ink dark:text-white">
+                        <div className="w-24 h-24 rounded-full bg-white border border-hairline-light flex items-center justify-center mx-auto mb-8 shadow-paper dark:bg-canvas-night dark:border-hairline-dark">
                             <IconShoppingCart size={48} />
                         </div>
                         <h2 className="text-3xl font-bold mb-4">
                             Kelola Bisnis Anda dengan Mudah
                         </h2>
-                        <p className="text-lg opacity-90">
+                        <p className="text-lg text-shade-60 dark:text-slate-300">
                             Sistem Point of Sale modern yang membantu Anda
                             mengelola transaksi, inventori, dan laporan keuangan
                             dengan efisien.
@@ -244,7 +244,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             ].map((feature, i) => (
                                 <span
                                     key={i}
-                                    className="px-4 py-2 bg-white/20 rounded-full text-sm font-medium"
+                                    className="px-4 py-2 bg-white border border-hairline-light rounded-full text-sm font-medium text-ink shadow-sm dark:bg-canvas-night dark:border-hairline-dark dark:text-white"
                                 >
                                     {feature}
                                 </span>

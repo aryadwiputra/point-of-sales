@@ -89,6 +89,49 @@ class AdvancedSalesInsightsTest extends TestCase
         });
     }
 
+    public function test_margin_profit_uses_unit_buy_price_snapshot_for_multi_unit_sales(): void
+    {
+        $user = $this->createUser();
+        $category = Category::create([
+            'name' => 'Multi Unit Category',
+            'description' => 'Testing',
+            'image' => 'category.png',
+        ]);
+        $customer = Customer::create([
+            'name' => 'Multi Unit Customer',
+            'no_telp' => '62818888888',
+            'address' => 'Jl. Multi Unit',
+        ]);
+        $cashier = User::factory()->create();
+        $product = $this->createProduct($category, 'Gula Pasir 1kg', 'BMB-0003', 14_000, 18_000, 50);
+
+        $this->createTransactionWithDetails($cashier, $customer, Carbon::parse('2026-06-01 11:00:00'), [
+            [
+                'product' => $product,
+                'qty' => 1,
+                'unit_conversion_qty' => 25,
+                'unit_buy_price' => 350_000,
+                'line_total' => 430_000,
+            ],
+        ]);
+
+        $response = $this->actingAs($user)->get(route('reports.insights.index'));
+        $response->assertInertia(function (Assert $page) {
+            $props = $page->toArray()['props'];
+            $margin = collect($props['marginByProduct'])->firstWhere('product_title', 'Gula Pasir 1kg');
+            $coverage = collect($props['stockCoverage']['products'])->firstWhere('product_title', 'Gula Pasir 1kg');
+
+            $this->assertSame(25, $props['summary']['items_sold']);
+            $this->assertSame(25, $props['topSellingProducts'][0]['qty_sold']);
+            $this->assertSame(25, $props['cashierPerformance'][0]['items_sold']);
+            $this->assertSame(25, $coverage['qty_sold']);
+            $this->assertSame(25, $margin['qty_sold']);
+            $this->assertSame(430_000, $margin['revenue_total']);
+            $this->assertSame(80_000, $margin['profit_total']);
+            $this->assertEquals(18.6, $margin['margin_percentage']);
+        });
+    }
+
     public function test_insights_filters_affect_sales_by_day_and_cashier_performance(): void
     {
         $user = $this->createUser();
@@ -459,12 +502,16 @@ class AdvancedSalesInsightsTest extends TestCase
             $product = $line['product'];
             $quantity = $line['qty'];
             $lineTotal = $line['line_total'];
+            $unitConversionQty = $line['unit_conversion_qty'] ?? 1;
+            $unitBuyPrice = $line['unit_buy_price'] ?? ($product->buy_price * $unitConversionQty);
 
             $detail = $transaction->details()->create([
                 'product_id' => $product->id,
                 'qty' => $quantity,
+                'unit_conversion_qty' => $unitConversionQty,
                 'base_unit_price' => $product->sell_price,
                 'unit_price' => (int) round($lineTotal / $quantity),
+                'unit_buy_price' => $unitBuyPrice,
                 'price' => $lineTotal,
             ]);
             $detail->forceFill([
@@ -473,7 +520,7 @@ class AdvancedSalesInsightsTest extends TestCase
             ])->saveQuietly();
 
             $profit = $transaction->profits()->create([
-                'total' => $lineTotal - ($product->buy_price * $quantity),
+                'total' => $lineTotal - ($unitBuyPrice * $quantity),
             ]);
             $profit->forceFill([
                 'created_at' => $createdAt,

@@ -13,11 +13,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: [
-                    "Inter",
-                    "Plus Jakarta Sans",
-                    ...defaultTheme.fontFamily.sans,
-                ],
+                sans: ["Inter", "Inter Display", ...defaultTheme.fontFamily.sans],
+                display: ["Inter Display", "Inter", ...defaultTheme.fontFamily.sans],
                 mono: [
                     "JetBrains Mono",
                     "Fira Code",
@@ -25,35 +22,66 @@ export default {
                 ],
             },
             colors: {
-                // Primary - Indigo
+                canvas: {
+                    night: "#000000",
+                    "night-elevated": "#0a0a0a",
+                    light: "#ffffff",
+                    cream: "#fbfbf5",
+                },
+                ink: "#000000",
+                shade: {
+                    30: "#d4d4d8",
+                    40: "#a1a1aa",
+                    50: "#71717a",
+                    60: "#52525b",
+                    70: "#3f3f46",
+                },
+                hairline: {
+                    light: "#e4e4e7",
+                    dark: "#1e2c31",
+                },
+                aloe: {
+                    10: "#c1fbd4",
+                    50: "#effff4",
+                    100: "#c1fbd4",
+                    200: "#98f3b7",
+                    500: "#31c36b",
+                    700: "#16723d",
+                },
+                pistachio: {
+                    10: "#d4f9e0",
+                    50: "#f4fff7",
+                    100: "#d4f9e0",
+                    200: "#b8efc9",
+                    500: "#4fc97a",
+                    700: "#1f6d3d",
+                },
                 primary: {
-                    50: "#eef2ff",
-                    100: "#e0e7ff",
-                    200: "#c7d2fe",
-                    300: "#a5b4fc",
-                    400: "#818cf8",
-                    500: "#6366f1",
-                    600: "#4f46e5",
-                    700: "#4338ca",
-                    800: "#3730a3",
-                    900: "#312e81",
-                    950: "#1e1b4b",
+                    50: "#f7f7f7",
+                    100: "#eeeeee",
+                    200: "#e4e4e7",
+                    300: "#d4d4d8",
+                    400: "#a1a1aa",
+                    500: "#000000",
+                    600: "#000000",
+                    700: "#18181b",
+                    800: "#09090b",
+                    900: "#000000",
+                    950: "#000000",
                 },
-                // Accent - Cyan
                 accent: {
-                    50: "#ecfeff",
-                    100: "#cffafe",
-                    200: "#a5f3fc",
-                    300: "#67e8f9",
-                    400: "#22d3ee",
-                    500: "#06b6d4",
-                    600: "#0891b2",
-                    700: "#0e7490",
-                    800: "#155e75",
-                    900: "#164e63",
-                    950: "#083344",
+                    50: "#f4fff7",
+                    100: "#d4f9e0",
+                    200: "#c1fbd4",
+                    300: "#98f3b7",
+                    400: "#70e89a",
+                    500: "#31c36b",
+                    600: "#249653",
+                    700: "#16723d",
+                    800: "#115a31",
+                    900: "#0b3e22",
+                    950: "#062514",
                 },
-                // Success - Emerald
                 success: {
                     50: "#ecfdf5",
                     100: "#d1fae5",
@@ -67,7 +95,6 @@ export default {
                     900: "#064e3b",
                     950: "#022c22",
                 },
-                // Warning - Amber
                 warning: {
                     50: "#fffbeb",
                     100: "#fef3c7",
@@ -81,7 +108,6 @@ export default {
                     900: "#78350f",
                     950: "#451a03",
                 },
-                // Danger - Rose
                 danger: {
                     50: "#fff1f2",
                     100: "#ffe4e6",
@@ -104,19 +130,22 @@ export default {
                 128: "32rem",
             },
             minHeight: {
-                touch: "2.75rem", // 44px - minimum touch target
-                "touch-lg": "3rem", // 48px - comfortable touch target
+                touch: "2.75rem",
+                "touch-lg": "3rem",
             },
             minWidth: {
                 touch: "2.75rem",
                 "touch-lg": "3rem",
             },
             borderRadius: {
+                card: "0.75rem",
+                pill: "9999px",
                 "4xl": "2rem",
             },
             boxShadow: {
-                glow: "0 0 20px rgba(99, 102, 241, 0.3)",
-                "glow-lg": "0 0 40px rgba(99, 102, 241, 0.4)",
+                paper: "0 1px 2px rgb(0 0 0 / 0.04), 0 12px 30px rgb(0 0 0 / 0.06)",
+                glow: "0 0 20px rgba(193, 251, 212, 0.45)",
+                "glow-lg": "0 0 40px rgba(193, 251, 212, 0.5)",
                 "inner-lg": "inset 0 4px 6px -1px rgb(0 0 0 / 0.1)",
             },
             animation: {

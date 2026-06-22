@@ -91,7 +91,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
         ->middlewareFor(['edit', 'update'], 'permission:pricing-rules-update')
         ->middlewareFor('destroy', 'permission:pricing-rules-delete');
     Route::post('pricing-rules/preview', [PricingRuleController::class, 'preview'])
-        ->middleware('permission:pricing-rules-access')
+        ->middleware('permission:pricing-rules-access|pricing-rules-create|pricing-rules-update')
         ->name('pricing-rules.preview');
     Route::get('stock-opnames', [StockOpnameController::class, 'index'])->middleware('permission:stock-opnames-access')->name('stock-opnames.index');
     Route::get('stock-opnames/create', [StockOpnameController::class, 'create'])->middleware('permission:stock-opnames-create')->name('stock-opnames.create');

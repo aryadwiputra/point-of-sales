@@ -1,57 +1,47 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Supplier\StoreSupplierRequest;
+use App\Http\Requests\Supplier\UpdateSupplierRequest;
 use App\Models\Supplier;
-use Illuminate\Http\Request;
+use App\Services\Suppliers\CreateSupplierService;
+use App\Services\Suppliers\DeleteSupplierService;
+use App\Services\Suppliers\SupplierIndexQueryService;
+use App\Services\Suppliers\UpdateSupplierService;
 use Inertia\Inertia;
 
 class SupplierController extends Controller
 {
-    public function index()
+    public function index(SupplierIndexQueryService $service)
     {
-        $suppliers = Supplier::orderBy('name')->get();
-
         return Inertia::render('Dashboard/Suppliers/Index', [
-            'suppliers' => $suppliers,
+            'suppliers' => $service->execute(),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreSupplierRequest $request, CreateSupplierService $service)
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:150'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        Supplier::create($data);
+        $service->execute($request->validated());
 
         return back()->with('success', 'Supplier berhasil ditambahkan.');
     }
 
-    public function update(Request $request, Supplier $supplier)
+    public function update(UpdateSupplierRequest $request, Supplier $supplier, UpdateSupplierService $service)
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:150'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        $supplier->update($data);
+        $service->execute($supplier, $request->validated());
 
         return back()->with('success', 'Supplier berhasil diperbarui.');
     }
 
-    public function destroy(Supplier $supplier)
+    public function destroy(Supplier $supplier, DeleteSupplierService $service)
     {
-        if ($supplier->payables()->exists()) {
+        if (! $service->execute($supplier)) {
             return back()->with('error', 'Supplier memiliki hutang, tidak dapat dihapus.');
         }
-        $supplier->delete();
 
         return back()->with('success', 'Supplier dihapus.');
     }

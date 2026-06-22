@@ -20,9 +20,9 @@ import { useAuthorization } from "@/Utils/authorization";
 // Category Card for Grid View
 function CategoryCard({ category, canUpdate, canDelete }) {
     return (
-        <div className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
+        <div className="group bg-white dark:bg-canvas-night-elevated rounded-card border border-hairline-light dark:border-hairline-dark overflow-hidden shadow-paper hover:border-shade-30 dark:hover:border-slate-700 transition-all duration-200">
             {/* Category Image */}
-            <div className="relative aspect-[3/2] bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div className="relative aspect-[3/2] bg-canvas-cream dark:bg-canvas-night overflow-hidden">
                 {category.image ? (
                     <img
                         src={category.image}
@@ -46,7 +46,7 @@ function CategoryCard({ category, canUpdate, canDelete }) {
                         {canUpdate && (
                             <Link
                                 href={route("categories.edit", category.id)}
-                                className="p-2.5 rounded-xl bg-white text-warning-600 hover:bg-warning-50 shadow-lg transition-colors"
+                                className="p-2.5 rounded-full bg-white text-warning-600 hover:bg-warning-50 shadow-lg transition-colors"
                             >
                                 <IconPencilCog size={18} />
                             </Link>
@@ -56,7 +56,7 @@ function CategoryCard({ category, canUpdate, canDelete }) {
                                 type={"delete"}
                                 icon={<IconTrash size={18} />}
                                 className={
-                                    "p-2.5 rounded-xl bg-white text-danger-600 hover:bg-danger-50 shadow-lg"
+                                    "p-2.5 rounded-full bg-white text-danger-600 hover:bg-danger-50 shadow-lg"
                                 }
                                 url={route("categories.destroy", category.id)}
                             />
@@ -67,7 +67,7 @@ function CategoryCard({ category, canUpdate, canDelete }) {
 
             {/* Category Info */}
             <div className="p-4">
-                <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                <h3 className="text-base font-semibold text-ink dark:text-slate-200 mb-1">
                     {category.name}
                 </h3>
                 {category.description && (
@@ -81,11 +81,15 @@ function CategoryCard({ category, canUpdate, canDelete }) {
 }
 
 export default function Index({ categories }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid");
     const canCreateCategories = can("categories-create");
     const canEditCategories = can("categories-edit");
     const canDeleteCategories = can("categories-delete");
+    const effectiveViewMode = isCompactMode ? "list" : viewMode;
 
     return (
         <>
@@ -95,7 +99,7 @@ export default function Index({ categories }) {
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <h1 className="text-2xl font-bold text-ink dark:text-white">
                             Kategori
                         </h1>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -113,7 +117,7 @@ export default function Index({ categories }) {
                                 />
                             }
                             className={
-                                "bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/30"
+                                "bg-ink hover:bg-shade-70 text-white"
                             }
                             label={"Tambah Kategori"}
                             href={route("categories.create")}
@@ -131,34 +135,38 @@ export default function Index({ categories }) {
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setViewMode("grid")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "grid"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="Grid View"
-                    >
-                        <IconLayoutGrid size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode("list")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "list"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="List View"
-                    >
-                        <IconList size={20} />
-                    </button>
+                    {!isCompactMode && (
+                        <>
+                            <button
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "grid"
+                                        ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
+                                }`}
+                                title="Grid View"
+                            >
+                                <IconLayoutGrid size={20} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "list"
+                                        ? "bg-aloe-100 text-ink dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-canvas-cream dark:hover:bg-slate-800"
+                                }`}
+                                title="List View"
+                            >
+                                <IconList size={20} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Content */}
             {categories.data.length > 0 ? (
-                viewMode === "grid" ? (
+                effectiveViewMode === "grid" ? (
                     /* Grid View */
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {categories.data.map((category) => (
@@ -195,22 +203,24 @@ export default function Index({ categories }) {
                                         </Table.Td>
                                         <Table.Td>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                                    {category.image ? (
-                                                        <img
-                                                            src={category.image}
-                                                            alt={category.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <IconCategory
-                                                                size={20}
-                                                                className="text-slate-400"
+                                                {!isCompactMode && (
+                                                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+                                                        {category.image ? (
+                                                            <img
+                                                                src={category.image}
+                                                                alt={category.name}
+                                                                className="w-full h-full object-cover"
                                                             />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <IconCategory
+                                                                    size={20}
+                                                                    className="text-slate-400"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                                                     {category.name}
                                                 </p>
@@ -273,15 +283,15 @@ export default function Index({ categories }) {
                 )
             ) : (
                 /* Empty State */
-                <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-canvas-night-elevated rounded-card border border-hairline-light dark:border-hairline-dark shadow-paper">
+                    <div className="w-16 h-16 rounded-full bg-aloe-100 dark:bg-hairline-dark flex items-center justify-center mb-4">
                         <IconDatabaseOff
                             size={32}
                             className="text-slate-400"
                             strokeWidth={1.5}
                         />
                     </div>
-                    <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-1">
+                    <h3 className="text-lg font-medium text-ink dark:text-slate-200 mb-1">
                         Belum Ada Kategori
                     </h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
@@ -291,7 +301,7 @@ export default function Index({ categories }) {
                         type={"link"}
                         icon={<IconCirclePlus size={18} />}
                         className={
-                            "bg-primary-500 hover:bg-primary-600 text-white"
+                            "bg-ink hover:bg-shade-70 text-white"
                         }
                         label={"Tambah Kategori"}
                         href={route("categories.create")}

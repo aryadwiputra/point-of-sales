@@ -3,12 +3,12 @@ import React from 'react'
 const Card = ({ icon, title, className, children }) => {
     return (
         <>
-            <div className={`p-4 rounded-t-lg border ${className} bg-white dark:bg-gray-950 dark:border-gray-900 `}>
-                <div className='flex items-center gap-2 font-semibold text-sm text-gray-700 dark:text-gray-200'>
+            <div className={`p-4 rounded-t-card border ${className || ""} bg-white dark:bg-canvas-night-elevated border-hairline-light dark:border-hairline-dark shadow-paper`}>
+                <div className='flex items-center gap-2 font-semibold text-sm text-ink dark:text-gray-200'>
                     {title}
                 </div>
             </div>
-            <div className='bg-white dark:bg-gray-950 rounded-b-lg border-t-0 dark:border-gray-900'>
+            <div className='bg-white dark:bg-canvas-night-elevated rounded-b-card border-t-0 dark:border-hairline-dark'>
                 {children}
             </div>
         </>
@@ -18,7 +18,7 @@ const Card = ({ icon, title, className, children }) => {
 
 const Table = ({ children }) => {
     return (
-        <div className="w-full overflow-hidden overflow-x-auto border-collapse rounded-b-lg border border-t-0 dark:border-gray-900">
+        <div className="w-full overflow-hidden overflow-x-auto border-collapse rounded-b-card border border-t-0 border-hairline-light dark:border-hairline-dark shadow-paper">
             <table className="w-full text-sm">
                 {children}
             </table>
@@ -28,13 +28,13 @@ const Table = ({ children }) => {
 
 const Thead = ({ className, children }) => {
     return (
-        <thead className={`${className} border-b bg-gray-50 dark:border-gray-900 dark:bg-gray-950`}>{children}</thead>
+        <thead className={`${className || ""} border-b border-hairline-light bg-canvas-cream dark:border-hairline-dark dark:bg-canvas-night`}>{children}</thead>
     );
 };
 
 const Tbody = ({ className, children }) => {
     return (
-        <tbody className={`${className} divide-y bg-white dark:divide-gray-900 dark:bg-gray-950`}>
+        <tbody className={`${className || ""} divide-y divide-hairline-light bg-white dark:divide-hairline-dark dark:bg-canvas-night-elevated`}>
             {children}
         </tbody>
     );
@@ -43,7 +43,7 @@ const Tbody = ({ className, children }) => {
 const Td = ({ className, children }) => {
     return (
         <td
-            className={`${className} whitespace-nowrap p-4 align-middle text-gray-700 dark:text-gray-400`}
+            className={`${className || ""} whitespace-nowrap p-4 align-middle text-shade-70 dark:text-gray-300`}
         >
             {children}
         </td>
@@ -54,7 +54,7 @@ const Th = ({ className, children }) => {
     return (
         <th
             scope="col"
-            className={`${className} h-12 px-4 text-left align-middle font-medium text-gray-700 dark:text-gray-400`}
+            className={`${className || ""} h-12 px-4 text-left align-middle font-semibold text-shade-60 dark:text-gray-300`}
         >
             {children}
         </th>

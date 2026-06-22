@@ -29,6 +29,9 @@ const formatCurrency = (value = 0) =>
         minimumFractionDigits: 0,
     }).format(value);
 
+const getBaseUnit = (product) =>
+    product.units?.find((unit) => unit.is_base_unit) || null;
+
 // Product Card for Grid View
 function ProductCard({
     product,
@@ -43,6 +46,11 @@ function ProductCard({
     const rowNumber = index + 1 + (currentPage - 1) * perPage;
     const lowStock = product.stock > 0 && product.stock <= 5;
     const outOfStock = product.stock === 0;
+    const baseUnit = getBaseUnit(product);
+    const displayBarcode = baseUnit?.barcode || product.barcode;
+    const displayBuyPrice = baseUnit?.buy_price || product.buy_price;
+    const displaySellPrice = baseUnit?.sell_price || product.sell_price;
+    const unitCount = product.units?.length || 0;
 
     return (
         <div
@@ -88,11 +96,11 @@ function ProductCard({
                         </span>
                     ) : lowStock ? (
                         <span className="px-2 py-1 text-xs font-semibold bg-warning-500 text-white rounded-full">
-                            Stok: {product.stock}
+                            Stok: {product.stock} {baseUnit?.label || ""}
                         </span>
                     ) : (
                         <span className="px-2 py-1 text-xs font-medium bg-slate-900/60 text-white rounded-full">
-                            Stok: {product.stock}
+                            Stok: {product.stock} {baseUnit?.label || ""}
                         </span>
                     )}
                 </div>
@@ -128,15 +136,20 @@ function ProductCard({
                     <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-400 rounded-md truncate">
                         {product.category?.name || "Kategori"}
                     </span>
+                    {unitCount > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md">
+                            {unitCount} satuan
+                        </span>
+                    )}
                 </div>
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 mb-1">
                     {product.title}
                 </h3>
-                {(product.barcode || product.sku) && (
+                {(displayBarcode || product.sku) && (
                     <div className="space-y-0.5 mb-2">
-                        {product.barcode && (
+                        {displayBarcode && (
                             <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
-                                Barcode: {product.barcode}
+                                Barcode: {displayBarcode}
                             </p>
                         )}
                         {product.sku && (
@@ -147,23 +160,45 @@ function ProductCard({
                     </div>
                 )}
 
+                {product.units?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                        {product.units.slice(0, 3).map((unit) => (
+                            <span
+                                key={unit.id}
+                                className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                                    unit.is_base_unit
+                                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                }`}
+                            >
+                                {unit.label}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 {/* Price Section - Mobile Friendly */}
                 <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     {/* Sell Price - Prominent */}
                     <p className="text-base sm:text-lg font-bold text-primary-600 dark:text-primary-400">
-                        {formatCurrency(product.sell_price)}
+                        {formatCurrency(displaySellPrice)}
+                        {baseUnit?.label && (
+                            <span className="ml-1 text-xs font-medium text-slate-500">
+                                / {baseUnit.label}
+                            </span>
+                        )}
                     </p>
                     {/* Buy Price - Subtle */}
                     <div className="flex items-center justify-between mt-1">
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Modal: {formatCurrency(product.buy_price)}
+                            Modal: {formatCurrency(displayBuyPrice)}
                         </p>
                         {/* Profit Indicator */}
-                        {product.sell_price > product.buy_price && (
+                        {displaySellPrice > displayBuyPrice && (
                             <span className="text-xs font-medium text-success-600 dark:text-success-400">
                                 +
                                 {formatCurrency(
-                                    product.sell_price - product.buy_price
+                                    displaySellPrice - displayBuyPrice
                                 )}
                             </span>
                         )}
@@ -175,6 +210,9 @@ function ProductCard({
 }
 
 export default function Index({ products }) {
+    const { appSettings = {} } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
@@ -183,6 +221,7 @@ export default function Index({ products }) {
     const canCreateProducts = can("products-create");
     const canEditProducts = can("products-edit");
     const canDeleteProducts = can("products-delete");
+    const effectiveViewMode = isCompactMode ? "list" : viewMode;
 
     const handlePrintSingleBarcode = (product) => {
         setSingleProductBarcode(product);
@@ -304,34 +343,38 @@ export default function Index({ products }) {
                             Cetak Terpilih ({selectedProducts.length})
                         </button>
                     )}
-                    <button
-                        onClick={() => setViewMode("grid")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "grid"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="Grid View"
-                    >
-                        <IconLayoutGrid size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode("list")}
-                        className={`p-2.5 rounded-lg transition-colors ${
-                            viewMode === "list"
-                                ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                        title="List View"
-                    >
-                        <IconList size={20} />
-                    </button>
+                    {!isCompactMode && (
+                        <>
+                            <button
+                                onClick={() => setViewMode("grid")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "grid"
+                                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                }`}
+                                title="Grid View"
+                            >
+                                <IconLayoutGrid size={20} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("list")}
+                                className={`p-2.5 rounded-lg transition-colors ${
+                                    viewMode === "list"
+                                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                }`}
+                                title="List View"
+                            >
+                                <IconList size={20} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Content */}
             {products.data.length > 0 ? (
-                viewMode === "grid" ? (
+                effectiveViewMode === "grid" ? (
                     /* Grid View */
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {products.data.map((product, i) => (
@@ -357,6 +400,7 @@ export default function Index({ products }) {
                                     <Table.Th className="w-10">No</Table.Th>
                                     <Table.Th>Produk</Table.Th>
                                     <Table.Th>Kategori</Table.Th>
+                                    <Table.Th>Satuan</Table.Th>
                                     <Table.Th>Harga Beli</Table.Th>
                                     <Table.Th>Harga Jual</Table.Th>
                                     <Table.Th>Stok</Table.Th>
@@ -376,30 +420,35 @@ export default function Index({ products }) {
                                         </Table.Td>
                                         <Table.Td>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
-                                                    {product.image ? (
-                                                        <img
-                                                            src={getProductImageUrl(product.image)}
-                                                            alt={product.title}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center">
-                                                            <IconPackage
-                                                                size={16}
-                                                                className="text-slate-400"
+                                                {!isCompactMode && (
+                                                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
+                                                        {product.image ? (
+                                                            <img
+                                                                src={getProductImageUrl(product.image)}
+                                                                alt={product.title}
+                                                                className="w-full h-full object-cover"
                                                             />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                <IconPackage
+                                                                    size={16}
+                                                                    className="text-slate-400"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                                                         {product.title}
                                                     </p>
                                                     <div className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                                                        {product.barcode && (
+                                                        {(getBaseUnit(product)?.barcode ||
+                                                            product.barcode) && (
                                                             <p>
-                                                                Barcode: {product.barcode}
+                                                                Barcode:{" "}
+                                                                {getBaseUnit(product)?.barcode ||
+                                                                    product.barcode}
                                                             </p>
                                                         )}
                                                         {product.sku && <p>SKU: {product.sku}</p>}
@@ -413,10 +462,37 @@ export default function Index({ products }) {
                                             </span>
                                         </Table.Td>
                                         <Table.Td>
-                                            {formatCurrency(product.buy_price)}
+                                            <div className="flex flex-wrap gap-1">
+                                                {product.units?.map((unit) => (
+                                                    <span
+                                                        key={unit.id}
+                                                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                            unit.is_base_unit
+                                                                ? "bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+                                                                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                        }`}
+                                                    >
+                                                        {unit.label}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </Table.Td>
+                                        <Table.Td>
+                                            {formatCurrency(
+                                                getBaseUnit(product)?.buy_price ||
+                                                    product.buy_price
+                                            )}
                                         </Table.Td>
                                         <Table.Td className="font-semibold text-primary-600 dark:text-primary-400">
-                                            {formatCurrency(product.sell_price)}
+                                            {formatCurrency(
+                                                getBaseUnit(product)?.sell_price ||
+                                                    product.sell_price
+                                            )}
+                                            {getBaseUnit(product)?.label && (
+                                                <span className="ml-1 text-xs font-medium text-slate-500">
+                                                    / {getBaseUnit(product).label}
+                                                </span>
+                                            )}
                                         </Table.Td>
                                         <Table.Td>
                                             <span
@@ -428,7 +504,8 @@ export default function Index({ products }) {
                                                         : "bg-success-100 text-success-700 dark:bg-success-900/50 dark:text-success-400"
                                                 }`}
                                             >
-                                                {product.stock}
+                                                {product.stock}{" "}
+                                                {getBaseUnit(product)?.label || ""}
                                             </span>
                                         </Table.Td>
                                         <Table.Td>

@@ -39,8 +39,8 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
     return (
         <header
             className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 md:px-6
-            bg-white dark:bg-slate-900
-            border-b border-slate-200 dark:border-slate-800
+            bg-white/95 dark:bg-canvas-night-elevated
+            border-b border-hairline-light dark:border-hairline-dark
             transition-colors duration-200"
         >
             {/* Left Section */}
@@ -48,7 +48,7 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                 {/* Sidebar Toggle */}
                 <button
                     onClick={toggleSidebar}
-                    className="flex p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    className="flex min-h-touch min-w-touch items-center justify-center rounded-full text-shade-50 hover:text-ink hover:bg-canvas-cream dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-canvas-night transition-colors"
                     title="Toggle Sidebar"
                 >
                     <IconMenu2 size={20} strokeWidth={1.5} />
@@ -67,7 +67,7 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                 {/* Current Page Title */}
                 <div className="hidden md:flex items-center">
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mr-4" />
-                    <h1 className="text-base font-semibold text-slate-800 dark:text-slate-200">
+                    <h1 className="text-base font-semibold text-ink dark:text-slate-200">
                         {getCurrentTitle()}
                     </h1>
                 </div>
@@ -78,7 +78,7 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                 {/* Theme Toggle */}
                 <button
                     onClick={themeSwitcher}
-                    className="p-2.5 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                    className="min-h-touch min-w-touch rounded-full text-shade-50 hover:text-ink hover:bg-canvas-cream dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-canvas-night transition-colors"
                     title={darkMode ? "Light Mode" : "Dark Mode"}
                 >
                     {darkMode ? (

@@ -117,6 +117,7 @@ export default function Form({
     const [previewState, setPreviewState] = useState({
         loading: false,
         data: null,
+        error: null,
     });
 
     const submit = (event) => {
@@ -148,13 +149,29 @@ export default function Form({
     };
 
     const runPreview = async () => {
-        setPreviewState({ loading: true, data: null });
+        setPreviewState({ loading: true, data: null, error: null });
 
         try {
             const response = await axios.post(route("pricing-rules.preview"), data);
-            setPreviewState({ loading: false, data: response.data?.data ?? null });
-        } catch {
-            setPreviewState({ loading: false, data: null });
+            setPreviewState({
+                loading: false,
+                data: response.data?.data ?? null,
+                error: null,
+            });
+        } catch (error) {
+            const responseErrors = error.response?.data?.errors;
+            const firstValidationMessage = responseErrors
+                ? Object.values(responseErrors).flat()[0]
+                : null;
+
+            setPreviewState({
+                loading: false,
+                data: null,
+                error:
+                    firstValidationMessage ||
+                    error.response?.data?.message ||
+                    "Preview belum bisa dijalankan. Periksa kembali isian rule.",
+            });
         }
     };
 
@@ -757,6 +774,7 @@ export default function Form({
                             <button
                                 type="button"
                                 onClick={runPreview}
+                                disabled={previewState.loading}
                                 className="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 dark:border-primary-900/50 dark:bg-primary-950/40 dark:text-primary-300"
                             >
                                 <IconChartInfographic size={16} />
@@ -765,6 +783,12 @@ export default function Form({
                                     : "Jalankan Preview"}
                             </button>
                         </div>
+
+                        {previewState.error && (
+                            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+                                {previewState.error}
+                            </div>
+                        )}
 
                         {previewState.data && (
                             <div className="space-y-4">

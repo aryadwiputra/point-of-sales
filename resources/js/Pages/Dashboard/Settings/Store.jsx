@@ -12,6 +12,8 @@ import {
     IconWorld,
     IconMail,
     IconPhoto,
+    IconLayoutGrid,
+    IconList,
 } from "@tabler/icons-react";
 
 export default function Store({ settings }) {
@@ -23,6 +25,7 @@ export default function Store({ settings }) {
         store_email: settings.store_email || "",
         store_website: settings.store_website || "",
         store_city: settings.store_city || "",
+        product_display_mode: settings.product_display_mode || "image_grid",
     });
 
     const [logoPreview, setLogoPreview] = useState(settings.store_logo || null);
@@ -152,6 +155,68 @@ export default function Store({ settings }) {
                                     placeholder="https://"
                                     icon={<IconWorld size={16} />}
                                 />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    Mode Tampilan Produk
+                                </label>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setData(
+                                                "product_display_mode",
+                                                "image_grid"
+                                            )
+                                        }
+                                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                                            data.product_display_mode ===
+                                            "image_grid"
+                                                ? "border-primary-400 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-950/40 dark:text-primary-300"
+                                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                        }`}
+                                    >
+                                        <IconLayoutGrid size={20} />
+                                        <span>
+                                            <span className="block text-sm font-semibold">
+                                                Image Grid
+                                            </span>
+                                            <span className="block text-xs text-slate-500 dark:text-slate-400">
+                                                Produk dan kategori memakai gambar.
+                                            </span>
+                                        </span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setData(
+                                                "product_display_mode",
+                                                "compact_list"
+                                            )
+                                        }
+                                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
+                                            data.product_display_mode ===
+                                            "compact_list"
+                                                ? "border-primary-400 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-950/40 dark:text-primary-300"
+                                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                        }`}
+                                    >
+                                        <IconList size={20} />
+                                        <span>
+                                            <span className="block text-sm font-semibold">
+                                                Compact List
+                                            </span>
+                                            <span className="block text-xs text-slate-500 dark:text-slate-400">
+                                                Tanpa foto produk dan kategori.
+                                            </span>
+                                        </span>
+                                    </button>
+                                </div>
+                                {errors.product_display_mode && (
+                                    <p className="mt-1 text-xs text-danger-500">
+                                        {errors.product_display_mode}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

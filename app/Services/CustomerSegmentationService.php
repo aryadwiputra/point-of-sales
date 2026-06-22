@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\CustomerSegment;
 use App\Models\CustomerSegmentMembership;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\DB;
 
 class CustomerSegmentationService
 {
@@ -69,15 +72,17 @@ class CustomerSegmentationService
 
     public function ensureDefaultAutoSegments(): void
     {
-        foreach ($this->defaultAutoSegments() as $segment) {
-            CustomerSegment::query()->updateOrCreate(
-                ['slug' => $segment['slug']],
-                [
-                    ...$segment,
-                    'is_active' => true,
-                ]
-            );
-        }
+        DB::transaction(function () {
+            foreach ($this->defaultAutoSegments() as $segment) {
+                CustomerSegment::query()->updateOrCreate(
+                    ['slug' => $segment['slug']],
+                    [
+                        ...$segment,
+                        'is_active' => true,
+                    ]
+                );
+            }
+        });
     }
 
     public function syncAutoSegments(?CarbonInterface $at = null): void
@@ -85,63 +90,67 @@ class CustomerSegmentationService
         $at = $at ?? now();
         $this->ensureDefaultAutoSegments();
 
-        $segments = CustomerSegment::query()
-            ->where('type', CustomerSegment::TYPE_AUTO)
-            ->where('is_active', true)
-            ->get();
+        DB::transaction(function () use ($at) {
+            $segments = CustomerSegment::query()
+                ->where('type', CustomerSegment::TYPE_AUTO)
+                ->where('is_active', true)
+                ->get();
 
-        Customer::query()
-            ->with(['receivables'])
-            ->orderBy('id')
-            ->chunkById(100, function ($customers) use ($segments, $at) {
-                foreach ($customers as $customer) {
-                    foreach ($segments as $segment) {
-                        $matches = $this->matchesAutoSegment($customer, $segment, $at);
+            Customer::query()
+                ->with(['receivables'])
+                ->orderBy('id')
+                ->chunkById(100, function ($customers) use ($segments, $at) {
+                    foreach ($customers as $customer) {
+                        foreach ($segments as $segment) {
+                            $matches = $this->matchesAutoSegment($customer, $segment, $at);
 
-                        if ($matches) {
-                            CustomerSegmentMembership::query()->updateOrCreate([
-                                'customer_id' => $customer->id,
-                                'customer_segment_id' => $segment->id,
-                            ], [
-                                'source' => CustomerSegmentMembership::SOURCE_AUTO,
-                                'matched_at' => $at,
-                            ]);
-                        } else {
-                            CustomerSegmentMembership::query()
-                                ->where('customer_id', $customer->id)
-                                ->where('customer_segment_id', $segment->id)
-                                ->delete();
+                            if ($matches) {
+                                CustomerSegmentMembership::query()->updateOrCreate([
+                                    'customer_id' => $customer->id,
+                                    'customer_segment_id' => $segment->id,
+                                ], [
+                                    'source' => CustomerSegmentMembership::SOURCE_AUTO,
+                                    'matched_at' => $at,
+                                ]);
+                            } else {
+                                CustomerSegmentMembership::query()
+                                    ->where('customer_id', $customer->id)
+                                    ->where('customer_segment_id', $segment->id)
+                                    ->delete();
+                            }
                         }
                     }
-                }
-            });
+                });
+        });
     }
 
     public function syncManualSegments(Customer $customer, array $segmentIds): void
     {
-        $segments = CustomerSegment::query()
-            ->where('type', CustomerSegment::TYPE_MANUAL)
-            ->whereIn('id', $segmentIds)
-            ->pluck('id')
-            ->all();
+        DB::transaction(function () use ($customer, $segmentIds) {
+            $segments = CustomerSegment::query()
+                ->where('type', CustomerSegment::TYPE_MANUAL)
+                ->whereIn('id', $segmentIds)
+                ->pluck('id')
+                ->all();
 
-        $customer->segmentMemberships()
-            ->where('source', CustomerSegmentMembership::SOURCE_MANUAL)
-            ->whereNotIn('customer_segment_id', $segments)
-            ->delete();
+            $customer->segmentMemberships()
+                ->where('source', CustomerSegmentMembership::SOURCE_MANUAL)
+                ->whereNotIn('customer_segment_id', $segments)
+                ->delete();
 
-        foreach ($segments as $segmentId) {
-            CustomerSegmentMembership::query()->updateOrCreate(
-                [
-                    'customer_id' => $customer->id,
-                    'customer_segment_id' => $segmentId,
-                ],
-                [
-                    'source' => CustomerSegmentMembership::SOURCE_MANUAL,
-                    'matched_at' => now(),
-                ]
-            );
-        }
+            foreach ($segments as $segmentId) {
+                CustomerSegmentMembership::query()->updateOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'customer_segment_id' => $segmentId,
+                    ],
+                    [
+                        'source' => CustomerSegmentMembership::SOURCE_MANUAL,
+                        'matched_at' => now(),
+                    ]
+                );
+            }
+        });
     }
 
     public function serializeCustomerSegments(Customer $customer): array

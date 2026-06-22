@@ -41,9 +41,68 @@ const formatPrice = (value = 0) =>
         minimumFractionDigits: 0,
     });
 
+const formatQty = (value = 0) =>
+    Number(value || 0).toLocaleString("id-ID", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+    });
+
+const parseScannedBarcode = (value = "") => {
+    const rawValue = String(value || "").trim();
+    const match = rawValue.match(/^(\d+(?:[.,]\d{1,3})?)\*(.+)$/);
+
+    if (!match) {
+        return {
+            qty: 1,
+            barcode: rawValue,
+        };
+    }
+
+    const qty = Number(match[1].replace(",", "."));
+
+    return {
+        qty: qty > 0 ? qty : 1,
+        barcode: match[2].trim(),
+    };
+};
+
+const normalizeBarcode = (value = "") => String(value || "").trim().toLowerCase();
+
+const emptyPricingPreview = {
+    items: [],
+    summary: {
+        base_subtotal: 0,
+        promo_discount_total: 0,
+        subtotal_after_promo: 0,
+        voucher_discount_total: 0,
+        loyalty_discount_total: 0,
+        manual_discount_total: 0,
+        shipping_cost: 0,
+        grand_total: 0,
+    },
+};
+
+const sumCartPrices = (items = []) =>
+    items.reduce((total, item) => total + Number(item.price || 0), 0);
+
+const getCartUnitPrice = (item) => {
+    const quantity = Number(item?.qty || 0);
+
+    return (
+        Number(item?.product_unit?.sell_price || item?.productUnit?.sell_price || 0) ||
+        Number(item?.product?.sell_price || 0) ||
+        (quantity > 0 ? Number(item?.price || 0) / quantity : 0)
+    );
+};
+
+const getAxiosErrorMessage = (error, fallback) =>
+    error?.response?.data?.message ||
+    error?.response?.data?.errors?.message?.[0] ||
+    fallback;
+
 export default function Index({
-    carts = [],
-    carts_total = 0,
+    carts: initialCarts = [],
+    carts_total: initialCartsTotal = 0,
     heldCarts = [],
     customers = [],
     products = [],
@@ -57,9 +116,12 @@ export default function Index({
     const {
         auth,
         errors,
+        appSettings = {},
         lowStockNotifications = [],
         activeCashierShift,
     } = usePage().props;
+    const isCompactMode =
+        appSettings.product_display_mode === "compact_list";
     const { can } = useAuthorization();
     const canOpenShift = can("cashier-shifts-open");
 
@@ -69,6 +131,8 @@ export default function Index({
     const [isSearching, setIsSearching] = useState(false);
     const [addingProductId, setAddingProductId] = useState(null);
     const [removingItemId, setRemovingItemId] = useState(null);
+    const [carts, setCarts] = useState(initialCarts);
+    const [cartsTotal, setCartsTotal] = useState(initialCartsTotal);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [pricingPreview, setPricingPreview] = useState(initialPricingPreview);
     const [isLoadingPricing, setIsLoadingPricing] = useState(false);
@@ -89,8 +153,9 @@ export default function Index({
     const [selectedVoucherId, setSelectedVoucherId] = useState("");
     const [openingCashInput, setOpeningCashInput] = useState("");
     const [shiftNotesInput, setShiftNotesInput] = useState("");
-    const normalizedSelectedCategory =
-        selectedCategory === null ? null : Number(selectedCategory);
+    const qtyUpdateTimers = useRef({});
+    const qtyUpdateSnapshots = useRef({});
+    const qtyUpdateSequences = useRef({});
     const pricingItemsByCartId = useMemo(() => {
         const items = pricingPreview?.items || [];
 
@@ -103,6 +168,7 @@ export default function Index({
 
     // Ref for search input to enable keyboard focus
     const searchInputRef = useRef(null);
+    const handleAddToCartRef = useRef(null);
 
     // Set default payment method
     useEffect(() => {
@@ -113,25 +179,78 @@ export default function Index({
         setPricingPreview(initialPricingPreview);
     }, [initialPricingPreview]);
 
-    // Barcode scanner integration
-    const handleBarcodeScan = useCallback(
+    useEffect(() => {
+        setCarts(initialCarts);
+        setCartsTotal(initialCartsTotal);
+    }, [initialCarts, initialCartsTotal]);
+
+    const findProductByBarcode = useCallback(
         (barcode) => {
+            const normalizedBarcode = normalizeBarcode(barcode);
+
+            if (!normalizedBarcode) {
+                return { product: null, unit: null };
+            }
+
+            for (const product of products) {
+                const unit = product.units?.find(
+                    (productUnit) =>
+                        normalizeBarcode(productUnit.barcode) ===
+                        normalizedBarcode
+                );
+
+                if (unit) {
+                    return { product, unit };
+                }
+            }
+
             const product = products.find(
-                (p) => p.barcode?.toLowerCase() === barcode.toLowerCase()
+                (item) => normalizeBarcode(item.barcode) === normalizedBarcode
             );
 
-            if (product) {
-                if (product.stock > 0) {
-                    handleAddToCart(product);
-                    toast.success(`${product.title} ditambahkan (barcode)`);
-                } else {
-                    toast.error(`${product.title} stok habis`);
-                }
-            } else {
-                toast.error(`Produk tidak ditemukan: ${barcode}`);
+            if (!product) {
+                return { product: null, unit: null };
             }
+
+            const unit =
+                product.units?.find(
+                    (productUnit) =>
+                        normalizeBarcode(productUnit.barcode) ===
+                        normalizedBarcode
+                ) ||
+                product.units?.find((productUnit) => productUnit.is_base_unit) ||
+                product.units?.[0] ||
+                null;
+
+            return { product, unit };
         },
         [products]
+    );
+
+    // Barcode scanner integration
+    const handleBarcodeScan = useCallback(
+        (scanText) => {
+            const { qty, barcode } = parseScannedBarcode(scanText);
+            const { product, unit: scannedUnit } = findProductByBarcode(barcode);
+
+            if (product) {
+                const unitConversionQty = Number(scannedUnit?.conversion_qty || 1);
+                const baseQty = qty * unitConversionQty;
+
+                if (Number(product.stock || 0) >= baseQty) {
+                    handleAddToCartRef.current?.(product, scannedUnit, qty);
+                    setSearchQuery("");
+                    return true;
+                } else {
+                    toast.error(`${product.title} stok habis`);
+                    return false;
+                }
+            } else {
+                toast.error(`Produk tidak ditemukan: ${barcode || scanText}`);
+                return false;
+            }
+        },
+        [findProductByBarcode]
     );
 
     const { isScanning } = useBarcodeScanner(handleBarcodeScan, {
@@ -151,8 +270,8 @@ export default function Index({
         [shippingInput]
     );
     const baseSubtotal = useMemo(
-        () => Number(pricingPreview?.summary?.base_subtotal ?? carts_total ?? 0),
-        [pricingPreview, carts_total]
+        () => Number(pricingPreview?.summary?.base_subtotal ?? cartsTotal ?? 0),
+        [pricingPreview, cartsTotal]
     );
     const promoDiscount = useMemo(
         () => Number(pricingPreview?.summary?.promo_discount_total ?? 0),
@@ -175,6 +294,7 @@ export default function Index({
         [pricingPreview]
     );
     const isCashPayment = !payLater && paymentMethod === "cash";
+    const isBankTransfer = !payLater && paymentMethod === "bank_transfer";
     const cash = useMemo(
         () => (isCashPayment ? Math.max(0, Number(cashInput) || 0) : payable),
         [cashInput, isCashPayment, payable]
@@ -183,26 +303,9 @@ export default function Index({
         () => carts.reduce((total, item) => total + Number(item.qty), 0),
         [carts]
     );
-    const pricingDependency = useMemo(
-        () => carts.map((item) => `${item.id}:${item.qty}`).join("|"),
-        [carts]
-    );
-
     useEffect(() => {
         if (carts.length === 0) {
-            setPricingPreview({
-                items: [],
-                summary: {
-                    base_subtotal: 0,
-                    promo_discount_total: 0,
-                    subtotal_after_promo: 0,
-                    voucher_discount_total: 0,
-                    loyalty_discount_total: 0,
-                    manual_discount_total: 0,
-                    shipping_cost: 0,
-                    grand_total: 0,
-                },
-            });
+            setPricingPreview(emptyPricingPreview);
 
             return;
         }
@@ -239,7 +342,6 @@ export default function Index({
         };
     }, [
         selectedCustomer?.id,
-        pricingDependency,
         discount,
         shipping,
         redeemPointsInput,
@@ -299,55 +401,214 @@ export default function Index({
         });
     };
 
+    const cartMutationPayload = useCallback(
+        () => ({
+            customer_id: selectedCustomer?.id ?? null,
+            discount,
+            shipping_cost: shipping,
+            redeem_points: Number(redeemPointsInput || 0),
+            customer_voucher_id: selectedVoucherId || null,
+        }),
+        [
+            selectedCustomer?.id,
+            discount,
+            shipping,
+            redeemPointsInput,
+            selectedVoucherId,
+        ]
+    );
+
+    const applyCartResponse = useCallback((payload = {}) => {
+        const nextCarts = payload.carts ?? [];
+
+        setCarts(nextCarts);
+        setCartsTotal(Number(payload.carts_total ?? sumCartPrices(nextCarts)));
+        setPricingPreview(payload.pricingPreview ?? emptyPricingPreview);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            Object.values(qtyUpdateTimers.current).forEach((timer) =>
+                clearTimeout(timer)
+            );
+        };
+    }, []);
+
     // Handle add product to cart
-    const handleAddToCart = async (product) => {
+    const handleAddToCart = useCallback(async (product, selectedUnit = null, qty = 1) => {
         if (!product?.id) return;
+        const unit =
+            selectedUnit ||
+            product.units?.find((productUnit) => productUnit.is_base_unit) ||
+            product.units?.[0] ||
+            null;
+        const itemQty = Math.max(0.001, Number(qty) || 1);
+        const snapshot = { carts, cartsTotal, pricingPreview };
+        const unitId = unit?.id ?? null;
+        const unitPrice = Number(unit?.sell_price || product.sell_price || 0);
 
         setAddingProductId(product.id);
 
-        router.post(
-            route("transactions.addToCart"),
-            {
-                product_id: product.id,
-                sell_price: product.sell_price,
-                qty: 1,
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success(`${product.title} ditambahkan`);
-                    setAddingProductId(null);
-                },
-                onError: () => {
-                    toast.error("Gagal menambahkan produk");
-                    setAddingProductId(null);
-                },
+        setCarts((currentCarts) => {
+            let matched = false;
+            const nextCarts = currentCarts.map((item) => {
+                const sameProduct = Number(item.product_id) === Number(product.id);
+                const sameUnit = unitId === null
+                    ? sameProduct
+                    : String(item.product_unit_id ?? "") === String(unitId);
+
+                if (!sameProduct || !sameUnit) {
+                    return item;
+                }
+
+                matched = true;
+                const nextQty = Number(item.qty || 0) + itemQty;
+
+                return {
+                    ...item,
+                    qty: nextQty,
+                    price: Math.round(unitPrice * nextQty),
+                };
+            });
+
+            if (!matched) {
+                nextCarts.unshift({
+                    id: `temp-${product.id}-${Date.now()}`,
+                    cashier_id: auth?.user?.id ?? null,
+                    product_id: product.id,
+                    product_unit_id: unitId,
+                    unit_label: unit?.label || "unit",
+                    unit_conversion_qty: unit?.conversion_qty || 1,
+                    qty: itemQty,
+                    price: Math.round(unitPrice * itemQty),
+                    product,
+                    product_unit: unit,
+                });
             }
-        );
-    };
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            return nextCarts;
+        });
+
+        try {
+            const response = await axios.post(route("transactions.addToCart"), {
+                product_id: product.id,
+                product_unit_id: unitId,
+                qty: itemQty,
+                ...cartMutationPayload(),
+            });
+
+            applyCartResponse(response.data);
+            toast.success(
+                `${formatQty(itemQty)} ${unit?.label || "unit"} ${
+                    product.title
+                } ditambahkan`
+            );
+        } catch (error) {
+            setCarts(snapshot.carts);
+            setCartsTotal(snapshot.cartsTotal);
+            setPricingPreview(snapshot.pricingPreview);
+            toast.error(getAxiosErrorMessage(error, "Gagal menambahkan produk"));
+        } finally {
+            setAddingProductId(null);
+        }
+    }, [
+        applyCartResponse,
+        auth?.user?.id,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
+
+    useEffect(() => {
+        handleAddToCartRef.current = handleAddToCart;
+    }, [handleAddToCart]);
 
     // Handle update cart quantity
     const [updatingCartId, setUpdatingCartId] = useState(null);
 
-    const handleUpdateQty = (cartId, newQty) => {
+    const handleUpdateQty = useCallback((cartId, newQty) => {
         if (newQty < 1) return;
         setUpdatingCartId(cartId);
 
-        router.patch(
-            route("transactions.updateCart", cartId),
-            { qty: newQty },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
+        if (!qtyUpdateSnapshots.current[cartId]) {
+            qtyUpdateSnapshots.current[cartId] = {
+                carts,
+                cartsTotal,
+                pricingPreview,
+            };
+        }
+
+        setCarts((currentCarts) => {
+            const nextCarts = currentCarts.map((item) => {
+                if (String(item.id) !== String(cartId)) {
+                    return item;
+                }
+
+                return {
+                    ...item,
+                    qty: newQty,
+                    price: Math.round(getCartUnitPrice(item) * newQty),
+                };
+            });
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            return nextCarts;
+        });
+
+        clearTimeout(qtyUpdateTimers.current[cartId]);
+        qtyUpdateSequences.current[cartId] =
+            (qtyUpdateSequences.current[cartId] || 0) + 1;
+        const sequence = qtyUpdateSequences.current[cartId];
+
+        qtyUpdateTimers.current[cartId] = setTimeout(async () => {
+            try {
+                const response = await axios.patch(
+                    route("transactions.updateCart", cartId),
+                    {
+                        qty: newQty,
+                        ...cartMutationPayload(),
+                    }
+                );
+
+                if (qtyUpdateSequences.current[cartId] !== sequence) {
+                    return;
+                }
+
+                applyCartResponse(response.data);
+                delete qtyUpdateSnapshots.current[cartId];
+            } catch (error) {
+                if (qtyUpdateSequences.current[cartId] !== sequence) {
+                    return;
+                }
+
+                const snapshot = qtyUpdateSnapshots.current[cartId];
+
+                if (snapshot) {
+                    setCarts(snapshot.carts);
+                    setCartsTotal(snapshot.cartsTotal);
+                    setPricingPreview(snapshot.pricingPreview);
+                    delete qtyUpdateSnapshots.current[cartId];
+                }
+
+                toast.error(getAxiosErrorMessage(error, "Gagal update quantity"));
+            } finally {
+                if (qtyUpdateSequences.current[cartId] === sequence) {
                     setUpdatingCartId(null);
-                },
-                onError: (errors) => {
-                    toast.error(errors?.message || "Gagal update quantity");
-                    setUpdatingCartId(null);
-                },
+                    delete qtyUpdateTimers.current[cartId];
+                }
             }
-        );
-    };
+        }, 250);
+    }, [
+        applyCartResponse,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
 
     // Handle numpad confirm for cash input
     const handleNumpadConfirm = useCallback((value) => {
@@ -404,7 +665,7 @@ export default function Index({
                     break;
                 case "F2":
                     e.preventDefault();
-                    if (carts.length > 0 && selectedCustomer)
+                    if (carts.length > 0)
                         handleSubmitTransaction();
                     break;
                 case "F3":
@@ -430,21 +691,49 @@ export default function Index({
     }, [carts, selectedCustomer, mobileView, showShortcuts]);
 
     // Handle remove from cart
-    const handleRemoveFromCart = (cartId) => {
+    const handleRemoveFromCart = useCallback(async (cartId) => {
+        const snapshot = { carts, cartsTotal, pricingPreview };
         setRemovingItemId(cartId);
 
-        router.delete(route("transactions.destroyCart", cartId), {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Item dihapus dari keranjang");
-                setRemovingItemId(null);
-            },
-            onError: () => {
-                toast.error("Gagal menghapus item");
-                setRemovingItemId(null);
-            },
+        setCarts((currentCarts) => {
+            const nextCarts = currentCarts.filter(
+                (item) => String(item.id) !== String(cartId)
+            );
+
+            setCartsTotal(sumCartPrices(nextCarts));
+
+            if (nextCarts.length === 0) {
+                setPricingPreview(emptyPricingPreview);
+            }
+
+            return nextCarts;
         });
-    };
+
+        try {
+            const response = await axios.delete(
+                route("transactions.destroyCart", cartId),
+                {
+                    data: cartMutationPayload(),
+                }
+            );
+
+            applyCartResponse(response.data);
+            toast.success("Item dihapus dari keranjang");
+        } catch (error) {
+            setCarts(snapshot.carts);
+            setCartsTotal(snapshot.cartsTotal);
+            setPricingPreview(snapshot.pricingPreview);
+            toast.error(getAxiosErrorMessage(error, "Gagal menghapus item"));
+        } finally {
+            setRemovingItemId(null);
+        }
+    }, [
+        applyCartResponse,
+        cartMutationPayload,
+        carts,
+        cartsTotal,
+        pricingPreview,
+    ]);
 
     // Handle submit transaction
     const handleSubmitTransaction = () => {
@@ -453,13 +742,13 @@ export default function Index({
             return;
         }
 
-        if (!selectedCustomer?.id) {
-            toast.error("Pilih pelanggan terlebih dahulu");
+        if (payLater && !dueDate) {
+            toast.error("Isi tanggal jatuh tempo untuk nota barang");
             return;
         }
 
-        if (payLater && !dueDate) {
-            toast.error("Isi tanggal jatuh tempo untuk nota barang");
+        if (payLater && !selectedCustomer?.id) {
+            toast.error("Pilih pelanggan untuk nota barang/piutang");
             return;
         }
 
@@ -468,8 +757,6 @@ export default function Index({
             return;
         }
 
-        // Validate bank transfer requires bank selection
-        const isBankTransfer = paymentMethod === "bank_transfer";
         if (isBankTransfer && !selectedBankAccount) {
             toast.error("Pilih rekening bank tujuan");
             return;
@@ -480,7 +767,7 @@ export default function Index({
         router.post(
             route("transactions.store"),
             {
-                customer_id: selectedCustomer.id,
+                customer_id: selectedCustomer?.id ?? null,
                 discount,
                 redeem_points: Number(redeemPointsInput || 0),
                 customer_voucher_id: selectedVoucherId || null,
@@ -517,24 +804,6 @@ export default function Index({
             }
         );
     };
-
-    // Filter products including out of stock
-    const allProducts = useMemo(() => {
-        return products.filter((product) => {
-            const matchesCategory =
-                normalizedSelectedCategory === null ||
-                Number(product.category_id) === normalizedSelectedCategory;
-            const matchesSearch =
-                !searchQuery ||
-                product.title
-                    .toLowerCase()
-                    .includes(searchQuery.toLowerCase()) ||
-                product.barcode
-                    ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
-            return matchesCategory && matchesSearch;
-        });
-    }, [products, normalizedSelectedCategory, searchQuery]);
 
     if (!activeCashierShift) {
         return (
@@ -615,13 +884,13 @@ export default function Index({
 
             <div className="h-[calc(100vh-4rem)] flex flex-col lg:flex-row">
                 {/* Mobile Tab Switcher */}
-                <div className="lg:hidden flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="lg:hidden flex border-b border-hairline-light dark:border-hairline-dark bg-white dark:bg-canvas-night-elevated">
                     <button
                         onClick={() => setMobileView("products")}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
                             mobileView === "products"
-                                ? "text-primary-600 border-b-2 border-primary-500"
-                                : "text-slate-500"
+                                ? "text-ink border-b-2 border-ink"
+                                : "text-shade-50"
                         }`}
                     >
                         <IconShoppingCart size={18} />
@@ -631,15 +900,15 @@ export default function Index({
                         onClick={() => setMobileView("cart")}
                         className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
                             mobileView === "cart"
-                                ? "text-primary-600 border-b-2 border-primary-500"
-                                : "text-slate-500"
+                                ? "text-ink border-b-2 border-ink"
+                                : "text-shade-50"
                         }`}
                     >
                         <IconReceipt size={18} />
                         <span className="relative inline-flex items-center gap-1">
                             Keranjang
                             {cartCount > 0 && (
-                                <span className="inline-flex items-center justify-center px-1.5 min-w-[20px] h-5 text-[11px] font-bold bg-primary-500 text-white rounded-full">
+                                <span className="inline-flex items-center justify-center px-1.5 min-w-[20px] h-5 text-[11px] font-bold bg-ink text-white rounded-full">
                                     {cartCount}
                                 </span>
                             )}
@@ -649,14 +918,14 @@ export default function Index({
 
                 {/* Left Panel - Products */}
                 <div
-                    className={`flex-1 bg-slate-100 dark:bg-slate-950 overflow-hidden ${
+                    className={`flex-1 bg-canvas-cream dark:bg-canvas-night overflow-hidden ${
                         mobileView !== "products"
                             ? "hidden lg:flex lg:flex-col"
                             : "flex flex-col"
                     }`}
                 >
                     <ProductGrid
-                        products={allProducts}
+                        products={products}
                         categories={categories}
                         selectedCategory={selectedCategory}
                         onCategoryChange={(categoryId) =>
@@ -666,6 +935,7 @@ export default function Index({
                         }
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
+                        onSearch={handleBarcodeScan}
                         isSearching={isSearching}
                         onAddToCart={handleAddToCart}
                         addingProductId={addingProductId}
@@ -675,27 +945,27 @@ export default function Index({
 
                 {/* Right Panel - Cart & Payment */}
                 <div
-                    className={`w-full lg:w-[420px] xl:w-[480px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 min-h-0 overflow-hidden ${
+                    className={`w-full lg:w-[420px] xl:w-[480px] flex flex-col bg-white dark:bg-canvas-night-elevated border-l border-hairline-light dark:border-hairline-dark min-h-0 overflow-hidden ${
                         mobileView !== "cart" ? "hidden lg:flex" : "flex"
                     }`}
                     style={{ height: "calc(100vh - 4rem)" }}
                 >
                     {/* Customer Select - Fixed */}
-                    <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+                    <div className="p-3 border-b border-hairline-light dark:border-hairline-dark flex-shrink-0">
                         <CustomerSelect
                             customers={customers}
                             selected={selectedCustomer}
                             onSelect={setSelectedCustomer}
-                            placeholder="Pilih pelanggan..."
+                            placeholder="Pembeli sekali beli"
                             error={errors?.customer_id}
-                            label="Pelanggan"
+                            label="Pelanggan (opsional)"
                             tierOptions={loyaltyTierOptions}
                         />
                     </div>
 
                     {/* Held Transactions & Alerts */}
                     {heldCarts.length > 0 && (
-                        <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                        <div className="p-3 border-b border-hairline-light dark:border-hairline-dark">
                             <HeldTransactions
                                 heldCarts={heldCarts}
                                 hasActiveCart={carts.length > 0}
@@ -707,7 +977,7 @@ export default function Index({
                     <div className="flex-1 overflow-y-auto min-h-0">
                         {/* Hold Button - at top of cart section */}
                         {carts.length > 0 && (
-                            <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                            <div className="p-3 border-b border-hairline-light dark:border-hairline-dark">
                                 <HoldButton
                                     hasItems={carts.length > 0}
                                     onHold={handleHoldCart}
@@ -716,14 +986,14 @@ export default function Index({
                             </div>
                         )}
 
-                        <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                        <div className="p-3 border-b border-hairline-light dark:border-hairline-dark">
                             <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                <h3 className="text-sm font-semibold text-ink dark:text-slate-300 flex items-center gap-2">
                                     <IconShoppingCart size={16} />
                                     Keranjang
                                 </h3>
                                 {carts.length > 0 && (
-                                    <span className="px-2.5 py-0.5 text-xs font-bold bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-full whitespace-nowrap">
+                                    <span className="px-2.5 py-0.5 text-xs font-bold bg-aloe-100 text-ink dark:bg-hairline-dark dark:text-primary-300 rounded-full whitespace-nowrap">
                                         {cartCount} item
                                     </span>
                                 )}
@@ -757,30 +1027,37 @@ export default function Index({
                                             );
                                             const pricingRule =
                                                 pricingItem?.pricing_rule;
+                                            const unitLabel =
+                                                item.unit_label ||
+                                                item.product_unit?.label ||
+                                                "unit";
+                                            const itemQty = Number(item.qty || 0);
 
                                             return (
                                         <div
                                             key={item.id}
                                             className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 group"
                                         >
-                                            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
-                                                {item.product?.image ? (
-                                                    <img
-                                                        src={getProductImageUrl(
-                                                            item.product.image
-                                                        )}
-                                                        alt={item.product.title}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <IconShoppingCart
-                                                            size={14}
-                                                            className="text-slate-400"
+                                            {!isCompactMode && (
+                                                <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0">
+                                                    {item.product?.image ? (
+                                                        <img
+                                                            src={getProductImageUrl(
+                                                                item.product.image
+                                                            )}
+                                                            alt={item.product.title}
+                                                            className="w-full h-full object-cover"
                                                         />
-                                                    </div>
-                                                )}
-                                            </div>
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <IconShoppingCart
+                                                                size={14}
+                                                                className="text-slate-400"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
                                                     {item.product?.title ||
@@ -794,14 +1071,14 @@ export default function Index({
                                                                 {formatPrice(
                                                                     baseUnitPrice
                                                                 )}{" "}
-                                                                × {item.qty}
+                                                                x {formatQty(itemQty)} {unitLabel}
                                                             </p>
                                                         )}
                                                     <p>
                                                         {formatPrice(
                                                             effectiveUnitPrice
                                                         )}{" "}
-                                                        × {item.qty}
+                                                        x {formatQty(itemQty)} {unitLabel}
                                                     </p>
                                                     {pricingRule && (
                                                         <p className="mt-0.5 text-[11px] font-medium text-rose-500">
@@ -817,23 +1094,23 @@ export default function Index({
                                                             item.id,
                                                             Math.max(
                                                                 1,
-                                                                item.qty - 1
+                                                                itemQty - 1
                                                             )
                                                         )
                                                     }
-                                                    disabled={item.qty <= 1}
+                                                    disabled={itemQty <= 1}
                                                     className="w-6 h-6 rounded flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 disabled:opacity-50 text-xs"
                                                 >
                                                     -
                                                 </button>
                                                 <span className="w-6 text-center text-xs font-medium">
-                                                    {item.qty}
+                                                    {formatQty(itemQty)}
                                                 </span>
                                                 <button
                                                     onClick={() =>
                                                         handleUpdateQty(
                                                             item.id,
-                                                            item.qty + 1
+                                                            itemQty + 1
                                                         )
                                                     }
                                                     className="w-6 h-6 rounded flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 text-xs"
@@ -877,9 +1154,9 @@ export default function Index({
                         {/* Payment Details - Scrollable */}
                         <div className="p-3 space-y-4">
                             {/* Pay later toggle */}
-                            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                            <div className="flex items-center justify-between p-3 rounded-card border border-hairline-light dark:border-hairline-dark bg-canvas-cream dark:bg-canvas-night">
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                    <p className="text-sm font-semibold text-ink dark:text-white">
                                         Bayar Belakangan (Nota Barang)
                                     </p>
                                     <p className="text-xs text-slate-500">
@@ -900,8 +1177,8 @@ export default function Index({
                                         }}
                                     />
                                     <span
-                                        className={`w-11 h-6 flex items-center bg-slate-300 rounded-full p-1 transition ${
-                                            payLater ? "bg-primary-500" : ""
+                                        className={`w-11 h-6 flex items-center bg-shade-30 rounded-full p-1 transition ${
+                                            payLater ? "bg-ink" : ""
                                         }`}
                                     >
                                         <span
@@ -922,7 +1199,7 @@ export default function Index({
                                         type="date"
                                         value={dueDate}
                                         onChange={(e) => setDueDate(e.target.value)}
-                                        className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                        className="w-full h-11 px-3 rounded-md border border-hairline-light dark:border-hairline-dark bg-white dark:bg-canvas-night-elevated text-sm focus:ring-4 focus:ring-aloe-100/70 focus:border-ink"
                                     />
                                 </div>
                             )}
@@ -941,10 +1218,10 @@ export default function Index({
                                                 setPaymentMethod(method.value)
                                             }
                                             disabled={payLater}
-                                            className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+                                            className={`p-3 rounded-card border transition-all flex items-center gap-2 ${
                                                 paymentMethod === method.value && !payLater
-                                                    ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
-                                                    : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                                                    ? "border-ink bg-aloe-100 dark:bg-hairline-dark"
+                                                    : "border-hairline-light dark:border-hairline-dark hover:border-shade-30 dark:hover:border-slate-600"
                                             } ${payLater ? "opacity-50 cursor-not-allowed" : ""}`}
                                         >
                                             <div
@@ -952,8 +1229,8 @@ export default function Index({
                                                     paymentMethod ===
                                                         method.value &&
                                                     !payLater
-                                                        ? "bg-primary-500 text-white"
-                                                        : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                                        ? "bg-ink text-white"
+                                                        : "bg-canvas-cream dark:bg-canvas-night text-slate-500"
                                                 }`}
                                             >
                                                 {method.value === "cash" ? (
@@ -972,7 +1249,7 @@ export default function Index({
                                                     className={`text-sm font-semibold ${
                                                         paymentMethod ===
                                                         method.value
-                                                            ? "text-primary-700 dark:text-primary-300"
+                                                            ? "text-ink dark:text-primary-300"
                                                             : "text-slate-700 dark:text-slate-300"
                                                     }`}
                                                 >
@@ -1005,13 +1282,13 @@ export default function Index({
                                                                 bank
                                                             )
                                                         }
-                                                        className={`p-3 rounded-xl border-2 transition-colors flex items-center gap-3 text-left ${
+                                                        className={`p-3 rounded-card border transition-colors flex items-center gap-3 text-left ${
                                                             isActive
-                                                                ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
-                                                                : "border-slate-200 dark:border-slate-700 hover:border-primary-200 dark:hover:border-primary-800"
+                                                                ? "border-ink bg-aloe-100 dark:bg-hairline-dark"
+                                                                : "border-hairline-light dark:border-hairline-dark hover:border-shade-30 dark:hover:border-primary-800"
                                                         }`}
                                                     >
-                                                        <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                                                        <div className="w-10 h-10 rounded-md bg-white dark:bg-canvas-night border border-hairline-light dark:border-hairline-dark flex items-center justify-center overflow-hidden">
                                                             {bank.logo_url ? (
                                                                 <img
                                                                     src={
@@ -1060,7 +1337,7 @@ export default function Index({
                                 )}
 
                             {/* Quick Amounts - Only for cash */}
-                            {paymentMethod === "cash" && (
+                            {paymentMethod === "cash" && !payLater && (
                                 <div>
                                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                         Nominal Cepat
@@ -1262,7 +1539,7 @@ export default function Index({
                             </div>
 
                             {/* Cash Input - Only for cash */}
-                            {paymentMethod === "cash" && (
+                            {paymentMethod === "cash" && !payLater && (
                                 <div>
                                     <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                         Jumlah Bayar (Rp)
@@ -1293,7 +1570,7 @@ export default function Index({
                     </div>
 
                     {/* Summary & Submit - Fixed at bottom */}
-                    <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 p-3">
+                    <div className="flex-shrink-0 border-t border-hairline-light dark:border-hairline-dark bg-canvas-cream dark:bg-canvas-night p-3">
                         {/* Summary Row */}
                         <div className="flex justify-between items-center mb-2 text-sm">
                             <span className="text-slate-500">Subtotal Dasar</span>
@@ -1312,7 +1589,7 @@ export default function Index({
                             </div>
                         )}
                         {(pricingPreview?.applied_groups || []).length > 0 && (
-                            <div className="mb-3 rounded-xl border border-slate-200 bg-white/70 p-2 dark:border-slate-700 dark:bg-slate-900/60">
+                            <div className="mb-3 rounded-card border border-hairline-light bg-white/80 p-2 dark:border-hairline-dark dark:bg-canvas-night-elevated">
                                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                     Grup Promo Aktif
                                 </div>
@@ -1338,7 +1615,7 @@ export default function Index({
                         {voucherDiscount > 0 && (
                             <div className="flex justify-between items-center mb-2 text-sm">
                                 <span className="text-slate-500">Voucher</span>
-                                <span className="text-primary-600">
+                                <span className="text-ink">
                                     -{formatPrice(voucherDiscount)}
                                 </span>
                             </div>
@@ -1348,7 +1625,7 @@ export default function Index({
                                 <span className="text-slate-500">
                                     Redeem Poin
                                 </span>
-                                <span className="text-primary-600">
+                                <span className="text-ink">
                                     -{formatPrice(loyaltyDiscount)}
                                 </span>
                             </div>
@@ -1370,10 +1647,10 @@ export default function Index({
                             </div>
                         )}
                         <div className="flex justify-between items-center mb-3">
-                            <span className="font-semibold text-slate-800 dark:text-white">
+                            <span className="font-semibold text-ink dark:text-white">
                                 Total
                             </span>
-                            <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                            <span className="text-xl font-bold text-ink dark:text-primary-400">
                                 {formatPrice(payable)}
                             </span>
                         </div>
@@ -1397,20 +1674,23 @@ export default function Index({
                             onClick={handleSubmitTransaction}
                             disabled={
                                 !carts.length ||
-                                !selectedCustomer ||
+                                (payLater && !selectedCustomer?.id) ||
+                                (payLater && !dueDate) ||
+                                (isBankTransfer && !selectedBankAccount) ||
                                 (!payLater &&
                                     paymentMethod === "cash" &&
                                     cash < payable) ||
                                 isLoadingPricing ||
                                 isSubmitting
                             }
-                            className={`w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                            className={`w-full h-12 rounded-full text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
                                 carts.length &&
-                                selectedCustomer &&
-                                (paymentMethod !== "cash" || cash >= payable)
-                                    && !isLoadingPricing
-                                    ? "bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white shadow-lg shadow-primary-500/30"
-                                    : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                (!payLater || (selectedCustomer?.id && dueDate)) &&
+                                (!isBankTransfer || selectedBankAccount) &&
+                                (paymentMethod !== "cash" || cash >= payable) &&
+                                !isLoadingPricing
+                                    ? "bg-ink hover:bg-shade-70 text-white"
+                                    : "bg-hairline-light dark:bg-slate-800 text-slate-400 cursor-not-allowed"
                             }`}
                         >
                             {isSubmitting || isLoadingPricing ? (
@@ -1421,8 +1701,13 @@ export default function Index({
                                     <span>
                                         {!carts.length
                                             ? "Keranjang Kosong"
-                                            : !selectedCustomer
-                                            ? "Pilih Pelanggan"
+                                            : payLater && !selectedCustomer?.id
+                                            ? "Pilih Pelanggan untuk Piutang"
+                                            : payLater && !dueDate
+                                            ? "Isi Jatuh Tempo"
+                                            : isBankTransfer &&
+                                              !selectedBankAccount
+                                            ? "Pilih Rekening"
                                             : paymentMethod === "cash" &&
                                               cash < payable
                                             ? `Kurang ${formatPrice(
