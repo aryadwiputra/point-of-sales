@@ -44,7 +44,7 @@ class CashierShiftService
         return $shift;
     }
 
-    public function openShift(User $cashier, User $actor, int $openingCash, ?string $notes = null): CashierShift
+    public function openShift(User $cashier, User $actor, int $openingCash, ?string $notes = null, ?int $warehouseId = null): CashierShift
     {
         $existing = CashierShift::query()
             ->open()
@@ -64,6 +64,7 @@ class CashierShiftService
             'opening_cash' => $openingCash,
             'expected_cash' => $openingCash,
             'notes' => $notes,
+            'warehouse_id' => $warehouseId,
             'status' => CashierShift::STATUS_OPEN,
         ]);
     }
@@ -164,6 +165,11 @@ class CashierShiftService
             'opening_cash' => (int) $shift->opening_cash,
             'opened_at' => optional($shift->opened_at)?->toISOString(),
             'notes' => $shift->notes,
+            'warehouse' => $shift->warehouse ? [
+                'id' => $shift->warehouse->id,
+                'code' => $shift->warehouse->code,
+                'name' => $shift->warehouse->name,
+            ] : null,
             'user' => $shift->user ? [
                 'id' => $shift->user->id,
                 'name' => $shift->user->name,

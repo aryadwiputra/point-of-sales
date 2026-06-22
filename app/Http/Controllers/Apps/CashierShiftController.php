@@ -8,6 +8,7 @@ use App\Http\Requests\ConfirmPasswordForForceCloseRequest;
 use App\Http\Requests\StoreCashierShiftRequest;
 use App\Models\CashierShift;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\CashierShiftService;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +34,7 @@ class CashierShiftController extends Controller
         ];
 
         $query = CashierShift::query()
-            ->with(['user:id,name', 'openedBy:id,name', 'closedBy:id,name'])
+            ->with(['user:id,name', 'openedBy:id,name', 'closedBy:id,name', 'warehouse:id,code,name'])
             ->when($filters['cashier_id'], fn (Builder $builder, $cashierId) => $builder->where('user_id', $cashierId))
             ->when($filters['status'], fn (Builder $builder, $status) => $builder->where('status', $status))
             ->when($filters['opened_from'], fn (Builder $builder, $date) => $builder->whereDate('opened_at', '>=', $date))
@@ -50,11 +51,14 @@ class CashierShiftController extends Controller
             ? User::query()->orderBy('name')->get(['id', 'name'])
             : collect([$request->user()->only(['id', 'name'])]);
 
+        $warehouses = Warehouse::active()->orderBy('sort_order')->orderBy('code')->get(['id', 'code', 'name']);
+
         return Inertia::render('Dashboard/CashierShifts/Index', [
             'shifts' => $shifts,
             'filters' => $filters,
             'cashiers' => $cashiers,
             'activeShift' => $activeShift ? $this->transformShift($activeShift) : null,
+            'warehouses' => $warehouses,
             'canForceClose' => $request->user()->isSuperAdmin() || $request->user()->can('cashier-shifts-force-close'),
         ]);
     }
@@ -76,6 +80,7 @@ class CashierShiftController extends Controller
             actor: $request->user(),
             openingCash: (int) $request->validated('opening_cash'),
             notes: $request->validated('notes'),
+            warehouseId: $request->validated('warehouse_id'),
         );
 
         $this->auditLogService->log(
@@ -157,7 +162,7 @@ class CashierShiftController extends Controller
     private function resolveVisibleShift(Request $request, CashierShift $cashierShift): CashierShift
     {
         $query = CashierShift::query()
-            ->with(['user:id,name', 'openedBy:id,name', 'closedBy:id,name'])
+            ->with(['user:id,name', 'openedBy:id,name', 'closedBy:id,name', 'warehouse:id,code,name'])
             ->whereKey($cashierShift->id);
 
         $query = $this->cashierShiftService->visibleToUser($query, $request->user());
@@ -188,6 +193,11 @@ class CashierShiftController extends Controller
             'sales_returns_count' => $shift->isOpen() ? $summary['sales_returns_count'] : (int) $shift->sales_returns_count,
             'notes' => $shift->notes,
             'close_notes' => $shift->close_notes,
+            'warehouse' => $shift->warehouse ? [
+                'id' => $shift->warehouse->id,
+                'code' => $shift->warehouse->code,
+                'name' => $shift->warehouse->name,
+            ] : null,
             'user' => $shift->user ? [
                 'id' => $shift->user->id,
                 'name' => $shift->user->name,

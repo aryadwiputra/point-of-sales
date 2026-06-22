@@ -33,11 +33,13 @@ export default function Index({
     filters,
     cashiers = [],
     activeShift = null,
+    warehouses = [],
 }) {
     const { auth, errors } = usePage().props;
     const { can } = useAuthorization();
     const [openingCash, setOpeningCash] = useState("");
     const [notes, setNotes] = useState("");
+    const [warehouseId, setWarehouseId] = useState(warehouses.length > 0 ? warehouses[0].id : "");
     const canOpenShift = can("cashier-shifts-open");
 
     const currentFilters = useMemo(
@@ -67,10 +69,15 @@ export default function Index({
     const handleOpenShift = (event) => {
         event.preventDefault();
 
-        router.post(route("cashier-shifts.store"), {
+        const payload = {
             opening_cash: Number(openingCash || 0),
             notes,
-        });
+        };
+        if (warehouseId) {
+            payload.warehouse_id = warehouseId;
+        }
+
+        router.post(route("cashier-shifts.store"), payload);
     };
 
     return (
@@ -110,7 +117,7 @@ export default function Index({
                             </p>
                         </div>
 
-                        <form onSubmit={handleOpenShift} className="grid gap-4 md:grid-cols-3">
+                        <form onSubmit={handleOpenShift} className="grid gap-4 md:grid-cols-4">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Modal Awal
@@ -127,6 +134,22 @@ export default function Index({
                                     <p className="mt-2 text-xs text-rose-500">{errors.opening_cash}</p>
                                 )}
                             </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    Gudang / Cabang
+                                </label>
+                                <select
+                                    value={warehouseId}
+                                    onChange={(event) => setWarehouseId(event.target.value)}
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                >
+                                    {warehouses.map((w) => (
+                                        <option key={w.id} value={w.id}>
+                                            {w.code} — {w.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="md:col-span-2">
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                                     Catatan
@@ -139,7 +162,7 @@ export default function Index({
                                     placeholder="Opsional"
                                 />
                             </div>
-                            <div className="md:col-span-3">
+                            <div className="md:col-span-4">
                                 <button
                                     type="submit"
                                     className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-600"
@@ -162,8 +185,13 @@ export default function Index({
                                 {activeShift.user?.name}
                             </p>
                             <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
-                                {formatDateTime(activeShift.opened_at)}
+                                {activeShift.warehouse?.name || formatDateTime(activeShift.opened_at)}
                             </p>
+                            {activeShift.warehouse && (
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                                    {activeShift.warehouse.code}
+                                </p>
+                            )}
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

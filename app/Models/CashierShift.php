@@ -17,6 +17,7 @@ class CashierShift extends Model
 
     protected $fillable = [
         'user_id',
+        'warehouse_id',
         'opened_by',
         'closed_by',
         'opened_at',
@@ -58,6 +59,11 @@ class CashierShift extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function openedBy()

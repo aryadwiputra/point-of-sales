@@ -102,7 +102,7 @@ class HandleInertiaRequests extends Middleware
                 });
 
             $activeShift = CashierShift::query()
-                ->with('user:id,name')
+                ->with('user:id,name', 'warehouse:id,code,name')
                 ->open()
                 ->where('user_id', $userId)
                 ->latest('opened_at')

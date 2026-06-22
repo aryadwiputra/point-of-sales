@@ -16,6 +16,7 @@ class StoreCashierShiftRequest extends FormRequest
         return [
             'opening_cash' => ['required', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
         ];
     }
 }
