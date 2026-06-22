@@ -1,5 +1,20 @@
 # AGENTS.md — Point of Sales
 
+Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
+
+## Important: This Repo
+
+**Remote:** `git@github.com:aryadwiputra/point-of-sales.git`
+
+**Branch structure:**
+- `main` — production. Protected. PR only from `development`.
+- `development` — integration branch. Feature branches merge here.
+- `release/*` — release candidates. Created from `development`, merged to `main` + tagged.
+- `revamp-frontend` — legacy UI overhaul branch (inactive).
+- `feature/*` — individual feature work.
+
+**Tags follow semver:** `v1.0.0`, `v1.1.0`, etc.
+
 ## Stack
 
 - **Backend**: Laravel 12 (PHP 8.2+)
@@ -7,95 +22,90 @@
 - **Styling**: Tailwind CSS 3 (custom theme in `tailwind.config.js`)
 - **Auth/RBAC**: Spatie Laravel Permission + Laravel Breeze
 - **DB**: MySQL (default); SQLite in-memory for tests
-- **Payment webhooks**: Midtrans, Xendit (`routes/api.php`)
+- **Payment gateways**: Midtrans, Xendit (webhooks in `routes/api.php`)
 
 ## Developer Commands
 
 ```bash
-# Initial setup (run in order)
+# Initial setup
 cp .env.example .env
-composer install
-npm install
+composer install && npm install
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
 
-# Dev servers — run BOTH in parallel
-npm run dev        # Vite (HMR)
-php artisan serve  # Laravel API
+# Dev servers — run BOTH
+npm run dev          # Vite HMR
+php artisan serve    # Laravel
 
 # Testing
-php artisan test                     # all tests
-php artisan test --filter=FooTest    # single test class
-php artisan test --filter=test_name  # single test method
+php artisan test                     # all
+php artisan test --filter=FooTest    # one class
+php artisan test --filter=test_name  # one method
 
 # Formatting
-vendor/bin/pint                      # PHP formatter (Laravel Pint)
+vendor/bin/pint
+
+# Production build
+npm run build
 ```
 
 ## Architecture
 
-- **Controllers**: `app/Http/Controllers/Apps/` — dashboard module controllers
-- **React pages**: `resources/js/Pages/Dashboard/` — Inertia page components
-- **Entry point**: `resources/js/app.jsx` — bootstraps Inertia + React
-- **Services**: `app/Services/` — cross-cutting logic (AuditLog, CashierShift, StockMutation, Payments/)
-- **Middleware**: `app/Http/Middleware/` — custom middleware including `EnsureActiveCashierShift`
-- **Inertia shared props**: `app/Http/Middleware/HandleInertiaRequests.php` — shares auth, permissions, notifications, store profile to all pages
-- **Routes**: `routes/web.php` (dashboard), `routes/api.php` (payment webhooks), `routes/auth.php` (Breeze auth)
+- **Controllers**: `app/Http/Controllers/Apps/` — per-module controllers
+- **Services**: `app/Services/` — business logic: AuditLog, CashierShift, StockMutation, Payments/, PricingService, CrmAutomationService, etc.
+- **Layouts**: `POSLayout.jsx` (POS), `DashboardLayout.jsx` (admin), `AuthenticatedLayout.jsx` (profile), `GuestLayout.jsx` (auth)
+- **Routes**: `routes/web.php` (~50+ dashboard routes), `routes/api.php` (webhooks), `routes/auth.php` (Breeze)
+- **Inertia shared props**: `HandleInertiaRequests.php` — auth, permissions, notifications (low stock, receivables, payables aging), active shift, store profile
 
-## Middleware & Access Control
+## Middleware
 
-- **`permission`** (Spatie): every dashboard route is protected by a specific permission string
-- **`active_shift`**: required for all POS transaction actions (search product, cart CRUD, hold/resume, store). Blocks if cashier has no open shift
-- **`bot.guard`**: applied on login/register/forgot-password for throttle protection
-- **`registration.enabled`**: public registration is **off by default** (`AUTH_PUBLIC_REGISTRATION=false`)
+| Alias | Class | Applied to |
+|-------|-------|------------|
+| `permission` | Spatie PermissionMiddleware | Every dashboard route |
+| `step_up` | EnsureRecentPasswordConfirmation | Sensitive create/update/delete: roles, users, payment settings, bank accounts, payment confirm |
+| `active_shift` | EnsureActiveCashierShift | All POS transaction actions (cart CRUD, hold/resume, checkout) |
+| `bot.guard` | EnsureBotGuard | Login/register/forgot-password (honeypot + timer) |
+| `registration.enabled` | EnsurePublicRegistrationEnabled | Register route (default: off) |
+
+## Seeder Chain
+
+`DatabaseSeeder` runs in exact order with permission cache reset before & after:
+
+```
+PermissionSeeder → RoleSeeder → UserSeeder → PaymentSettingSeeder → SampleDataSeeder → OperationalCoreSeeder → FeatureCoverageSeeder
+```
+
+**Default users:** `arya@gmail.com` / `password` (admin), `cashier@gmail.com` / `password` (cashier)
 
 ## Critical Gotchas
 
-1. **Permission cache stale after seeding** — after `db:seed`, logout + login again to refresh Spatie's permission cache
-2. **Webhooks need public APP_URL** — Midtrans/Xendit webhooks will not work with `localhost`; set `APP_URL` to a public URL
-3. **Product images require storage link** — run `php artisan storage:link` or images won't render
-4. **New module routes may 500 without migrations** — newer modules (sales returns, stock opname, cashier shifts, audit logs) need their migrations run: `php artisan migrate`
-5. **Tests use SQLite in-memory** — `phpunit.xml` forces `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`. Do not assume MySQL features in tests.
-6. **Both dev servers required** — Inertia needs Vite running for HMR and asset serving. `php artisan serve` alone will not load JS/CSS.
+1. **Permission cache stale after seed** — logout + login again. Seeder resets cache but session still holds old permissions.
+2. **Webhooks need public APP_URL** — Midtrans/Xendit won't work with localhost.
+3. **Product images need storage:link** — `php artisan storage:link` or images won't render.
+4. **Missing migrations cause 500 on new modules** — run `php artisan migrate` for newer modules (purchase orders, goods receiving, supplier returns, stock opname, etc.).
+5. **Tests force SQLite in-memory** — `phpunit.xml` sets `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`. Don't assume MySQL features.
+6. **Both dev servers required** — Vite serves JS/CSS via HMR. `php artisan serve` alone won't work.
 
-## Frontend Conventions
+## Release Process
 
-- **Routing**: use Ziggy `route()` helper in React components (Ziggy is installed)
-- **Styling**: Tailwind with semantic color tokens — `primary`, `accent`, `success`, `warning`, `danger` (see `tailwind.config.js`)
+1. `development` accumulates features → branch `release/X.Y.Z`
+2. QA/fix on `release/X.Y.Z` → merge to `main`
+3. Tag: `git tag -a vX.Y.Z -m "vX.Y.Z"` on `main`
+4. Merge `release/X.Y.Z` back to `development`
+5. GitHub Release created from tag
+
+## Frontend
+
 - **Icons**: `@tabler/icons-react`
-- **Alerts**: `react-hot-toast` and `sweetalert2` (both installed)
+- **Alerts/confirm**: `react-hot-toast` + `sweetalert2`
 - **Charts**: `chart.js`
-
-## Database & Seeding
-
-- Default seeders create roles, permissions, 2 users (admin + cashier), and sample data
-- Admin: `arya@gmail.com` / `password`
-- Cashir: `cashier@gmail.com` / `password`
-- Indonesia region data loaded via `laravolt/indonesia` package
-
-## Module Map (dashboard routes)
-
-| Path | Purpose |
-|------|---------|
-| `/dashboard` | Main dashboard (permission: `dashboard-access`) |
-| `/transactions` | POS — cart, hold/resume, checkout, print |
-| `/transactions/history` | Transaction history + sales return entry |
-| `/sales-returns` | Sales return management |
-| `/customers` | Customer CRUD + Indonesia region data |
-| `/receivables` | Customer receivables (piutang) |
-| `/suppliers` | Supplier CRUD |
-| `/payables` | Supplier payables (hutang) |
-| `/stock-opnames` | Stock opname (audit inventory) |
-| `/stock-mutations` | Stock mutation history |
-| `/cashier-shifts` | Open/close cashier shifts |
-| `/audit-logs` | Activity audit trail |
-| `/settings/*` | Payments, bank accounts, store profile, targets |
-| `/reports/sales` | Sales report |
-| `/reports/profits` | Profit report |
+- **Routing**: Ziggy `route()` helper available
+- **Tailwind tokens**: `primary` (indigo), `accent` (cyan), `success` (emerald), `warning` (amber), `danger` (rose)
 
 ## Docs
 
-- Module docs: `docs/README.md` (index), `docs/features/` (per-module)
+- Modules: `docs/features/`
 - Architecture: `docs/architecture-overview.md`
+- Config: `docs/configuration.md`
 - Planning: `planning/improvement-planning.md`
