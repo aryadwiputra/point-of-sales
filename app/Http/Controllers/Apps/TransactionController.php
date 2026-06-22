@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\Warehouse;
@@ -17,6 +18,7 @@ use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
+use App\Services\UnitConversionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -231,12 +233,20 @@ class TransactionController extends Controller
             return redirect()->back()->with('error', 'Product not found.');
         }
 
+        $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
+        $unitConversion = app(UnitConversionService::class);
+        $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
+
         $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
         $availableStock = $warehouseProduct?->pivot->stock ?? 0;
 
-        if ($availableStock < $request->qty) {
+        if ($availableStock < $baseQty) {
             return redirect()->back()->with('error', 'Out of Stock Product!.');
         }
+
+        $sellPrice = $unitConversion->getSellPrice($product, $unitId);
+        $pu = $product->units()->where('unit_id', $unitId)->first();
+        $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
 
         $cart = Cart::with('product')
             ->where('product_id', $request->product_id)
@@ -245,15 +255,17 @@ class TransactionController extends Controller
 
         if ($cart) {
             $cart->increment('qty', $request->qty);
-            $cart->price = $cart->product->sell_price * $cart->qty;
+            $cart->price = $sellPrice * $cart->qty;
             $cart->save();
         } else {
             Cart::create([
                 'cashier_id' => auth()->user()->id,
                 'warehouse_id' => $warehouseId,
                 'product_id' => $request->product_id,
+                'unit_id' => $unitId,
+                'conversion_factor' => $conversionFactor,
                 'qty' => $request->qty,
-                'price' => $request->sell_price * $request->qty,
+                'price' => $sellPrice * $request->qty,
             ]);
         }
 
@@ -612,6 +624,8 @@ class TransactionController extends Controller
                 $transaction->details()->create([
                     'transaction_id' => $transaction->id,
                     'product_id' => $cart->product_id,
+                    'unit_id' => $cart->unit_id,
+                    'conversion_factor' => $cart->conversion_factor,
                     'qty' => $cart->qty,
                     'base_unit_price' => $baseUnitPrice,
                     'unit_price' => $unitPrice,
@@ -636,13 +650,14 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
+                $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
                 \App\Models\ProductWarehouse::where([
                     'product_id' => $product->id,
                     'warehouse_id' => $activeShift->warehouse_id,
-                ])->decrement('stock', $cart->qty);
+                ])->decrement('stock', $baseQty);
 
                 // sync legacy stock field for backward compat
-                $product->decrement('stock', $cart->qty);
+                $product->decrement('stock', $baseQty);
             }
 
             Cart::where('cashier_id', auth()->user()->id)->active()->delete();

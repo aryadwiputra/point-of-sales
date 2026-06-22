@@ -47,6 +47,19 @@ class Product extends Model
             ->withTimestamps();
     }
 
+    public function units(): BelongsToMany
+    {
+        return $this->belongsToMany(Unit::class, 'product_units')
+            ->withPivot(['is_base', 'conversion_factor', 'buy_price', 'sell_price', 'barcode', 'sku_suffix'])
+            ->using(ProductUnit::class)
+            ->withTimestamps();
+    }
+
+    public function baseUnit(): ?Unit
+    {
+        return $this->units()->wherePivot('is_base', true)->first();
+    }
+
     public function stockOpnameItems()
     {
         return $this->hasMany(StockOpnameItem::class);
