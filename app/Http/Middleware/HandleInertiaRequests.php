@@ -171,6 +171,7 @@ class HandleInertiaRequests extends Middleware
             'activeCashierShift' => $activeCashierShift,
             'storeProfile' => $storeProfile,
             'pendingApprovalCount' => $pendingApprovalCount,
+            'appVersion' => config('app.version'),
             'security' => [
                 'warnings' => $securityWarnings,
                 'publicRegistrationEnabled' => config('security.auth.public_registration'),

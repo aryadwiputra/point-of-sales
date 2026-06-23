@@ -19,7 +19,7 @@ import {
 import Notification from "@/Components/Dashboard/Notification";
 
 export default function POSLayout({ children }) {
-    const { auth, storeProfile, activeCashierShift } = usePage().props;
+    const { auth, storeProfile, activeCashierShift, appVersion } = usePage().props;
     const { darkMode, themeSwitcher } = useTheme();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -149,6 +149,11 @@ export default function POSLayout({ children }) {
                     <div className="hidden md:flex">
                         <Notification />
                     </div>
+
+                    {/* Version */}
+                    <span className="hidden lg:block text-[11px] text-slate-400 dark:text-slate-600 font-mono">
+                        {appVersion}
+                    </span>
 
                     {/* Fullscreen Toggle */}
                     <button
