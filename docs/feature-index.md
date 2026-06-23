@@ -1,71 +1,94 @@
 # Feature Index
 
-Kembali ke indeks dokumentasi: `docs/README.md`
+## POS & Transaksi
 
-## Modul Inti
+| Modul | File | Status |
+|-------|------|--------|
+| POS / Checkout | `docs/features/pos-transactions.md` | ✅ |
+| Sales Return | `docs/features/sales-returns.md` | ✅ |
+| Customer Portal (self-service) | `docs/features/customer-portal.md` | 🆕 |
 
-### POS & Transaksi
+## Inventory & Warehouse
 
-Modul kasir untuk membangun cart, hold/resume transaksi, checkout multi-metode pembayaran, dan cetak/share dokumen transaksi.
+| Modul | File | Status |
+|-------|------|--------|
+| Produk & Kategori | `docs/features/inventory-stock.md` | ✅ |
+| Stock Opname | `docs/features/inventory-stock.md` | ✅ |
+| Stock Mutation | `docs/features/inventory-stock.md` | ✅ |
+| Multi-Warehouse & Stock Transfer | `docs/features/multi-warehouse.md` | 🆕 |
+| Batch / Expiry Tracking | — | 🆕 |
+| Composite Products (Kits) | — | 🆕 |
+| Reorder Point | — | 🆕 |
+| Unit Conversion (Multi-Satuan) | `docs/features/unit-conversion.md` | 🆕 |
 
-Dokumen: `docs/features/pos-transactions.md`
+## Purchasing & Finance
 
-### Customer & Wilayah
+| Modul | File | Status |
+|-------|------|--------|
+| Purchase Orders | `docs/features/purchasing-chain.md` | 🆕 |
+| Goods Receiving | `docs/features/purchasing-chain.md` | 🆕 |
+| Supplier Returns | `docs/features/purchasing-chain.md` | 🆕 |
+| Supplier | `docs/features/payables-suppliers.md` | ✅ |
+| Payables (Hutang) | `docs/features/payables-suppliers.md` | ✅ |
+| Receivables (Piutang) | `docs/features/receivables.md` | ✅ |
 
-Modul customer mendukung CRUD dan data wilayah Indonesia sampai level desa, serta histori transaksi pelanggan.
+## Pricing & Promo
 
-Dokumen: `docs/features/customers-regions.md`
+| Modul | File | Status |
+|-------|------|--------|
+| Pricing Rules | `docs/features/promotions-loyalty.md` | 🆕 |
+| Customer Vouchers | `docs/features/promotions-loyalty.md` | 🆕 |
+| Loyalty (tiers, points) | `docs/features/promotions-loyalty.md` | 🆕 |
+| Multi-Price List | — | 🆕 |
+| Discount Approval | — | 🆕 |
 
-### Receivables
+## CRM
 
-Modul piutang pelanggan untuk transaksi `pay_later`, termasuk pembayaran parsial, jatuh tempo, dan status piutang.
+| Modul | File | Status |
+|-------|------|--------|
+| Member Management | `docs/features/member-management.md` | ✅ |
+| Customer Segments | `docs/features/crm-segments.md` | 🆕 |
+| Campaigns & Reminders | `docs/features/crm-segments.md` | 🆕 |
 
-Dokumen: `docs/features/receivables.md`
+## Settings & Admin
 
-### Payables & Suppliers
+| Modul | File | Status |
+|-------|------|--------|
+| Payment Gateways | `docs/features/settings-payments.md` | ✅ |
+| Bank Accounts | `docs/features/settings-payments.md` | ✅ |
+| Store Profile | `docs/features/settings-payments.md` | ✅ |
+| Sales Target | `docs/features/settings-payments.md` | ✅ |
+| Tax Settings (PPN, NPWP, NIB) | — | 🆕 |
+| Printer Settings | — | 🆕 |
+| Users & Roles | `docs/features/rbac-users-roles.md` | ✅ |
+| Permissions | `docs/features/rbac-users-roles.md` | ✅ |
+| Audit Logs | `docs/features/audit-logs.md` | ✅ |
 
-Modul supplier dan hutang supplier untuk pencatatan kewajiban ke vendor serta pelunasan hutang.
+## Reports & Documents
 
-Dokumen: `docs/features/payables-suppliers.md`
+| Modul | File | Status |
+|-------|------|--------|
+| Sales Report | `docs/features/reports-documents.md` | ✅ |
+| Profit Report | `docs/features/reports-documents.md` | ✅ |
+| Advanced Sales Insights | `docs/features/reports-documents.md` | ✅ |
+| PDF Invoice / Receipt / Shipping | `docs/features/reports-documents.md` | ✅ |
+| PDF Receivable / Payable | `docs/features/reports-documents.md` | ✅ |
 
-### Inventory & Stock
+## Tools & Integrations
 
-Modul inventory saat ini mencakup produk, stock opname, dan stock mutation.
+| Modul | File | Status |
+|-------|------|--------|
+| Import/Export CSV+Excel | `docs/features/import-export.md` | 🆕 |
+| Mobile POS / PWA | `docs/features/mobile-pos.md` | 🆕 |
+| Thermal Printer | `docs/features/thermal-printer.md` | 🆕 |
+| Offline Mode | — | 🆕 |
 
-Dokumen: `docs/features/inventory-stock.md`
+## Planning & Roadmap
 
-### Sales Returns
-
-Modul retur penjualan untuk koreksi transaksi pasca-penjualan, termasuk restock, pengurangan profit, koreksi piutang, dan store credit.
-
-Dokumen: `docs/features/sales-returns.md`
-
-### Cashier Shifts
-
-Modul shift kasir untuk membuka dan menutup shift, serta membatasi operasi transaksi yang memerlukan shift aktif.
-
-Dokumen: `docs/features/cashier-shifts.md`
-
-### Audit Logs
-
-Modul observability untuk melihat perubahan penting yang dilakukan user pada fitur-fitur sensitif.
-
-Dokumen: `docs/features/audit-logs.md`
-
-### Settings & Payments
-
-Modul konfigurasi yang mencakup payment settings, bank accounts, profil toko, dan target penjualan.
-
-Dokumen: `docs/features/settings-payments.md`
-
-### RBAC, Users, Roles
-
-Modul akses dan administrasi user berbasis role dan permission.
-
-Dokumen: `docs/features/rbac-users-roles.md`
-
-### Reports & Documents
-
-Modul laporan dan dokumen PDF/print untuk transaksi, receivables, dan payables.
-
-Dokumen: `docs/features/reports-documents.md`
+- `planning/feature-roadmap.md` — ringkasan roadmap v2.1–v3.0
+- `planning/tier-1-implementation.md` — detail eksekusi Tier 1
+- `planning/tier-2-implementation.md` — detail eksekusi Tier 2
+- `planning/tier-3-implementation.md` — detail eksekusi Tier 3
+- `planning/multi-warehouse.md` — detail multi-warehouse
+- `planning/improvement-planning.md` — roadmap awal (legacy)
+- `planning/security-improvement-roadmap.md` — roadmap keamanan

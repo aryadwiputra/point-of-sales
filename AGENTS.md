@@ -44,6 +44,10 @@ php artisan test                     # all
 php artisan test --filter=FooTest    # one class
 php artisan test --filter=test_name  # one method
 
+# Import/Export
+php artisan make:export ProductsExport --model=Product
+php artisan make:import ProductsImport --model=Product
+
 # Formatting
 vendor/bin/pint
 
@@ -85,7 +89,7 @@ PermissionSeeder → RoleSeeder → UserSeeder → PaymentSettingSeeder → Samp
 2. **Webhooks need public APP_URL** — Midtrans/Xendit won't work with localhost.
 3. **Product images need storage:link** — `php artisan storage:link` or images won't render.
 4. **Missing migrations cause 500 on new modules** — run `php artisan migrate` for newer modules (purchase orders, goods receiving, supplier returns, stock opname, etc.).
-5. **Tests force SQLite in-memory** — `phpunit.xml` sets `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`. Don't assume MySQL features.
+5. **Tests force SQLite in-memory** — `phpunit.xml` sets `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`. Don't assume MySQL features. **Set `tax_rate=0` on test Product::create** to avoid PPN changing grand_total.
 6. **Both dev servers required** — Vite serves JS/CSS via HMR. `php artisan serve` alone won't work.
 
 ## Release Process
