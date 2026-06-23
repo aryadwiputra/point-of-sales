@@ -5,47 +5,65 @@ Dokumentasi ini ditujukan untuk developer yang ingin setup, memahami alur modul,
 ## Daftar Isi
 
 ### Onboarding
-
-- `docs/getting-started.md`
-- `docs/configuration.md`
+- `docs/getting-started.md` — setup dari awal
+- `docs/configuration.md` — environment, payment, tax, printer
 
 ### Arsitektur
+- `docs/architecture-overview.md` — stack, middleware, service layer
+- `docs/feature-index.md` — indeks semua modul
 
-- `docs/architecture-overview.md`
-- `docs/feature-index.md`
+### POS & Transaksi
+- `docs/features/pos-transactions.md` — cart, hold/resume, checkout multi-payment
+- `docs/features/sales-returns.md` — retur penjualan, refund, store credit
+- `docs/features/cashier-shifts.md` — buka/tutup shift kasir
+- `docs/features/customer-portal.md` — invoice publik, bayar piutang online 🆕
 
-### Fitur Operasional
+### Inventory & Warehouse
+- `docs/features/inventory-stock.md` — produk, stock opname, mutation
+- `docs/features/multi-warehouse.md` — multi-gudang, stock transfer 🆕
+- `docs/features/unit-conversion.md` — multi-satuan (pcs, box, kg) 🆕
 
-- `docs/features/pos-transactions.md`
-- `docs/features/customers-regions.md`
-- `docs/features/member-management.md`
-- `docs/features/sales-returns.md`
-- `docs/features/cashier-shifts.md`
+### Purchasing & Finance
+- `docs/features/purchasing-chain.md` — PO, goods receiving, supplier return 🆕
+- `docs/features/payables-suppliers.md` — hutang supplier
+- `docs/features/receivables.md` — piutang pelanggan
+- `docs/features/tax-management.md` — PPN, NPWP, NIB 🆕
 
-### Fitur Inventory
+### Pricing & Loyalty
+- `docs/features/promotions-loyalty.md` — pricing rules, vouchers, loyalty, price list 🆕
 
-- `docs/features/inventory-stock.md`
+### CRM
+- `docs/features/member-management.md` — member CRUD
+- `docs/features/crm-segments.md` — segments, campaigns, reminders 🆕
 
-### Fitur Keuangan
+### Settings & Admin
+- `docs/features/settings-payments.md` — payment gateways, bank accounts, store profile, target
+- `docs/features/rbac-users-roles.md` — users, roles, permissions
+- `docs/features/audit-logs.md` — audit trail
 
-- `docs/features/receivables.md`
-- `docs/features/payables-suppliers.md`
-- `docs/features/settings-payments.md`
-- `docs/features/reports-documents.md`
+### Reports & Documents
+- `docs/features/reports-documents.md` — sales, profit, insights, PDF
 
-### Admin & Observability
+### Tools & Integrations
+- `docs/features/import-export.md` — CSV/Excel import & export 🆕
+- `docs/features/mobile-pos.md` — PWA, barcode scanner kamera 🆕
+- `docs/features/thermal-printer.md` — ESC/POS, WebUSB 🆕
 
-- `docs/features/rbac-users-roles.md`
-- `docs/features/audit-logs.md`
+### Planning
+- `planning/feature-roadmap.md` — roadmap v2.1–v3.0
+- `planning/tier-1-implementation.md` — detail Tier 1
+- `planning/tier-2-implementation.md` — detail Tier 2
+- `planning/tier-3-implementation.md` — detail Tier 3
 
 ## Cara Membaca Dokumentasi
 
-- Jika baru pertama kali menjalankan repo, mulai dari `docs/getting-started.md`
-- Jika ingin memahami struktur aplikasi, baca `docs/architecture-overview.md`
-- Jika ingin bekerja pada modul tertentu, buka `docs/feature-index.md` lalu masuk ke dokumen fitur terkait
-- Jika menemui masalah akses, selalu cek `docs/features/rbac-users-roles.md`
+1. Jika baru pertama kali: mulai dari `docs/getting-started.md`
+2. Jika ingin paham struktur: baca `docs/architecture-overview.md`
+3. Jika ingin kerja di modul tertentu: buka `docs/feature-index.md` → masuk ke dokumen fitur terkait
+4. Jika ada masalah akses: cek `docs/features/rbac-users-roles.md`
 
 ## Catatan
 
-- Dokumentasi fokus pada fitur yang sudah ada di repo saat ini
-- Dokumen roadmap tetap terpisah di `planning/improvement-planning.md`
+- Dokumentasi mencakup seluruh fitur yang sudah ada di repo
+- Planning file tersimpan di folder `planning/`
+- Setiap dokumen fitur mencakup tujuan, route, permission, alur user

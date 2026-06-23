@@ -9,6 +9,9 @@ use App\Http\Controllers\Apps\CustomerController;
 use App\Http\Controllers\Apps\CustomerSegmentController;
 use App\Http\Controllers\Apps\CustomerVoucherController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
+use App\Http\Controllers\Apps\ImportExportController;
+use App\Http\Controllers\Apps\DiscountApprovalController;
+use App\Http\Controllers\Apps\PriceListController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\PaymentSettingController;
 use App\Http\Controllers\Apps\PricingRuleController;
@@ -51,6 +54,10 @@ Route::get('/dashboard/access', function () {
 Route::get('/share/transactions/{invoice}', [\App\Http\Controllers\DocumentController::class, 'publicInvoice'])
     ->name('transactions.public');
 
+// Customer portal routes (no login, token-based)
+Route::get('/portal/transactions/{invoice}', [\App\Http\Controllers\PublicPortalController::class, 'showTransaction'])->name('portal.transaction');
+Route::post('/portal/receivables/{receivable}/pay', [\App\Http\Controllers\PublicPortalController::class, 'payReceivable'])->name('portal.receivable.pay');
+
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'permission:dashboard-access'])->name('dashboard');
     Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions-access')->name('permissions.index');
@@ -86,6 +93,14 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
         ->middlewareFor(['create', 'store'], 'permission:products-create')
         ->middlewareFor(['edit', 'update'], 'permission:products-edit')
         ->middlewareFor('destroy', 'permission:products-delete');
+
+    // import/export
+    Route::get('/export/products', [ImportExportController::class, 'exportProducts'])->middleware('permission:products-export')->name('export.products');
+    Route::get('/export/customers', [ImportExportController::class, 'exportCustomers'])->middleware('permission:customers-export')->name('export.customers');
+    Route::get('/export/transactions', [ImportExportController::class, 'exportTransactions'])->middleware('permission:transactions-access')->name('export.transactions');
+    Route::post('/import/products', [ImportExportController::class, 'importProducts'])->middleware('permission:products-import')->name('import.products');
+    Route::post('/import/customers', [ImportExportController::class, 'importCustomers'])->middleware('permission:customers-import')->name('import.customers');
+    Route::get('/import/template/{type}', [ImportExportController::class, 'downloadTemplate'])->name('import.template');
     Route::resource('pricing-rules', PricingRuleController::class)
         ->except(['show'])
         ->middlewareFor('index', 'permission:pricing-rules-access')
@@ -255,6 +270,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     // pdf documents
     Route::get('/documents/transactions/{invoice}/pdf/invoice', [\App\Http\Controllers\DocumentController::class, 'invoice'])->middleware('permission:transactions-access')->name('pdf.transactions.invoice');
     Route::get('/documents/transactions/{invoice}/pdf/receipt/{size?}', [\App\Http\Controllers\DocumentController::class, 'receipt'])->middleware('permission:transactions-access')->name('pdf.transactions.receipt');
+    Route::get('/documents/transactions/{invoice}/print/thermal', [\App\Http\Controllers\DocumentController::class, 'thermalPrint'])->middleware('permission:transactions-access')->name('pdf.transactions.thermal');
     Route::get('/documents/transactions/{invoice}/pdf/shipping', [\App\Http\Controllers\DocumentController::class, 'shipping'])->middleware('permission:transactions-access')->name('pdf.transactions.shipping');
     Route::get('/documents/receivables/{receivable}/pdf', [\App\Http\Controllers\DocumentController::class, 'receivable'])->middleware('permission:receivables-access')->name('pdf.receivables.show');
     Route::get('/documents/payables/{payable}/pdf', [\App\Http\Controllers\DocumentController::class, 'payable'])->middleware('permission:payables-access')->name('pdf.payables.show');
@@ -267,6 +283,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/settings/target', [\App\Http\Controllers\Apps\SettingController::class, 'updateTarget'])->middleware('permission:dashboard-access')->name('settings.target.update');
     Route::get('/settings/store', [\App\Http\Controllers\Apps\SettingController::class, 'storeProfile'])->middleware('permission:dashboard-access')->name('settings.store');
     Route::post('/settings/store', [\App\Http\Controllers\Apps\SettingController::class, 'updateStoreProfile'])->middleware('permission:dashboard-access')->name('settings.store.update');
+    Route::get('/settings/printer', [\App\Http\Controllers\Apps\SettingController::class, 'printer'])->middleware('permission:dashboard-access')->name('settings.printer');
+    Route::post('/settings/printer', [\App\Http\Controllers\Apps\SettingController::class, 'updatePrinter'])->middleware('permission:dashboard-access')->name('settings.printer.update');
     Route::get('/settings/loyalty', [\App\Http\Controllers\Apps\SettingController::class, 'loyalty'])->middleware('permission:dashboard-access')->name('settings.loyalty');
     Route::post('/settings/loyalty', [\App\Http\Controllers\Apps\SettingController::class, 'updateLoyalty'])->middleware('permission:dashboard-access')->name('settings.loyalty.update');
 
@@ -280,6 +298,16 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::patch('/settings/bank-accounts/{bankAccount}/toggle', [\App\Http\Controllers\Apps\BankAccountController::class, 'toggleActive'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.toggle');
     Route::post('/settings/bank-accounts/order', [\App\Http\Controllers\Apps\BankAccountController::class, 'updateOrder'])->middleware(['permission:payment-settings-update', 'step_up'])->name('settings.bank-accounts.order');
 
+    // settings price lists
+    Route::resource('/settings/price-lists', PriceListController::class)
+        ->except(['create', 'edit'])
+        ->middlewareFor('index', 'permission:price-lists-access')
+        ->middlewareFor('store', ['permission:price-lists-create', 'step_up'])
+        ->middlewareFor('update', ['permission:price-lists-update', 'step_up'])
+        ->middlewareFor('destroy', ['permission:price-lists-delete', 'step_up']);
+    Route::post('/settings/price-lists/{priceList}/items', [PriceListController::class, 'updateItem'])->middleware(['permission:price-lists-update', 'step_up'])->name('price-lists.items.update');
+    Route::delete('/settings/price-lists/{priceList}/items/{productId}', [PriceListController::class, 'destroyItem'])->middleware(['permission:price-lists-update', 'step_up'])->name('price-lists.items.destroy');
+
     // settings warehouses
     Route::resource('/settings/warehouses', WarehouseController::class)
         ->except('show')
@@ -291,6 +319,11 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 
     // confirm payment for bank transfer
     Route::patch('/transactions/{transaction}/confirm-payment', [TransactionController::class, 'confirmPayment'])->middleware(['permission:transactions-confirm-payment', 'step_up'])->name('transactions.confirm-payment');
+
+    // discount approval
+    Route::get('/discount-approvals', [DiscountApprovalController::class, 'pending'])->middleware('permission:discounts-approve')->name('discount-approvals.pending');
+    Route::post('/discount-approvals/{transaction}/approve', [DiscountApprovalController::class, 'approve'])->middleware('permission:discounts-approve')->name('discount-approvals.approve');
+    Route::post('/discount-approvals/{transaction}/deny', [DiscountApprovalController::class, 'deny'])->middleware('permission:discounts-approve')->name('discount-approvals.deny');
 
     // reports
     Route::get('/reports/sales', [SalesReportController::class, 'index'])->middleware('permission:reports-access')->name('reports.sales.index');

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { usePage, Link } from "@inertiajs/react";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "@/Context/ThemeSwitcherContext";
+import { useOnlineStatus } from "@/Context/OnlineStatusContext";
 import {
     IconHome,
     IconHistory,
@@ -12,6 +13,8 @@ import {
     IconX,
     IconUser,
     IconWallet,
+    IconArrowsMaximize,
+    IconArrowsMinimize,
 } from "@tabler/icons-react";
 import Notification from "@/Components/Dashboard/Notification";
 
@@ -20,6 +23,22 @@ export default function POSLayout({ children }) {
     const { darkMode, themeSwitcher } = useTheme();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const isOnline = useOnlineStatus();
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+        } else {
+            document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+        }
+    };
+
+    useEffect(() => {
+        const handler = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handler);
+        return () => document.removeEventListener('fullscreenchange', handler);
+    }, []);
 
     // Update time every minute
     useEffect(() => {
@@ -131,6 +150,19 @@ export default function POSLayout({ children }) {
                         <Notification />
                     </div>
 
+                    {/* Fullscreen Toggle */}
+                    <button
+                        onClick={toggleFullscreen}
+                        className="p-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-w-touch min-h-touch flex items-center justify-center"
+                        title={isFullscreen ? "Keluar Fullscreen" : "Fullscreen"}
+                    >
+                        {isFullscreen ? (
+                            <IconArrowsMinimize size={20} className="text-slate-500" />
+                        ) : (
+                            <IconArrowsMaximize size={20} className="text-slate-500" />
+                        )}
+                    </button>
+
                     {/* Theme Toggle */}
                     <button
                         onClick={themeSwitcher}
@@ -182,6 +214,12 @@ export default function POSLayout({ children }) {
                     </Link>
                 </div>
             </header>
+
+            {!isOnline && (
+                <div className="bg-amber-500 text-white text-center text-xs font-medium py-1 px-4">
+                    Transaksi disimpan offline — akan dikirim saat online kembali
+                </div>
+            )}
 
             {/* Mobile Menu Overlay */}
             {showMobileMenu && (

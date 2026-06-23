@@ -2,101 +2,92 @@
 
 Kembali ke indeks dokumentasi: `docs/README.md`
 
-## Tujuan
-
-Dokumen ini merangkum konfigurasi yang perlu diperhatikan setelah aplikasi berhasil dijalankan.
-
 ## Environment Penting
 
-Perhatikan minimal:
-
-- `APP_URL`
-- konfigurasi database
-- kredensial Midtrans
-- kredensial Xendit
-- `XENDIT_CALLBACK_TOKEN`
+| Variable | Untuk apa |
+|----------|-----------|
+| `APP_URL` | Webhook URL, public invoice, customer portal link, payment callback |
+| `DB_DATABASE` | Nama database (default: `point_of_sales`) |
+| `MIDTRANS_SERVER_KEY` | Server key Midtrans |
+| `MIDTRANS_CLIENT_KEY` | Client key Midtrans (frontend) |
+| `XENDIT_SECRET_KEY` | Secret key Xendit |
+| `XENDIT_PUBLIC_KEY` | Public key Xendit |
+| `XENDIT_CALLBACK_TOKEN` | Callback token verifikasi webhook Xendit |
+| `AUTH_PUBLIC_REGISTRATION` | Aktifkan registrasi publik (`true`/`false`, default: `false`) |
 
 ## APP_URL
 
-`APP_URL` penting untuk:
+`APP_URL` harus public (bukan `localhost`) jika menggunakan:
 
-- share invoice publik
-- generate webhook URL
-- integrasi payment gateway
-
-Jika masih `localhost`, webhook eksternal tidak akan bisa menjangkau aplikasi.
+- Webhook Midtrans/Xendit
+- Public invoice sharing
+- Customer portal link
+- Payment gateway callback
 
 ## Payment Gateway
 
-Konfigurasi dilakukan dari:
+Konfigurasi di `dashboard/settings/payments`:
 
-- `dashboard/settings/payments`
+- **Cash** — tanpa konfigurasi
+- **Bank Transfer** — memerlukan rekening bank aktif
+- **Midtrans** — memerlukan server key + client key + mode production
+- **Xendit** — memerlukan secret key + public key + callback token + mode production
 
-Gateway yang saat ini didukung:
-
-- cash
-- bank transfer
-- Midtrans
-- Xendit
-
-Validasi penting:
-
-- Midtrans aktif butuh `server key` dan `client key`
-- Xendit aktif butuh `secret key`
-- Xendit juga butuh `callback token`
-- default gateway harus mengarah ke gateway yang aktif
-
-## Webhook
-
-Endpoint:
-
-- Midtrans: `/api/webhooks/midtrans`
-- Xendit: `/api/webhooks/xendit`
-
-Checklist:
-
-1. set `APP_URL` ke URL publik
-2. copy webhook URL dari halaman payment settings
-3. daftarkan di dashboard provider
-4. pastikan token callback Xendit cocok
+Detail setup: `docs/features/settings-payments.md`
 
 ## Bank Accounts
 
-Konfigurasi dilakukan dari:
+Konfigurasi di `dashboard/settings/bank-accounts`:
 
-- `dashboard/settings/bank-accounts`
+- Digunakan untuk pembayaran transfer manual
+- Bisa diatur urutan tampilan
+- Bisa dinonaktifkan tanpa dihapus
 
-Dipakai untuk:
+## Tax Settings
 
-- transfer manual saat checkout
-- pencatatan pembayaran piutang
-- pencatatan pembayaran hutang supplier
+Konfigurasi di `dashboard/settings/store` — bagian "Informasi Pajak & Legal":
 
-## Profil Toko
+- **NPWP Toko** — Nomor Pokok Wajib Pajak (format: `XX.XXX.XXX.X-XXX.XXX`)
+- **NIB** — Nomor Induk Berusaha
+- **Tarif PPN Default** — Persentase PPN untuk produk baru (default: 11.00%)
+- Tarif PPN bisa diubah per produk di halaman edit produk
 
-Konfigurasi dilakukan dari:
+## Printer Settings
 
-- `dashboard/settings/store`
+Konfigurasi di `dashboard/settings/printer`:
 
-Data ini dipakai pada dokumen dan tampilan publik:
+- **Ukuran Kertas** — 80mm atau 58mm
+- **Auto-print** — cetak receipt otomatis setelah transaksi (via WebUSB)
+- Thermal printer terhubung via WebUSB (browser Chrome/Edge)
 
-- nama toko
-- logo
-- alamat
-- kontak
-- kota
+## Store Profile
 
-## Target Penjualan
+Konfigurasi di `dashboard/settings/store`:
 
-Konfigurasi dilakukan dari:
+- Nama, alamat, telepon, email, website, kota
+- Logo toko
+- NPWP dan NIB (untuk keperluan pajak)
 
-- `dashboard/settings/target`
+## Sales Target
 
-Dipakai oleh dashboard untuk menampilkan progress target bulanan.
+Konfigurasi di `dashboard/settings/target`:
+
+- Target penjualan bulanan
+- Muncul di dashboard sebagai progress bar
+
+## Multi-Warehouse
+
+Konfigurasi di `dashboard/settings/warehouses`:
+
+- **Main Warehouse** — gudang pusat, dibuat otomatis saat seeding
+- **Branch Warehouse** — cabang toko yang juga menjual langsung
+- **Stock Warehouse** — gudang penyangga (tidak menjual langsung)
+- Stok produk dipisah per warehouse di tabel `product_warehouse`
 
 ## Catatan Dependency Eksternal
 
-- wilayah customer memakai `laravolt/indonesia`
-- PDF memakai DomPDF
-- barcode dokumen dibuat dinamis
-- payment gateway butuh konektivitas publik untuk webhook
+- `laravolt/indonesia` — data provinsi/kota/kecamatan/desa Indonesia
+- `barryvdh/laravel-dompdf` — generate PDF invoice/receipt/shipping label
+- `picqer/php-barcode-generator` — barcode di dokumen PDF
+- `maatwebsite/excel` — import/export CSV + Excel
+- Midtrans & Xendit — payment gateway

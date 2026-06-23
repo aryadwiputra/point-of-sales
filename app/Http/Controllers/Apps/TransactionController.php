@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\Warehouse;
@@ -17,6 +18,8 @@ use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
+use App\Services\UnitConversionService;
+use App\Services\ThermalPrintService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -231,11 +234,37 @@ class TransactionController extends Controller
             return redirect()->back()->with('error', 'Product not found.');
         }
 
-        $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
-        $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+        // Composite: check component stock
+        if ($product->is_composite) {
+            $product->load('components');
+            foreach ($product->components as $component) {
+                $needed = (float) $component->pivot->qty * $request->qty;
+                $whProduct = $component->warehouses()->where('warehouse_id', $warehouseId)->first();
+                $avail = $whProduct?->pivot->stock ?? 0;
+                if ($avail < $needed) {
+                    return redirect()->back()->with('error', "Stok {$component->title} tidak mencukupi.");
+                }
+            }
+            // Composite price = sum component prices
+            $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
+        } else {
+            $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
+            $unitConversion = app(UnitConversionService::class);
+            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
 
-        if ($availableStock < $request->qty) {
-            return redirect()->back()->with('error', 'Out of Stock Product!.');
+            $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
+            $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+
+            if ($availableStock < $baseQty) {
+                return redirect()->back()->with('error', 'Out of Stock Product!.');
+            }
+
+            $sellPrice = $unitConversion->getSellPrice($product, $unitId);
+            $pu = $product->units()->where('unit_id', $unitId)->first();
+            $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
+        }
+        if (! isset($conversionFactor)) {
+            $conversionFactor = 1;
         }
 
         $cart = Cart::with('product')
@@ -245,15 +274,17 @@ class TransactionController extends Controller
 
         if ($cart) {
             $cart->increment('qty', $request->qty);
-            $cart->price = $cart->product->sell_price * $cart->qty;
+            $cart->price = $sellPrice * $cart->qty;
             $cart->save();
         } else {
             Cart::create([
                 'cashier_id' => auth()->user()->id,
                 'warehouse_id' => $warehouseId,
                 'product_id' => $request->product_id,
+                'unit_id' => $unitId,
+                'conversion_factor' => $conversionFactor,
                 'qty' => $request->qty,
-                'price' => $request->sell_price * $request->qty,
+                'price' => $sellPrice * $request->qty,
             ]);
         }
 
@@ -597,6 +628,9 @@ class TransactionController extends Controller
                 'payment_method' => $isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash'),
                 'payment_status' => $isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending'),
                 'bank_account_id' => $paymentGateway === 'bank_transfer' ? $request->bank_account_id : null,
+                'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
+                'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
+                'customer_npwp' => $request->customer_npwp,
             ]);
 
             foreach ($carts as $cart) {
@@ -606,9 +640,11 @@ class TransactionController extends Controller
                 $baseUnitPrice = (int) data_get($pricingItem, 'base_unit_price', $cart->product->sell_price);
                 $unitPrice = (int) data_get($pricingItem, 'effective_unit_price', $cart->product->sell_price);
 
-                $transaction->details()->create([
+                $detail = $transaction->details()->create([
                     'transaction_id' => $transaction->id,
                     'product_id' => $cart->product_id,
+                    'unit_id' => $cart->unit_id,
+                    'conversion_factor' => $cart->conversion_factor,
                     'qty' => $cart->qty,
                     'base_unit_price' => $baseUnitPrice,
                     'unit_price' => $unitPrice,
@@ -633,13 +669,25 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
-                \App\Models\ProductWarehouse::where([
-                    'product_id' => $product->id,
-                    'warehouse_id' => $activeShift->warehouse_id,
-                ])->decrement('stock', $cart->qty);
 
-                // sync legacy stock field for backward compat
-                $product->decrement('stock', $cart->qty);
+                if ($product->is_composite) {
+                    $product->load('components');
+                    foreach ($product->components as $component) {
+                        $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
+                        \App\Models\ProductWarehouse::where([
+                            'product_id' => $component->id,
+                            'warehouse_id' => $activeShift->warehouse_id,
+                        ])->decrement('stock', $componentQty);
+                        $component->decrement('stock', $componentQty);
+                    }
+                } else {
+                    $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
+                    \App\Models\ProductWarehouse::where([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $activeShift->warehouse_id,
+                    ])->decrement('stock', $baseQty);
+                    $product->decrement('stock', $baseQty);
+                }
             }
 
             Cart::where('cashier_id', auth()->user()->id)->active()->delete();
@@ -660,6 +708,25 @@ class TransactionController extends Controller
 
             return $transaction->fresh(['customer']);
         });
+
+        // Check if discount needs approval
+        if ($transaction->discount > 0 && $transaction->needsDiscountApproval()) {
+            $transaction->update([
+                'discount_approval_status' => 'pending',
+                'payment_status' => 'pending_approval',
+            ]);
+
+            \App\Models\DiscountApprovalLog::create([
+                'transaction_id' => $transaction->id,
+                'cashier_id' => auth()->id(),
+                'requested_discount' => $appliedManualDiscount,
+                'status' => 'pending',
+            ]);
+
+            return redirect()
+                ->route('transactions.print', $transaction->invoice)
+                ->with('info', 'Transaksi menunggu approval supervisor.');
+        }
 
         if ($paymentGateway) {
             try {

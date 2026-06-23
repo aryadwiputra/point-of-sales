@@ -17,6 +17,8 @@ class TransactionDetail extends Model
     protected $fillable = [
         'transaction_id',
         'product_id',
+        'unit_id',
+        'conversion_factor',
         'qty',
         'base_unit_price',
         'unit_price',
@@ -37,26 +39,27 @@ class TransactionDetail extends Model
         'discount_total' => 'integer',
         'pricing_rule_id' => 'integer',
         'pricing_rule_kind' => 'string',
+        'conversion_factor' => 'decimal:4',
     ];
 
-    /**
-     * transaction
-     *
-     * @return void
-     */
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);
     }
 
-    /**
-     * product
-     *
-     * @return void
-     */
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(ProductBatch::class, 'product_batch_id');
     }
 
     public function pricingRule()

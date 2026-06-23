@@ -20,6 +20,7 @@ import HeldTransactions, {
 import useBarcodeScanner from "@/Hooks/useBarcodeScanner";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 import { useAuthorization } from "@/Utils/authorization";
+import { queueTransaction } from "@/Utils/offlineDb";
 import {
     IconUser,
     IconShoppingCart,
@@ -166,6 +167,10 @@ export default function Index({
         () => Number(pricingPreview?.summary?.loyalty_discount_total ?? 0),
         [pricingPreview]
     );
+    const taxTotal = useMemo(
+        () => Number(pricingPreview?.summary?.tax_total ?? 0),
+        [pricingPreview]
+    );
     const subtotal = useMemo(
         () => Number(pricingPreview?.summary?.subtotal_after_promo ?? 0),
         [pricingPreview]
@@ -200,6 +205,7 @@ export default function Index({
                     loyalty_discount_total: 0,
                     manual_discount_total: 0,
                     shipping_cost: 0,
+                    tax_total: 0,
                     grand_total: 0,
                 },
             });
@@ -476,6 +482,29 @@ export default function Index({
         }
 
         setIsSubmitting(true);
+
+        if (!navigator.onLine) {
+            const payload = {
+                customer_id: selectedCustomer.id,
+                discount,
+                redeem_points: Number(redeemPointsInput || 0),
+                customer_voucher_id: selectedVoucherId || null,
+                shipping_cost: shipping,
+                grand_total: payable,
+                cash: isCashPayment ? cash : payable,
+                payment_gateway: payLater ? null : isCashPayment ? null : paymentMethod,
+                pay_later: payLater,
+                due_date: payLater ? dueDate : null,
+                bank_account_id: isBankTransfer ? selectedBankAccount : null,
+            };
+            queueTransaction(payload).then(() => {
+                setCarts([]);
+                setPricingPreview(initialPricingPreview);
+                toast.success("Transaksi disimpan offline. Akan dikirim saat online.");
+            });
+            setIsSubmitting(false);
+            return;
+        }
 
         router.post(
             route("transactions.store"),
@@ -1366,6 +1395,14 @@ export default function Index({
                                 <span className="text-slate-500">Ongkir</span>
                                 <span className="font-medium">
                                     +{formatPrice(shipping)}
+                                </span>
+                            </div>
+                        )}
+                        {taxTotal > 0 && (
+                            <div className="flex justify-between items-center mb-2 text-sm">
+                                <span className="text-slate-500">PPN</span>
+                                <span className="font-medium">
+                                    +{formatPrice(taxTotal)}
                                 </span>
                             </div>
                         )}

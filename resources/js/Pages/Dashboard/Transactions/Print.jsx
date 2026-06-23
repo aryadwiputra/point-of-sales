@@ -10,6 +10,7 @@ import {
     IconBuildingBank,
     IconCheck,
     IconAlertCircle,
+    IconShare,
 } from "@tabler/icons-react";
 import ThermalReceipt, {
     ThermalReceipt58mm,
@@ -59,7 +60,8 @@ export default function Print({ transaction }) {
     const baseSubtotal =
         (transaction?.grand_total || 0) +
         (transaction?.discount || 0) -
-        (transaction?.shipping_cost || 0) +
+        (transaction?.shipping_cost || 0) -
+        (transaction?.tax_total || 0) +
         promoDiscountTotal +
         loyaltyDiscountTotal +
         voucherDiscountTotal;
@@ -225,6 +227,25 @@ export default function Print({ transaction }) {
                                 </button>
                             </div>
 
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch(route("pdf.transactions.thermal", transaction.invoice));
+                                        const html = await res.text();
+                                        const blob = new Blob([html], { type: "text/html" });
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, "_blank", "width=400,height=600");
+                                    } catch (e) {
+                                        alert("Gagal cetak thermal: " + e.message);
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                            >
+                                <IconPrinter size={18} />
+                                Thermal
+                            </button>
+
                             {showPaymentLink && (
                                 <a
                                     href={transaction.payment_url}
@@ -236,6 +257,19 @@ export default function Print({ transaction }) {
                                     Pembayaran
                                 </a>
                             )}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const url = route("portal.transaction", [transaction.invoice, { token: transaction.access_token }]);
+                                    navigator.clipboard?.writeText(window.location.origin + "/" + url.replace(/^\/+/, ""));
+                                    alert("Link invoice disalin");
+                                }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                            >
+                                <IconShare size={18} />
+                                Share
+                            </button>
 
                             {/* Confirm Payment Button - Only for pending bank_transfer */}
                             {paymentMethodKey === "bank_transfer" &&
@@ -618,6 +652,15 @@ export default function Print({ transaction }) {
                                                 {formatPrice(
                                                     transaction.shipping_cost
                                                 )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {transaction.tax_total > 0 && (
+                                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                            <span>PPN {transaction.tax_rate ? Number(transaction.tax_rate).toFixed(0) : "11"}%</span>
+                                            <span>
+                                                +{" "}
+                                                {formatPrice(transaction.tax_total)}
                                             </span>
                                         </div>
                                     )}

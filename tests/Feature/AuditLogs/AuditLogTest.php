@@ -400,6 +400,7 @@ class AuditLogTest extends TestCase
             'buy_price' => $buyPrice,
             'sell_price' => $sellPrice,
             'stock' => $stock,
+            'tax_rate' => 0,
         ]);
     }
 }

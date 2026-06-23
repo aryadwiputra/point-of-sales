@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Payable;
 use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Services\ThermalPrintService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
@@ -121,6 +122,18 @@ class DocumentController extends Controller
         $pdf->setPaper([0, 0, 425, 283], 'landscape');
 
         return $pdf->stream("shipping-{$transaction->invoice}.pdf");
+    }
+
+    public function thermalPrint(string $invoice)
+    {
+        $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
+            ->where('invoice', $invoice)
+            ->firstOrFail();
+
+        $service = app(ThermalPrintService::class);
+        $html = $service->generateReceiptHtml($transaction);
+
+        return response($html)->header('Content-Type', 'text/html; charset=utf-8');
     }
 
     public function receivable(Receivable $receivable)

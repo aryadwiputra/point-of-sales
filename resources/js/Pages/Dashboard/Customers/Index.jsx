@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
-import { Head, usePage, Link } from "@inertiajs/react";
+import { Head, usePage, Link, router } from "@inertiajs/react";
 import Button from "@/Components/Dashboard/Button";
 import {
     IconCirclePlus,
@@ -12,11 +12,14 @@ import {
     IconUser,
     IconPhone,
     IconMapPin,
+    IconUpload,
+    IconDownload,
 } from "@tabler/icons-react";
 import Search from "@/Components/Dashboard/Search";
 import Table from "@/Components/Dashboard/Table";
 import Pagination from "@/Components/Dashboard/Pagination";
 import { useAuthorization } from "@/Utils/authorization";
+import toast from "react-hot-toast";
 
 // Customer Card for Grid View
 function CustomerCard({ customer, canUpdate, canDelete }) {
@@ -131,7 +134,29 @@ export default function Index({ customers }) {
                         </p>
                     </div>
                     {canCreateCustomers && (
-                        <Button
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={route("export.customers")}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <IconDownload size={18} />
+                                Export
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById("import-customers-input")?.click()}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <IconUpload size={18} />
+                                Import
+                            </button>
+                            <input id="import-customers-input" type="file" accept=".xlsx,.xls,.csv" className="hidden"
+                                onChange={function(e) {
+                                    const file = e.target.files && e.target.files[0];
+                                    if (file) router.post(route("import.customers"), { file });
+                                }}
+                            />
+                            <Button
                             type={"link"}
                             icon={
                                 <IconCirclePlus
@@ -145,6 +170,7 @@ export default function Index({ customers }) {
                             label={"Tambah Pelanggan"}
                             href={route("customers.create")}
                         />
+                        </div>
                     )}
                 </div>
             </div>

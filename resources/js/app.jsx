@@ -5,7 +5,15 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ThemeSwitcherProvider } from './Context/ThemeSwitcherContext';
+import { OnlineStatusProvider } from './Context/OnlineStatusContext';
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js');
+    });
+}
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -15,7 +23,9 @@ createInertiaApp({
 
         root.render(
             <ThemeSwitcherProvider>
-                <App {...props} />
+                <OnlineStatusProvider>
+                    <App {...props} />
+                </OnlineStatusProvider>
             </ThemeSwitcherProvider>
         );
     },

@@ -14,6 +14,8 @@ import {
     IconSearch,
     IconBarcode,
     IconPrinter,
+    IconUpload,
+    IconDownload,
 } from "@tabler/icons-react";
 import Search from "@/Components/Dashboard/Search";
 import Table from "@/Components/Dashboard/Table";
@@ -21,6 +23,7 @@ import Pagination from "@/Components/Dashboard/Pagination";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 import BarcodePrintModal from "@/Components/Barcode/BarcodePrintModal";
 import { useAuthorization } from "@/Utils/authorization";
+import { router } from "@inertiajs/react";
 
 const formatCurrency = (value = 0) =>
     new Intl.NumberFormat("id-ID", {
@@ -247,6 +250,35 @@ export default function Index({ products }) {
                             <IconBarcode size={18} />
                             Cetak All Barcode
                         </button>
+                        {canCreateProducts && (
+                            <>
+                                <a
+                                    href={route("export.products")}
+                                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                                >
+                                    <IconDownload size={18} />
+                                    Export
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => document.getElementById("import-products-input")?.click()}
+                                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                                >
+                                    <IconUpload size={18} />
+                                    Import
+                                </button>
+                                <input
+                                    id="import-products-input"
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv"
+                                    className="hidden"
+                                    onChange={function(e) {
+                                        const file = e.target.files && e.target.files[0];
+                                        if (file) router.post(route("import.products"), { file });
+                                    }}
+                                />
+                            </>
+                        )}
                         {canCreateProducts && (
                             <Button
                                 type={"link"}

@@ -73,6 +73,8 @@ class ProductController extends Controller
             'buy_price' => 'required',
             'sell_price' => 'required',
             'stock' => 'required|integer|min:0',
+            'min_stock' => 'nullable|integer|min:0',
+            'max_stock' => 'nullable|integer|min:0',
         ]);
         // upload image
         $image = $request->file('image');
@@ -89,6 +91,8 @@ class ProductController extends Controller
             'buy_price' => $request->buy_price,
             'sell_price' => $request->sell_price,
             'stock' => $request->stock,
+            'min_stock' => $request->min_stock ?? 0,
+            'max_stock' => $request->max_stock ?? 0,
         ]);
 
         $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
@@ -142,6 +146,8 @@ class ProductController extends Controller
             'category_id' => 'required',
             'buy_price' => 'required',
             'sell_price' => 'required',
+            'min_stock' => 'nullable|integer|min:0',
+            'max_stock' => 'nullable|integer|min:0',
         ]);
 
         // check image update

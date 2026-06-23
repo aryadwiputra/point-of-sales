@@ -199,7 +199,41 @@ class LoyaltyService
 
         $afterLoyalty = max(0, $afterVoucher - $pointsDiscount);
         $manualDiscountApplied = min($manualDiscountRequested, $afterLoyalty);
-        $grandTotal = max(0, $afterLoyalty - $manualDiscountApplied + $shippingCost);
+        $baseGrandTotal = max(0, $afterLoyalty - $manualDiscountApplied + $shippingCost);
+
+        // Calculate tax
+        $taxService = app(TaxService::class);
+        $items = data_get($pricingPreview, 'items', []);
+        $productIds = collect($items)->pluck('product_id')->filter()->unique()->values();
+        $productTaxes = \App\Models\Product::whereIn('id', $productIds)->pluck('tax_rate', 'id');
+        $productTaxTypes = \App\Models\Product::whereIn('id', $productIds)->pluck('tax_type', 'id');
+
+        $effectiveRate = 0;
+        $taxTotal = 0;
+        $taxableItems = [];
+
+        foreach ($items as $item) {
+            $pid = $item['product_id'] ?? null;
+            $lineTotal = (int) ($item['line_total'] ?? 0);
+            if ($pid && $lineTotal > 0) {
+                $rate = (float) ($productTaxes[$pid] ?? 11.00);
+                $type = $productTaxTypes[$pid] ?? 'exclusive';
+                $taxResult = $taxService->calculateLineItem($lineTotal, $type, $rate);
+                $taxTotal += $taxResult['tax_amount'];
+                if ($rate > 0) {
+                    $effectiveRate = $rate;
+                }
+                $taxableItems[] = ['product_id' => $pid, 'line_total' => $lineTotal, 'tax_amount' => $taxResult['tax_amount']];
+            }
+        }
+
+        // Also tax shipping if needed (simple: apply effective tax rate)
+        if ($shippingCost > 0 && $effectiveRate > 0) {
+            $shippingTax = (int) round($shippingCost * $effectiveRate / 100);
+            $taxTotal += $shippingTax;
+        }
+
+        $grandTotal = $baseGrandTotal + $taxTotal;
         $pointsEarnedPreview = $this->calculateEarnPoints(
             $customer,
             max(0, $grandTotal - $shippingCost),
@@ -219,6 +253,8 @@ class LoyaltyService
                 'loyalty_discount_total' => $pointsDiscount,
                 'manual_discount_total' => $manualDiscountApplied,
                 'shipping_cost' => $shippingCost,
+                'tax_total' => $taxTotal,
+                'tax_rate' => $effectiveRate ?: null,
                 'grand_total' => $grandTotal,
                 'available_loyalty_points' => $availablePoints,
                 'requested_redeem_points' => $requestedRedeemPoints,
