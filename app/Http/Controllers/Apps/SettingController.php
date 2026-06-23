@@ -144,6 +144,29 @@ class SettingController extends Controller
         return back()->with('success', 'Profil toko berhasil diperbarui');
     }
 
+    public function printer()
+    {
+        return Inertia::render('Dashboard/Settings/Printer', [
+            'settings' => [
+                'printer_auto_print' => Setting::getBool('printer_auto_print', false),
+                'printer_paper_size' => Setting::get('printer_paper_size', '80mm'),
+            ],
+        ]);
+    }
+
+    public function updatePrinter(Request $request)
+    {
+        $validated = $request->validate([
+            'printer_auto_print' => ['boolean'],
+            'printer_paper_size' => ['required', 'in:80mm,58mm'],
+        ]);
+
+        Setting::set('printer_auto_print', $validated['printer_auto_print'] ? '1' : '0', 'Auto-print receipt setelah transaksi');
+        Setting::set('printer_paper_size', $validated['printer_paper_size'], 'Ukuran kertas printer thermal');
+
+        return back()->with('success', 'Pengaturan printer disimpan.');
+    }
+
     public function loyalty()
     {
         return Inertia::render('Dashboard/Settings/Loyalty', [

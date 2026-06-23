@@ -19,6 +19,7 @@ use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
 use App\Services\UnitConversionService;
+use App\Services\ThermalPrintService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

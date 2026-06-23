@@ -227,6 +227,25 @@ export default function Print({ transaction }) {
                                 </button>
                             </div>
 
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch(route("pdf.transactions.thermal", transaction.invoice));
+                                        const html = await res.text();
+                                        const blob = new Blob([html], { type: "text/html" });
+                                        const url = URL.createObjectURL(blob);
+                                        window.open(url, "_blank", "width=400,height=600");
+                                    } catch (e) {
+                                        alert("Gagal cetak thermal: " + e.message);
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                            >
+                                <IconPrinter size={18} />
+                                Thermal
+                            </button>
+
                             {showPaymentLink && (
                                 <a
                                     href={transaction.payment_url}
