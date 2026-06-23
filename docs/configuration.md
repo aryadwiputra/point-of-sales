@@ -7,6 +7,7 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 | Variable | Untuk apa |
 |----------|-----------|
 | `APP_URL` | Webhook URL, public invoice, customer portal link, payment callback |
+| `APP_VERSION` | Versi aplikasi (tampil di sidebar + POS navbar) |
 | `DB_DATABASE` | Nama database (default: `point_of_sales`) |
 | `MIDTRANS_SERVER_KEY` | Server key Midtrans |
 | `MIDTRANS_CLIENT_KEY` | Client key Midtrans (frontend) |
@@ -14,6 +15,7 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 | `XENDIT_PUBLIC_KEY` | Public key Xendit |
 | `XENDIT_CALLBACK_TOKEN` | Callback token verifikasi webhook Xendit |
 | `AUTH_PUBLIC_REGISTRATION` | Aktifkan registrasi publik (`true`/`false`, default: `false`) |
+| `WA_SERVICE_URL` | Alamat Node.js WhatsApp service (default: `http://localhost:3001`) |
 
 ## APP_URL
 
@@ -75,6 +77,17 @@ Konfigurasi di `dashboard/settings/target`:
 - Target penjualan bulanan
 - Muncul di dashboard sebagai progress bar
 
+## WhatsApp Gateway
+
+Konfigurasi di `dashboard/settings/whatsapp`:
+
+- **URL Service** — alamat Node.js service (default `http://localhost:3001`)
+- **Aktifkan Gateway** — enable/disable WhatsApp integration
+- **Kirim Otomatis** — reminder piutang + invoice otomatis via campaign
+- **Koneksi** — scan QR untuk menghubungkan (session tersimpan otomatis)
+
+Detail setup: `docs/features/whatsapp-gateway.md`
+
 ## Multi-Warehouse
 
 Konfigurasi di `dashboard/settings/warehouses`:
@@ -91,3 +104,4 @@ Konfigurasi di `dashboard/settings/warehouses`:
 - `picqer/php-barcode-generator` — barcode di dokumen PDF
 - `maatwebsite/excel` — import/export CSV + Excel
 - Midtrans & Xendit — payment gateway
+- `whatsapp-web.js` — WhatsApp gateway (Node.js, terpisah dari Laravel)

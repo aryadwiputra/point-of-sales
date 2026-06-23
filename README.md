@@ -63,6 +63,7 @@ Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inven
 - Voucher customer
 - Customer segments (manual & auto)
 - Campaign automation (reminder, promo broadcast)
+- **WhatsApp Gateway** — kirim pesan otomatis via whatsapp-web.js (QR scan, session persistent)
 
 ### Reports & Documents
 - Sales report + filter + summary
@@ -76,6 +77,11 @@ Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inven
 - Full RBAC (users, roles, permissions)
 - Audit log (before/after snapshot)
 - Import produk & customer dari Excel
+- **App Versioning** — versi aplikasi terpusat (`APP_VERSION`), tampil di sidebar + POS navbar
+
+### Integrasi
+- **WhatsApp Gateway** — terhubung via Node.js service (`whatsapp-service/`)
+- **Payment Gateways** — Midtrans, Xendit
 
 ---
 
@@ -89,8 +95,14 @@ composer install && npm install
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
+
+# Dev servers — jalankan semua di terminal terpisah
 npm run dev          # Vite HMR
 php artisan serve    # Laravel
+
+# WhatsApp Gateway (opsional) — untuk kirim WA otomatis
+cd whatsapp-service
+npm install && npm start
 ```
 
 ## Default Login
@@ -103,9 +115,9 @@ php artisan serve    # Laravel
 | Dokumen | Isi |
 |---------|-----|
 | `docs/getting-started.md` | Setup lengkap |
-| `docs/configuration.md` | Konfigurasi environment, payment, pajak, printer |
-| `docs/architecture-overview.md` | Arsitektur, middleware, service layer |
-| `docs/feature-index.md` | Indeks semua modul |
+| `docs/configuration.md` | Konfigurasi environment, payment, pajak, printer, WhatsApp |
+| `docs/architecture-overview.md` | Arsitektur, middleware, service layer, Node service |
+| `docs/feature-index.md` | Indeks semua modul (44 fitur) |
 
 ### Per Modul
 
@@ -114,9 +126,9 @@ php artisan serve    # Laravel
 - Purchasing: PO, goods receiving, supplier return, payables
 - Finance: receivables, PPN
 - Pricing: pricing rules, price list, loyalty, vouchers
-- CRM: member, segments, campaigns
+- CRM: member, segments, campaigns, **WhatsApp Gateway**
 - Reports: sales, profit, insights, dokumen PDF
-- Tools: import/export, mobile POS, thermal printer
+- Tools: import/export, mobile POS, thermal printer, offline mode
 
 ## Troubleshooting Umum
 
@@ -126,12 +138,16 @@ php artisan serve    # Laravel
 4. **Route error 500** — jalankan `php artisan migrate` untuk modul baru
 5. **Test gagal karena PPN** — pastikan `tax_rate=0` di test Product::create
 6. **Vite tidak jalan** — pastikan `npm run dev` berjalan, jangan hanya `php artisan serve`
+7. **WhatsApp QR tidak muncul** — pastikan `whatsapp-service/` sudah jalan (`npm start`)
+8. **WhatsApp terputus** — klik "Hubungkan Ulang" di Settings > WhatsApp, scan ulang QR
 
 ## Kontribusi
 
 1. Branch dari `development`: `git checkout -b feature/nama-fitur development`
 2. Buat PR ke `development`
 3. PR ke `main` hanya dari `development` via branching release
+
+Pastikan `php artisan test` lulus sebelum PR.
 
 ## Lisensi
 

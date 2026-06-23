@@ -14,7 +14,7 @@ Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
 - `feature/*` — individual feature work. Branch from `development`, PR to `development`.
 - `fix/*` — hotfixes. Branch from `main`, PR to `main` + `development`.
 
-**Tags follow semver:** `v1.0.0`, `v1.1.0`, etc.
+**Tags follow semver:** `v1.0.0`, `v2.1.0`, etc.
 
 ## Stack
 
@@ -24,6 +24,7 @@ Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
 - **Auth/RBAC**: Spatie Laravel Permission + Laravel Breeze
 - **DB**: MySQL (default); SQLite in-memory for tests
 - **Payment gateways**: Midtrans, Xendit (webhooks in `routes/api.php`)
+- **WhatsApp**: whatsapp-web.js via separate Node service (`whatsapp-service/`)
 
 ## Developer Commands
 
@@ -44,6 +45,13 @@ php artisan test                     # all
 php artisan test --filter=FooTest    # one class
 php artisan test --filter=test_name  # one method
 
+# WhatsApp Service (separate terminal)
+cd whatsapp-service
+npm install && npm start             # port 3001
+
+# PM2 for production
+pm2 start whatsapp-service/server.js --name wa-service
+
 # Import/Export
 php artisan make:export ProductsExport --model=Product
 php artisan make:import ProductsImport --model=Product
@@ -61,7 +69,8 @@ npm run build
 - **Services**: `app/Services/` — business logic: AuditLog, CashierShift, StockMutation, Payments/, PricingService, CrmAutomationService, etc.
 - **Layouts**: `POSLayout.jsx` (POS), `DashboardLayout.jsx` (admin), `AuthenticatedLayout.jsx` (profile), `GuestLayout.jsx` (auth)
 - **Routes**: `routes/web.php` (~50+ dashboard routes), `routes/api.php` (webhooks), `routes/auth.php` (Breeze)
-- **Inertia shared props**: `HandleInertiaRequests.php` — auth, permissions, notifications (low stock, receivables, payables aging), active shift, store profile
+- **Inertia shared props**: `HandleInertiaRequests.php` — auth, permissions, notifications (low stock, receivables, payables aging), active shift, store profile, appVersion
+- **Services**: `app/Services/` — ~21 services, latest: WhatsAppService (HTTP wrapper to Node)
 
 ## Middleware
 
@@ -91,6 +100,9 @@ PermissionSeeder → RoleSeeder → UserSeeder → PaymentSettingSeeder → Samp
 4. **Missing migrations cause 500 on new modules** — run `php artisan migrate` for newer modules (purchase orders, goods receiving, supplier returns, stock opname, etc.).
 5. **Tests force SQLite in-memory** — `phpunit.xml` sets `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`. Don't assume MySQL features. **Set `tax_rate=0` on test Product::create** to avoid PPN changing grand_total.
 6. **Both dev servers required** — Vite serves JS/CSS via HMR. `php artisan serve` alone won't work.
+7. **WhatsApp service separate** — `whatsapp-service/` needs `npm start` in another terminal + `WA_SERVICE_URL` in .env
+8. **CRM campaign auto-send** — requires `wa_enabled=true` + connected device in Settings > WhatsApp
+9. **Version bump on release** — update `APP_VERSION` in `.env` + `.env.example` when tagging
 
 ## Release Process
 

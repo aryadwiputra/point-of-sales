@@ -10,9 +10,10 @@ Panduan ini membantu developer baru menjalankan aplikasi dari nol sampai bisa lo
 
 - PHP 8.2+ sesuai kebutuhan Laravel 12
 - Composer
-- Node.js + npm
+- Node.js 18+ + npm
 - MySQL / MariaDB
 - ekstensi PHP standar Laravel
+- Chrome/Chromium (untuk WhatsApp Gateway — opsional)
 
 ## Langkah Setup
 
