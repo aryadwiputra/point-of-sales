@@ -54,6 +54,10 @@ Route::get('/dashboard/access', function () {
 Route::get('/share/transactions/{invoice}', [\App\Http\Controllers\DocumentController::class, 'publicInvoice'])
     ->name('transactions.public');
 
+// Customer portal routes (no login, token-based)
+Route::get('/portal/transactions/{invoice}', [\App\Http\Controllers\PublicPortalController::class, 'showTransaction'])->name('portal.transaction');
+Route::post('/portal/receivables/{receivable}/pay', [\App\Http\Controllers\PublicPortalController::class, 'payReceivable'])->name('portal.receivable.pay');
+
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], function () {
     Route::get('/', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'permission:dashboard-access'])->name('dashboard');
     Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions-access')->name('permissions.index');
