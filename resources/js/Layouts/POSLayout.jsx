@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { usePage, Link } from "@inertiajs/react";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "@/Context/ThemeSwitcherContext";
+import { useOnlineStatus } from "@/Context/OnlineStatusContext";
 import {
     IconHome,
     IconHistory,
@@ -23,6 +24,7 @@ export default function POSLayout({ children }) {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const isOnline = useOnlineStatus();
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -212,6 +214,12 @@ export default function POSLayout({ children }) {
                     </Link>
                 </div>
             </header>
+
+            {!isOnline && (
+                <div className="bg-amber-500 text-white text-center text-xs font-medium py-1 px-4">
+                    Transaksi disimpan offline — akan dikirim saat online kembali
+                </div>
+            )}
 
             {/* Mobile Menu Overlay */}
             {showMobileMenu && (

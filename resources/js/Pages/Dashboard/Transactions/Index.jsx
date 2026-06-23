@@ -20,6 +20,7 @@ import HeldTransactions, {
 import useBarcodeScanner from "@/Hooks/useBarcodeScanner";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 import { useAuthorization } from "@/Utils/authorization";
+import { queueTransaction } from "@/Utils/offlineDb";
 import {
     IconUser,
     IconShoppingCart,
@@ -481,6 +482,29 @@ export default function Index({
         }
 
         setIsSubmitting(true);
+
+        if (!navigator.onLine) {
+            const payload = {
+                customer_id: selectedCustomer.id,
+                discount,
+                redeem_points: Number(redeemPointsInput || 0),
+                customer_voucher_id: selectedVoucherId || null,
+                shipping_cost: shipping,
+                grand_total: payable,
+                cash: isCashPayment ? cash : payable,
+                payment_gateway: payLater ? null : isCashPayment ? null : paymentMethod,
+                pay_later: payLater,
+                due_date: payLater ? dueDate : null,
+                bank_account_id: isBankTransfer ? selectedBankAccount : null,
+            };
+            queueTransaction(payload).then(() => {
+                setCarts([]);
+                setPricingPreview(initialPricingPreview);
+                toast.success("Transaksi disimpan offline. Akan dikirim saat online.");
+            });
+            setIsSubmitting(false);
+            return;
+        }
 
         router.post(
             route("transactions.store"),
