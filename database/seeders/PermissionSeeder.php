@@ -155,6 +155,10 @@ class PermissionSeeder extends Seeder
         $create('warehouses-update');
         $create('warehouses-delete');
 
+        // whatsapp
+        $create('whatsapp-settings-access');
+        $create('whatsapp-settings-update');
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
