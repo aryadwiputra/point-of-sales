@@ -10,6 +10,7 @@ import {
     IconBuildingBank,
     IconCheck,
     IconAlertCircle,
+    IconShare,
 } from "@tabler/icons-react";
 import ThermalReceipt, {
     ThermalReceipt58mm,
@@ -237,6 +238,19 @@ export default function Print({ transaction }) {
                                     Pembayaran
                                 </a>
                             )}
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const url = route("portal.transaction", [transaction.invoice, { token: transaction.access_token }]);
+                                    navigator.clipboard?.writeText(window.location.origin + "/" + url.replace(/^\/+/, ""));
+                                    alert("Link invoice disalin");
+                                }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                            >
+                                <IconShare size={18} />
+                                Share
+                            </button>
 
                             {/* Confirm Payment Button - Only for pending bank_transfer */}
                             {paymentMethodKey === "bank_transfer" &&
