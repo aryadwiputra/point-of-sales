@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { IconSearch, IconX, IconBarcode } from "@tabler/icons-react";
+import { IconSearch, IconX, IconBarcode, IconCamera } from "@tabler/icons-react";
 import { getProductImageUrl } from "@/Utils/imageUrl";
+import BarcodeScanner from "./BarcodeScanner";
 
 const formatPrice = (value = 0) =>
     Number(value || 0).toLocaleString("id-ID", {
@@ -21,6 +22,7 @@ export default function SearchBar({
 }) {
     const [isFocused, setIsFocused] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [showScanner, setShowScanner] = useState(false);
     const inputRef = useRef(null);
     const listRef = useRef(null);
 
@@ -125,14 +127,27 @@ export default function SearchBar({
                         </button>
                     )}
                     <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
-                        <IconBarcode
-                            size={18}
-                            className="text-slate-500 dark:text-slate-400"
-                        />
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowScanner(true)}
+                        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Scan barcode"
+                    >
+                        <IconCamera size={20} className="text-slate-500 dark:text-slate-400" />
+                    </button>
                 </div>
             </div>
+
+            {showScanner && (
+                <BarcodeScanner
+                    onScan={(barcode) => {
+                        onChange(barcode);
+                        setShowScanner(false);
+                        setTimeout(() => onSearch?.(), 100);
+                    }}
+                    onClose={() => setShowScanner(false)}
+                />
+            )}
 
             {/* Suggestions Dropdown */}
             {showSuggestions && (
