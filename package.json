@@ -22,6 +22,7 @@
     "dependencies": {
         "@tabler/icons-react": "^3.5.0",
         "chart.js": "^4.5.1",
+        "html5-qrcode": "^2.3.8",
         "jsbarcode": "^3.12.1",
         "react-hot-toast": "^2.4.1",
         "sweetalert2": "^11.11.1"
