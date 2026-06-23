@@ -73,6 +73,7 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 | `ReceivableService` | Aging, statement, collection stats |
 | `PayableAgingService` | Aging hutang supplier |
 | `PaymentGatewayManager` | Dispatch ke Midtrans/Xendit |
+| `WhatsAppService` | HTTP wrapper ke Node.js whatsapp-web.js service |
 
 ## Pola Integrasi Modul
 
@@ -96,6 +97,25 @@ GR → inherit warehouse dari PO, increment stok di pivot
 Stock Transfer → source → send → receive → destination
 Stock Opname → pilih warehouse, baca stok dari pivot
 ```
+
+## WhatsApp Gateway Architecture
+
+```
+┌─────────────────────────┐     HTTP      ┌──────────────────────┐
+│  Laravel App            │  ──────────→  │  whatsapp-service    │
+│                         │  ←──────────  │  (Node.js :3001)     │
+│  WhatsAppService.php    │               │                      │
+│  CrmAutomationService   │               │  whatsapp-web.js     │
+│  SettingController      │               │  Puppeteer/Chrome    │
+└─────────────────────────┘               └──────────┬───────────┘
+                                                     │
+                                              WhatsApp Web
+```
+
+- `whatsapp-service/` adalah Node.js Express server yang menjalankan `whatsapp-web.js`
+- Laravel komunikasi via HTTP ke service tersebut
+- Session WhatsApp disimpan di `whatsapp-service/session/` (persistent)
+- Butuh Node.js + Chrome di server (Puppeteer internal)
 
 ## Pola Dokumentasi Fitur
 
