@@ -20,6 +20,7 @@ class Product extends Model
         'tax_rate' => 'decimal:2',
         'min_stock' => 'integer',
         'max_stock' => 'integer',
+        'is_composite' => 'boolean',
     ];
 
     protected $fillable = [
@@ -36,6 +37,7 @@ class Product extends Model
         'tax_rate',
         'min_stock',
         'max_stock',
+        'is_composite',
     ];
 
     public function category()
@@ -62,6 +64,29 @@ class Product extends Model
     public function baseUnit(): ?Unit
     {
         return $this->units()->wherePivot('is_base', true)->first();
+    }
+
+    public function components(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'composite_product_items', 'composite_product_id', 'component_product_id')
+            ->withPivot('qty')
+            ->withTimestamps();
+    }
+
+    public function compositeOf(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'composite_product_items', 'component_product_id', 'composite_product_id');
+    }
+
+    public function compositeStock(): int
+    {
+        if (! $this->is_composite) return $this->stockTotal();
+        $minStock = null;
+        foreach ($this->components as $component) {
+            $available = (int) floor($component->stockTotal() / max(1, (float) $component->pivot->qty));
+            $minStock = $minStock === null ? $available : min($minStock, $available);
+        }
+        return $minStock ?? 0;
     }
 
     public function stockOpnameItems()

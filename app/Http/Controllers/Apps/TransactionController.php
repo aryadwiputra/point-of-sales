@@ -233,20 +233,38 @@ class TransactionController extends Controller
             return redirect()->back()->with('error', 'Product not found.');
         }
 
-        $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
-        $unitConversion = app(UnitConversionService::class);
-        $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
+        // Composite: check component stock
+        if ($product->is_composite) {
+            $product->load('components');
+            foreach ($product->components as $component) {
+                $needed = (float) $component->pivot->qty * $request->qty;
+                $whProduct = $component->warehouses()->where('warehouse_id', $warehouseId)->first();
+                $avail = $whProduct?->pivot->stock ?? 0;
+                if ($avail < $needed) {
+                    return redirect()->back()->with('error', "Stok {$component->title} tidak mencukupi.");
+                }
+            }
+            // Composite price = sum component prices
+            $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
+        } else {
+            $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
+            $unitConversion = app(UnitConversionService::class);
+            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
 
-        $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
-        $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+            $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
+            $availableStock = $warehouseProduct?->pivot->stock ?? 0;
 
-        if ($availableStock < $baseQty) {
-            return redirect()->back()->with('error', 'Out of Stock Product!.');
+            if ($availableStock < $baseQty) {
+                return redirect()->back()->with('error', 'Out of Stock Product!.');
+            }
+
+            $sellPrice = $unitConversion->getSellPrice($product, $unitId);
+            $pu = $product->units()->where('unit_id', $unitId)->first();
+            $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
         }
-
-        $sellPrice = $unitConversion->getSellPrice($product, $unitId);
-        $pu = $product->units()->where('unit_id', $unitId)->first();
-        $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
+        if (! isset($conversionFactor)) {
+            $conversionFactor = 1;
+        }
 
         $cart = Cart::with('product')
             ->where('product_id', $request->product_id)
@@ -650,13 +668,25 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
-                $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                \App\Models\ProductWarehouse::where([
-                    'product_id' => $product->id,
-                    'warehouse_id' => $activeShift->warehouse_id,
-                ])->decrement('stock', $baseQty);
 
-                $product->decrement('stock', $baseQty);
+                if ($product->is_composite) {
+                    $product->load('components');
+                    foreach ($product->components as $component) {
+                        $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
+                        \App\Models\ProductWarehouse::where([
+                            'product_id' => $component->id,
+                            'warehouse_id' => $activeShift->warehouse_id,
+                        ])->decrement('stock', $componentQty);
+                        $component->decrement('stock', $componentQty);
+                    }
+                } else {
+                    $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
+                    \App\Models\ProductWarehouse::where([
+                        'product_id' => $product->id,
+                        'warehouse_id' => $activeShift->warehouse_id,
+                    ])->decrement('stock', $baseQty);
+                    $product->decrement('stock', $baseQty);
+                }
             }
 
             Cart::where('cashier_id', auth()->user()->id)->active()->delete();
