@@ -6,10 +6,18 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Transaction extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::creating(function ($transaction) {
+            $transaction->access_token = (string) Str::uuid();
+        });
+    }
 
     protected $fillable = [
         'cashier_id',
@@ -39,6 +47,7 @@ class Transaction extends Model
         'discount_approved_by',
         'discount_approved_at',
         'discount_approval_status',
+        'access_token',
     ];
 
     protected $casts = [
