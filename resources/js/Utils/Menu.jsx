@@ -37,6 +37,7 @@ import {
     IconArrowsLeftRight,
     IconAlertCircle,
     IconListDetails,
+    IconBrandWhatsapp,
 } from "@tabler/icons-react";
 import hasAnyPermission from "./Permission";
 import React from "react";
@@ -398,6 +399,13 @@ export default function Menu() {
                     active: url === "/dashboard/settings/warehouses",
                     icon: <IconBuildingWarehouse size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["warehouses-access"]),
+                },
+                {
+                    title: "WhatsApp",
+                    href: route("settings.whatsapp"),
+                    active: url === "/dashboard/settings/whatsapp",
+                    icon: <IconBrandWhatsapp size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["whatsapp-settings-access"]),
                 },
             ],
         },

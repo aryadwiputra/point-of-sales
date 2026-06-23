@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\AuditLogService;
 use App\Services\LoyaltyService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -14,7 +15,8 @@ class SettingController extends Controller
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
-        private readonly LoyaltyService $loyaltyService
+        private readonly LoyaltyService $loyaltyService,
+        private readonly WhatsAppService $whatsAppService
     ) {}
 
     /**
@@ -224,5 +226,74 @@ class SettingController extends Controller
         );
 
         return back()->with('success', 'Pengaturan loyalty berhasil disimpan');
+    }
+
+    public function whatsapp()
+    {
+        $waStatus = ['connected' => false, 'phone' => null, 'qr' => null];
+        if (Setting::get('wa_service_url')) {
+            try {
+                $waStatus = $this->whatsAppService->status();
+            } catch (\Exception $e) {
+                $waStatus['error'] = $e->getMessage();
+            }
+        }
+
+        return Inertia::render('Dashboard/Settings/Whatsapp', [
+            'settings' => [
+                'wa_service_url' => Setting::get('wa_service_url', ''),
+                'wa_enabled' => Setting::getBool('wa_enabled', false),
+                'wa_auto_reminder' => Setting::getBool('wa_auto_reminder', false),
+                'wa_auto_invoice' => Setting::getBool('wa_auto_invoice', false),
+            ],
+            'waStatus' => $waStatus,
+        ]);
+    }
+
+    public function updateWhatsapp(Request $request)
+    {
+        $validated = $request->validate([
+            'wa_service_url' => ['nullable', 'string', 'max:255'],
+            'wa_enabled' => ['boolean'],
+            'wa_auto_reminder' => ['boolean'],
+            'wa_auto_invoice' => ['boolean'],
+        ]);
+
+        Setting::set('wa_service_url', $validated['wa_service_url'] ?? '', 'URL service WhatsApp');
+        Setting::set('wa_enabled', ($validated['wa_enabled'] ?? false) ? '1' : '0', 'WhatsApp gateway aktif');
+        Setting::set('wa_auto_reminder', ($validated['wa_auto_reminder'] ?? false) ? '1' : '0', 'Auto-kirim reminder via WA');
+        Setting::set('wa_auto_invoice', ($validated['wa_auto_invoice'] ?? false) ? '1' : '0', 'Auto-kirim invoice via WA');
+
+        return back()->with('success', 'Pengaturan WhatsApp disimpan.');
+    }
+
+    public function testWhatsapp(Request $request)
+    {
+        $request->validate(['target' => 'required|string']);
+
+        $sent = $this->whatsAppService->send(
+            $request->target,
+            'Test pesan dari Point of Sales — ' . config('app.url')
+        );
+
+        return response()->json(['status' => $sent]);
+    }
+
+    public function startWhatsapp()
+    {
+        $result = $this->whatsAppService->start();
+        return response()->json($result);
+    }
+
+    public function whatsappStatus()
+    {
+        $status = $this->whatsAppService->status();
+        return response()->json($status);
+    }
+
+    public function disconnectWhatsapp()
+    {
+        $this->whatsAppService->disconnect();
+        return response()->json(['status' => true]);
     }
 }

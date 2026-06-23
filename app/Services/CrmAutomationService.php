@@ -7,13 +7,16 @@ use App\Models\CustomerCampaign;
 use App\Models\CustomerCampaignLog;
 use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\Setting;
+use App\Services\WhatsAppService;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class CrmAutomationService
 {
     public function __construct(
-        private readonly CustomerSegmentationService $segmentationService
+        private readonly CustomerSegmentationService $segmentationService,
+        private readonly ?WhatsAppService $whatsAppService = null
     ) {}
 
     public function audienceOptions(): array
@@ -139,15 +142,26 @@ class CrmAutomationService
             'segments' => $customer->segments->pluck('name')->values()->all(),
         ])->values()->all();
 
+        $waAvailable = Setting::getBool('wa_enabled', false)
+            && Setting::get('wa_service_url')
+            && $this->whatsAppService?->status()['connected'] ?? false;
+
         foreach ($audience as $customer) {
             $payload = $this->buildCustomerPayload($campaign, $customer);
 
-            $campaign->logs()->create([
+            $log = $campaign->logs()->create([
                 'customer_id' => $customer->id,
                 'channel' => CustomerCampaign::CHANNEL_WHATSAPP_LINK,
                 'status' => CustomerCampaignLog::STATUS_READY_TO_SEND,
                 'payload' => $payload,
             ]);
+
+            if ($waAvailable && $customer->no_telp) {
+                $sent = $this->whatsAppService->send($customer->no_telp, $payload['message']);
+                if ($sent) {
+                    $this->markLog($log, CustomerCampaignLog::STATUS_SENT);
+                }
+            }
         }
 
         $campaign->update([

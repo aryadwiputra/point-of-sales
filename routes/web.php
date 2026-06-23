@@ -288,6 +288,14 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::get('/settings/loyalty', [\App\Http\Controllers\Apps\SettingController::class, 'loyalty'])->middleware('permission:dashboard-access')->name('settings.loyalty');
     Route::post('/settings/loyalty', [\App\Http\Controllers\Apps\SettingController::class, 'updateLoyalty'])->middleware('permission:dashboard-access')->name('settings.loyalty.update');
 
+    // settings whatsapp
+    Route::get('/settings/whatsapp', [\App\Http\Controllers\Apps\SettingController::class, 'whatsapp'])->middleware('permission:whatsapp-settings-access')->name('settings.whatsapp');
+    Route::post('/settings/whatsapp', [\App\Http\Controllers\Apps\SettingController::class, 'updateWhatsapp'])->middleware('permission:whatsapp-settings-update')->name('settings.whatsapp.update');
+    Route::post('/settings/whatsapp/test', [\App\Http\Controllers\Apps\SettingController::class, 'testWhatsapp'])->middleware('permission:whatsapp-settings-update')->name('settings.whatsapp.test');
+    Route::post('/settings/whatsapp/start', [\App\Http\Controllers\Apps\SettingController::class, 'startWhatsapp'])->middleware('permission:whatsapp-settings-update')->name('settings.whatsapp.start');
+    Route::get('/settings/whatsapp/status', [\App\Http\Controllers\Apps\SettingController::class, 'whatsappStatus'])->middleware('permission:whatsapp-settings-access')->name('settings.whatsapp.status');
+    Route::post('/settings/whatsapp/disconnect', [\App\Http\Controllers\Apps\SettingController::class, 'disconnectWhatsapp'])->middleware('permission:whatsapp-settings-update')->name('settings.whatsapp.disconnect');
+
     // settings bank accounts
     Route::get('/settings/bank-accounts', [\App\Http\Controllers\Apps\BankAccountController::class, 'index'])->middleware('permission:payment-settings-access')->name('settings.bank-accounts.index');
     Route::get('/settings/bank-accounts/create', [\App\Http\Controllers\Apps\BankAccountController::class, 'create'])->middleware('permission:payment-settings-update')->name('settings.bank-accounts.create');
