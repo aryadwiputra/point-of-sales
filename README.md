@@ -6,6 +6,18 @@ Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inven
 
 ---
 
+## Cuplikan Layar
+
+| POS Checkout | Dashboard | Stock Opname |
+|:---:|:---:|:---:|
+| ![POS](public/screenshots/02-pos-checkout.png) | ![Dashboard](public/screenshots/01-dashboard.png) | ![Stock Opname](public/screenshots/06-stock-opnames.png) |
+| **Sales Report** | **Receivables** | **Multi-Warehouse** |
+| ![Sales Report](public/screenshots/15-sales-report.png) | ![Receivables](public/screenshots/12-receivables.png) | ![Warehouses](public/screenshots/07-warehouses.png) |
+
+📸 **[Lihat galeri lengkap (33 screenshot)](docs/screenshots.md)**
+
+---
+
 ## Fitur Utama
 
 ### POS & Transaksi
