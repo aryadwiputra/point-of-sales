@@ -11,6 +11,7 @@ class UnitConversionService
     {
         $pu = $product->units()->where('unit_id', $unitId)->first();
         $factor = $pu?->pivot->conversion_factor ?? 1;
+
         return (int) round($qty * $factor);
     }
 
@@ -18,12 +19,14 @@ class UnitConversionService
     {
         $pu = $product->units()->where('unit_id', $unitId)->first();
         $factor = $pu?->pivot->conversion_factor ?? 1;
+
         return $factor > 0 ? $baseQty / $factor : $baseQty;
     }
 
     public function getPrice(Product $product, int $unitId, string $type = 'sell_price'): int
     {
         $pu = $product->units()->where('unit_id', $unitId)->first();
+
         return (int) ($pu?->pivot->{$type} ?? $product->{$type});
     }
 
@@ -39,8 +42,11 @@ class UnitConversionService
 
     public function getUnitLabel(Product $product, ?int $unitId): string
     {
-        if (! $unitId) return 'pcs';
+        if (! $unitId) {
+            return 'pcs';
+        }
         $unit = Unit::find($unitId);
+
         return $unit?->symbol ?? 'pcs';
     }
 }

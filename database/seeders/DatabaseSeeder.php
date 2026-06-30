@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\PermissionRegistrar;

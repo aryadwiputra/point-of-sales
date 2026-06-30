@@ -6,9 +6,8 @@ use App\Models\Customer;
 use App\Models\CustomerCampaign;
 use App\Models\CustomerCampaignLog;
 use App\Models\Receivable;
-use App\Models\Transaction;
 use App\Models\Setting;
-use App\Services\WhatsAppService;
+use App\Models\Transaction;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 

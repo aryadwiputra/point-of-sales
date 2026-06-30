@@ -119,6 +119,7 @@ class StockOpnameController extends Controller
                         $wh = $product->warehouses()->where('warehouse_id', $stockOpname->warehouse_id)->first();
                         $pivotStock = $wh?->pivot->stock ?? 0;
                     }
+
                     return [
                         ...$product->toArray(),
                         'warehouse_stock' => $pivotStock,

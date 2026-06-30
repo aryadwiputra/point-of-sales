@@ -17,6 +17,7 @@
         "laravolt/indonesia": "^0.38.0",
         "maatwebsite/excel": "^3.1",
         "picqer/php-barcode-generator": "^3.2",
+        "spatie/laravel-data": "^4.23",
         "spatie/laravel-permission": "^6.7",
         "tightenco/ziggy": "^2.0"
     },

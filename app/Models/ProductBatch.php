@@ -17,8 +17,15 @@ class ProductBatch extends Model
         ];
     }
 
-    public function product() { return $this->belongsTo(Product::class); }
-    public function warehouse() { return $this->belongsTo(Warehouse::class); }
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
     public function scopeExpiringSoon($q, int $days = 30)
     {

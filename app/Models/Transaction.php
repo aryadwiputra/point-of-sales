@@ -159,11 +159,16 @@ class Transaction extends Model
         $threshold = (int) \App\Models\Setting::get('discount_approval_threshold', 0);
         $percentThreshold = (int) \App\Models\Setting::get('discount_approval_percent_threshold', 0);
 
-        if ($threshold > 0 && $this->discount >= $threshold) return true;
+        if ($threshold > 0 && $this->discount >= $threshold) {
+            return true;
+        }
         if ($percentThreshold > 0 && $this->grand_total > 0) {
             $percent = ($this->discount / $this->grand_total) * 100;
-            if ($percent >= $percentThreshold) return true;
+            if ($percent >= $percentThreshold) {
+                return true;
+            }
         }
+
         return false;
     }
 

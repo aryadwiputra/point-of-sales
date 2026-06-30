@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Product;
 use App\Models\ProductWarehouse;
+use App\Models\StockMutation;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
-use App\Models\StockMutation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -210,7 +209,7 @@ class StockTransferService
             ]);
         }
 
-        DB::transaction(function () use ($transfer, $userId) {
+        DB::transaction(function () use ($transfer) {
             $before = $transfer->replicate();
             $returnStock = $transfer->isInTransit();
 

@@ -15,7 +15,7 @@ class ReorderService
         if ($warehouseId) {
             $query->whereHas('warehouses', function ($q) use ($warehouseId) {
                 $q->where('product_warehouse.warehouse_id', $warehouseId)
-                  ->whereColumn('product_warehouse.stock', '<=', 'products.min_stock');
+                    ->whereColumn('product_warehouse.stock', '<=', 'products.min_stock');
             });
         } else {
             $query->whereColumn('stock', '<=', 'min_stock');
@@ -33,7 +33,9 @@ class ReorderService
                 'unit_price' => $p->buy_price,
             ])->values()->toArray();
 
-        if (empty($items)) return null;
+        if (empty($items)) {
+            return null;
+        }
 
         return app(PurchaseOrderService::class)->createOrder(
             ['notes' => 'Auto-generated from restock suggestion'],

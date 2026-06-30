@@ -13,7 +13,18 @@ class PriceList extends Model
         return ['is_active' => 'boolean', 'priority' => 'integer'];
     }
 
-    public function items() { return $this->hasMany(PriceListItem::class); }
-    public function segment() { return $this->belongsTo(CustomerSegment::class); }
-    public function scopeActive($q) { $q->where('is_active', true); }
+    public function items()
+    {
+        return $this->hasMany(PriceListItem::class);
+    }
+
+    public function segment()
+    {
+        return $this->belongsTo(CustomerSegment::class);
+    }
+
+    public function scopeActive($q)
+    {
+        $q->where('is_active', true);
+    }
 }

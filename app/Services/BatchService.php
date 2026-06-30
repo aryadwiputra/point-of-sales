@@ -13,7 +13,9 @@ class BatchService
         return ProductBatch::where('product_id', $productId)
             ->where('warehouse_id', $warehouseId)
             ->where('stock', '>', 0)
-            ->where(function ($q) { $q->whereNull('expired_at')->orWhere('expired_at', '>', now()); })
+            ->where(function ($q) {
+                $q->whereNull('expired_at')->orWhere('expired_at', '>', now());
+            })
             ->orderBy('expired_at')
             ->orderBy('received_at')
             ->get();
@@ -26,7 +28,9 @@ class BatchService
         $remaining = $qty;
 
         foreach ($batches as $batch) {
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
             $take = min($batch->stock, $remaining);
             $allocations[] = [
                 'batch_id' => $batch->id,

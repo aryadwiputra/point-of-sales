@@ -63,10 +63,19 @@ class ImportExportController extends Controller
         };
 
         return Excel::download(
-            new class($headings) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+            new class($headings) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings
+            {
                 public function __construct(private array $headings) {}
-                public function headings(): array { return $this->headings; }
-                public function array(): array { return []; }
+
+                public function headings(): array
+                {
+                    return $this->headings;
+                }
+
+                public function array(): array
+                {
+                    return [];
+                }
             },
             "template-{$type}.xlsx"
         );
