@@ -270,6 +270,7 @@ class TransactionController extends Controller
         $cart = Cart::with('product')
             ->where('product_id', $request->product_id)
             ->where('cashier_id', auth()->user()->id)
+            ->active()
             ->first();
 
         if ($cart) {
