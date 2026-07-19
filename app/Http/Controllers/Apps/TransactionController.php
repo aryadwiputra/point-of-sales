@@ -252,11 +252,12 @@ class TransactionController extends Controller
             $unitConversion = app(UnitConversionService::class);
             $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
 
-            $warehouseProduct = $product->warehouses()->where('warehouse_id', $warehouseId)->first();
-            $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+            $availableStock = $warehouseId
+                ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+                : (int) $product->stock;
 
             if ($availableStock < $baseQty) {
-                return redirect()->back()->with('error', 'Out of Stock Product!.');
+                return redirect()->back()->with('error', 'Stok tidak mencukupi.');
             }
 
             $sellPrice = $unitConversion->getSellPrice($product, $unitId);
@@ -270,6 +271,7 @@ class TransactionController extends Controller
         $cart = Cart::with('product')
             ->where('product_id', $request->product_id)
             ->where('cashier_id', auth()->user()->id)
+            ->active()
             ->first();
 
         if ($cart) {
@@ -339,9 +341,10 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        // Check stock availability in warehouse
-        $warehouseProduct = $cart->product->warehouses()->where('warehouse_id', $warehouseId)->first();
-        $availableStock = $warehouseProduct?->pivot->stock ?? 0;
+        // Check stock availability
+        $availableStock = $warehouseId
+            ? (int) ($cart->product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+            : (int) $cart->product->stock;
 
         if ($availableStock < $request->qty) {
             return response()->json([

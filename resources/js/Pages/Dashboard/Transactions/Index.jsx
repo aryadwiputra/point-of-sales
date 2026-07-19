@@ -58,6 +58,7 @@ export default function Index({
     const {
         auth,
         errors,
+        flash,
         lowStockNotifications = [],
         activeCashierShift,
     } = usePage().props;
@@ -113,6 +114,12 @@ export default function Index({
     useEffect(() => {
         setPricingPreview(initialPricingPreview);
     }, [initialPricingPreview]);
+
+    // Show flash messages
+    useEffect(() => {
+        if (flash?.error) toast.error(flash.error);
+        if (flash?.success) toast.success(flash.success);
+    }, [flash]);
 
     // Barcode scanner integration
     const handleBarcodeScan = useCallback(
