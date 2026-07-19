@@ -24,10 +24,10 @@ client_description: ""
 case_study_label: "Proyek Mandiri"
 role: "Laravel / Full-Stack Developer"
 tech_stack:
-    - Laravel 12
-    - PHP 8.2
-    - Inertia.js 2
-    - React 18
+    - Laravel 13
+    - PHP 8.3
+    - Inertia.js 3
+    - React 19
     - MySQL
     - Tailwind CSS 3
     - Spatie Laravel Permission
@@ -114,7 +114,7 @@ Beberapa pendekatan implementasi yang menjadi fondasi project ini:
 
 ### Backend
 
-Backend dibangun dengan Laravel 12 dan memanfaatkan pola controller + service untuk menjaga controller tetap fokus pada request lifecycle. Area `app/Http/Controllers/Apps` menangani modul dashboard, sementara `app/Services` menampung logika yang dipakai lintas flow bisnis seperti audit log, stock mutation, cashier shift, receivable, payable aging, pricing rule, loyalty, goods receiving, purchase order, sampai CRM automation.
+Backend dibangun dengan Laravel 13 dan memanfaatkan pola controller + service untuk menjaga controller tetap fokus pada request lifecycle. Area `app/Http/Controllers/Apps` menangani modul dashboard, sementara `app/Services` menampung logika yang dipakai lintas flow bisnis seperti audit log, stock mutation, cashier shift, receivable, payable aging, pricing rule, loyalty, goods receiving, purchase order, sampai CRM automation.
 
 Aplikasi memakai RBAC berbasis Spatie Laravel Permission. Hampir seluruh route dashboard dilindungi permission spesifik seperti akses dashboard, transaksi, laporan, settings, role, dan permission management. Untuk operasi transaksi POS, middleware `active_shift` memastikan kasir hanya bisa melakukan aksi penting ketika memiliki shift aktif. Beberapa aksi sensitif juga sudah dipisahkan untuk kebutuhan step-up authentication.
 
@@ -122,7 +122,7 @@ Dari sisi data, project ini mencakup model operasional yang cukup lengkap: trans
 
 ### Frontend
 
-Frontend menggunakan Inertia.js 2 dan React 18 dengan struktur halaman di `resources/js/Pages/Dashboard`. Pendekatan ini membuat developer bisa membangun pengalaman dashboard yang responsif sambil tetap memanfaatkan routing, validation, dan server-side flow dari Laravel.
+Frontend menggunakan Inertia.js 3 dan React 19 dengan struktur halaman di `resources/js/Pages/Dashboard`. Pendekatan ini membuat developer bisa membangun pengalaman dashboard yang responsif sambil tetap memanfaatkan routing, validation, dan server-side flow dari Laravel.
 
 UI dibangun dengan Tailwind CSS 3 dan komponen dashboard reusable seperti table, modal, widget, pagination, input, listbox, dan sidebar. Pada modul POS, alur kasir dipecah ke komponen yang jelas seperti pencarian produk, grid produk, cart panel, payment panel, held transactions, customer select, dan dukungan barcode scanner. Pendekatan ini membantu menjaga pengalaman transaksi tetap cepat walaupun fitur operasionalnya cukup banyak.
 
@@ -181,7 +181,7 @@ sidebar_points:
     - title: "Periode:"
       description: "Juni 2024 — Mei 2026"
     - title: "Stack teknis:"
-      description: "Laravel 12, Inertia.js, React 18, MySQL, Tailwind CSS"
+      description: "Laravel 13, Inertia.js, React 19, MySQL, Tailwind CSS"
     - title: "Fokus implementasi:"
       description: "POS, inventory, receivables, payables, sales return, cashier shift, audit log"
 ```

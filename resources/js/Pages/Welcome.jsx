@@ -48,7 +48,7 @@ export default function Welcome() {
     ];
 
     const techStack = [
-        { name: "Laravel 12", color: "bg-red-500" },
+        { name: "Laravel 13", color: "bg-red-500" },
         { name: "Inertia.js", color: "bg-purple-500" },
         { name: "React", color: "bg-cyan-500" },
         { name: "TailwindCSS", color: "bg-sky-500" },

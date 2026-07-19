@@ -8,10 +8,10 @@ client_description: "Aplikasi ini ditujukan untuk kebutuhan operasional toko ata
 case_study_label: "Proyek Mandiri"
 role: "Laravel / Full-Stack Developer"
 tech_stack:
-  - Laravel 12
-  - PHP 8.2
-  - Inertia.js 2
-  - React 18
+  - Laravel 13
+  - PHP 8.3
+  - Inertia.js 3
+  - React 19
   - MySQL
   - Tailwind CSS 3
   - Vite 5
@@ -68,7 +68,7 @@ Modul utama dalam sistem ini meliputi:
 
 ### Backend
 
-Backend dibangun dengan Laravel 12 dan PHP 8.2, menggunakan pola controller modular di `app/Http/Controllers/Apps/` untuk memisahkan tiap domain fitur. Logika lintas modul dipindahkan ke service layer seperti `StockMutationService`, `CashierShiftService`, `ReceivableService`, `PurchaseOrderService`, `SupplierReturnService`, `CrmAutomationService`, `CustomerSegmentationService`, `LoyaltyService`, `GoodsReceivingService`, dan `AuditLogService` agar controller tetap fokus pada orkestrasi request.
+Backend dibangun dengan Laravel 13 dan PHP 8.3, menggunakan pola controller modular di `app/Http/Controllers/Apps/` untuk memisahkan tiap domain fitur. Logika lintas modul dipindahkan ke service layer seperti `StockMutationService`, `CashierShiftService`, `ReceivableService`, `PurchaseOrderService`, `SupplierReturnService`, `CrmAutomationService`, `CustomerSegmentationService`, `LoyaltyService`, `GoodsReceivingService`, dan `AuditLogService` agar controller tetap fokus pada orkestrasi request.
 
 Aplikasi ini memakai RBAC berbasis `spatie/laravel-permission`, sehingga setiap route dashboard dapat diproteksi dengan permission yang spesifik. Untuk flow yang lebih sensitif, sistem menambahkan middleware khusus seperti `EnsureActiveCashierShift`, `EnsureBotGuard`, `EnsurePublicRegistrationEnabled`, `EnforceAbsoluteSessionLifetime`, dan middleware step-up confirmation pada aksi tertentu.
 
@@ -78,7 +78,7 @@ Dokumen PDF untuk invoice, receipt, shipping, receivable, dan payable dihasilkan
 
 ### Frontend
 
-Frontend dashboard dibangun menggunakan Inertia.js 2 dan React 18, sehingga pengalaman pengguna tetap terasa seperti SPA tetapi tetap mengikuti pola routing dan response dari Laravel. Struktur halaman dipisahkan per modul di `resources/js/Pages/Dashboard/`, misalnya untuk transaksi, produk, stock opname, receivables, payables, audit logs, cashier shifts, CRM, purchase order, goods receiving, supplier return, dan laporan.
+Frontend dashboard dibangun menggunakan Inertia.js 3 dan React 19, sehingga pengalaman pengguna tetap terasa seperti SPA tetapi tetap mengikuti pola routing dan response dari Laravel. Struktur halaman dipisahkan per modul di `resources/js/Pages/Dashboard/`, misalnya untuk transaksi, produk, stock opname, receivables, payables, audit logs, cashier shifts, CRM, purchase order, goods receiving, supplier return, dan laporan.
 
 Untuk pengalaman penggunaan, aplikasi memanfaatkan Tailwind CSS 3 dengan semantic color token, Ziggy untuk helper routing di sisi React, `react-hot-toast` dan `sweetalert2` untuk feedback interaksi, serta `chart.js` untuk visualisasi laporan. Pendekatan ini membuat dashboard cukup konsisten untuk alur operasional yang padat, terutama pada POS, histori transaksi, monitoring stok, pengelolaan pelanggan, dan halaman laporan.
 
@@ -130,7 +130,7 @@ sidebar_points:
   - title: "Periode:"
     description: "Juni 2024 — Mei 2026"
   - title: "Stack teknis:"
-    description: "Laravel 12, React 18, Inertia.js 2, MySQL, Tailwind CSS, Midtrans, Xendit"
+    description: "Laravel 13, React 19, Inertia.js 3, MySQL, Tailwind CSS, Midtrans, Xendit"
   - title: "Cakupan:"
     description: "POS, inventory, pembelian, receivables, payables, retur, shift kasir, CRM, laporan, dan payment gateway"
 ```

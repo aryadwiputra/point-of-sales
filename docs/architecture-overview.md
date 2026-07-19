@@ -4,8 +4,8 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 
 ## Stack
 
-- **Backend:** Laravel 12 (PHP 8.2+)
-- **Frontend:** Inertia.js 2.0 + React 18, Vite 5
+- **Backend:** Laravel 13 (PHP 8.3+)
+- **Frontend:** Inertia.js 3 + React 19, Vite 5
 - **Styling:** Tailwind CSS 3 (custom theme in `tailwind.config.js`)
 - **Auth/RBAC:** Spatie Laravel Permission + Laravel Breeze
 - **DB:** MySQL (default); SQLite in-memory untuk testing
