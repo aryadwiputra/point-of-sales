@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="/manifest.json">
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title data-inertia>{{ config('app.name', 'Laravel') }}</title>
 
     <!-- Fonts - Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
