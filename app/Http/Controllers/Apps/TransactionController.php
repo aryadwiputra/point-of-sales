@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Apps;
 
 use App\Exceptions\PaymentGatewayException;
 use App\Http\Controllers\Controller;
+use App\Models\BankAccount;
 use App\Models\Cart;
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
+use App\Models\DiscountApprovalLog;
 use App\Models\PaymentSetting;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
@@ -19,7 +22,6 @@ use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
 use App\Services\UnitConversionService;
-use App\Services\ThermalPrintService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,7 +112,7 @@ class TransactionController extends Controller
         });
 
         // get all categories
-        $categories = \App\Models\Category::select('id', 'name', 'image')
+        $categories = Category::select('id', 'name', 'image')
             ->orderBy('name')
             ->get();
 
@@ -130,7 +132,7 @@ class TransactionController extends Controller
         }
 
         // Get active bank accounts for bank transfer
-        $bankAccounts = \App\Models\BankAccount::active()->ordered()->get();
+        $bankAccounts = BankAccount::active()->ordered()->get();
 
         return Inertia::render('Dashboard/Transactions/Index', [
             'carts' => $carts,
@@ -364,7 +366,7 @@ class TransactionController extends Controller
     /**
      * holdCart - Hold current cart items for later
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function holdCart(Request $request)
     {
@@ -406,7 +408,7 @@ class TransactionController extends Controller
      * resumeCart - Resume a held cart
      *
      * @param  string  $holdId
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function resumeCart($holdId)
     {
@@ -452,7 +454,7 @@ class TransactionController extends Controller
      * clearHold - Delete a held cart
      *
      * @param  string  $holdId
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function clearHold($holdId)
     {
@@ -484,7 +486,7 @@ class TransactionController extends Controller
     /**
      * getHeldCarts - Get all held carts for current user
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getHeldCarts()
     {
@@ -677,7 +679,7 @@ class TransactionController extends Controller
                     $product->load('components');
                     foreach ($product->components as $component) {
                         $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                        \App\Models\ProductWarehouse::where([
+                        ProductWarehouse::where([
                             'product_id' => $component->id,
                             'warehouse_id' => $activeShift->warehouse_id,
                         ])->decrement('stock', $componentQty);
@@ -685,7 +687,7 @@ class TransactionController extends Controller
                     }
                 } else {
                     $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                    \App\Models\ProductWarehouse::where([
+                    ProductWarehouse::where([
                         'product_id' => $product->id,
                         'warehouse_id' => $activeShift->warehouse_id,
                     ])->decrement('stock', $baseQty);
@@ -719,7 +721,7 @@ class TransactionController extends Controller
                 'payment_status' => 'pending_approval',
             ]);
 
-            \App\Models\DiscountApprovalLog::create([
+            DiscountApprovalLog::create([
                 'transaction_id' => $transaction->id,
                 'cashier_id' => auth()->id(),
                 'requested_discount' => $appliedManualDiscount,

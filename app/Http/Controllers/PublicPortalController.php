@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentSetting;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Services\Payments\PaymentGatewayManager;
@@ -55,7 +56,7 @@ class PublicPortalController extends Controller
         abort_if($transaction->access_token !== $request->token, 403);
 
         $paymentGateway = app(PaymentGatewayManager::class);
-        $paymentSetting = \App\Models\PaymentSetting::first();
+        $paymentSetting = PaymentSetting::first();
         $gateway = $paymentSetting?->default_gateway ?? 'midtrans';
 
         if (! $paymentSetting || ! $paymentSetting->isGatewayReady($gateway)) {

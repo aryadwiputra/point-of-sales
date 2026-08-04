@@ -8,7 +8,7 @@ Panduan ini membantu developer baru menjalankan aplikasi dari nol sampai bisa lo
 
 ## Requirement Minimum
 
-- PHP 8.2+ sesuai kebutuhan Laravel 12
+- PHP 8.3+ sesuai kebutuhan Laravel 13
 - Composer
 - Node.js 18+ + npm
 - MySQL / MariaDB

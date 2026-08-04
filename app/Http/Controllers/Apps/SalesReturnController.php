@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSalesReturnRequest;
 use App\Http\Requests\UpdateSalesReturnRequest;
 use App\Models\CustomerCredit;
+use App\Models\ProductWarehouse;
 use App\Models\Profit;
 use App\Models\SalesReturn;
 use App\Models\SalesReturnItem;
@@ -14,6 +15,7 @@ use App\Models\TransactionDetail;
 use App\Services\AuditLogService;
 use App\Services\CashierShiftService;
 use App\Services\StockMutationService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -237,7 +239,7 @@ class SalesReturnController extends Controller
                         // Restock to transaction warehouse
                         $transactionWarehouseId = $salesReturn->transaction->warehouse_id;
                         if ($transactionWarehouseId) {
-                            \App\Models\ProductWarehouse::where([
+                            ProductWarehouse::where([
                                 'product_id' => $product->id,
                                 'warehouse_id' => $transactionWarehouseId,
                             ])->increment('stock', (int) $item->qty_return);
@@ -388,7 +390,7 @@ class SalesReturnController extends Controller
             'id' => $transaction->id,
             'invoice' => $transaction->invoice,
             'created_at' => $transaction->getRawOriginal('created_at')
-                ? \Carbon\Carbon::parse($transaction->getRawOriginal('created_at'))->toISOString()
+                ? Carbon::parse($transaction->getRawOriginal('created_at'))->toISOString()
                 : null,
             'cashier' => $transaction->cashier ? [
                 'id' => $transaction->cashier->id,

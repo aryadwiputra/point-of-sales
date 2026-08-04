@@ -6,6 +6,7 @@ use App\Models\GoodsReceiving;
 use App\Models\GoodsReceivingItem;
 use App\Models\Payable;
 use App\Models\ProductBatch;
+use App\Models\ProductWarehouse;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -61,7 +62,7 @@ class GoodsReceivingService
                 $product->decrement('stock', $qtyReceived);
                 // Increment warehouse pivot stock
                 if ($order->warehouse_id) {
-                    \App\Models\ProductWarehouse::where([
+                    ProductWarehouse::where([
                         'product_id' => $product->id,
                         'warehouse_id' => $order->warehouse_id,
                     ])->increment('stock', $qtyReceived);

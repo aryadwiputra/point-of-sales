@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 
 class DatabaseSeeder extends Seeder
@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Migrate existing stock to pivot
-        \Illuminate\Support\Facades\DB::statement("
+        DB::statement("
             INSERT INTO product_warehouse (product_id, warehouse_id, stock, created_at, updated_at)
             SELECT id, {$pusat->id}, stock, NOW(), NOW() FROM products
         ");

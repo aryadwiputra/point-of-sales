@@ -273,7 +273,7 @@ class SettingController extends Controller
 
         $sent = $this->whatsAppService->send(
             $request->target,
-            'Test pesan dari Point of Sales — ' . config('app.url')
+            'Test pesan dari Point of Sales — '.config('app.url')
         );
 
         return response()->json(['status' => $sent]);
@@ -282,18 +282,21 @@ class SettingController extends Controller
     public function startWhatsapp()
     {
         $result = $this->whatsAppService->start();
+
         return response()->json($result);
     }
 
     public function whatsappStatus()
     {
         $status = $this->whatsAppService->status();
+
         return response()->json($status);
     }
 
     public function disconnectWhatsapp()
     {
         $this->whatsAppService->disconnect();
+
         return response()->json(['status' => true]);
     }
 }

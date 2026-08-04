@@ -82,7 +82,7 @@ return new class extends Migration
             Crypt::decryptString($value);
 
             return true;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;
         }
     }

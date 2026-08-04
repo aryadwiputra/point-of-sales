@@ -18,3 +18,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# WhatsApp Service
+whatsapp-service/.wwebjs_cache/
+whatsapp-service/session/

@@ -1,6 +1,6 @@
 # AGENTS.md — Point of Sales
 
-Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
+Open-source POS system (200+ stars). Laravel 13 + Inertia 3.0 + React 19.
 
 ## Important: This Repo
 
@@ -18,8 +18,8 @@ Open-source POS system (200+ stars). Laravel 12 + Inertia 2.0 + React 18.
 
 ## Stack
 
-- **Backend**: Laravel 12 (PHP 8.2+)
-- **Frontend**: Inertia.js 2.0 + React 18, Vite 5
+- **Backend**: Laravel 13 (PHP 8.3+)
+- **Frontend**: Inertia.js 3.0 + React 19, Vite 5
 - **Styling**: Tailwind CSS 3 (custom theme in `tailwind.config.js`)
 - **Auth/RBAC**: Spatie Laravel Permission + Laravel Breeze
 - **DB**: MySQL (default); SQLite in-memory for tests

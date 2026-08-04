@@ -6,6 +6,7 @@ use App\Models\CashierShift;
 use App\Models\Payable;
 use App\Models\Product;
 use App\Models\Receivable;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\CashierShiftService;
 use App\Services\PayableAgingService;
@@ -140,19 +141,19 @@ class HandleInertiaRequests extends Middleware
         ];
 
         if (Schema::hasTable('settings')) {
-            $logo = \App\Models\Setting::get('store_logo');
+            $logo = Setting::get('store_logo');
             if ($logo && ! str_starts_with($logo, 'http') && ! str_starts_with($logo, '/storage')) {
                 $logo = asset('storage/'.ltrim($logo, '/'));
             }
 
             $storeProfile = [
-                'name' => \App\Models\Setting::get('store_name', 'Toko Anda'),
+                'name' => Setting::get('store_name', 'Toko Anda'),
                 'logo' => $logo,
-                'address' => \App\Models\Setting::get('store_address', ''),
-                'phone' => \App\Models\Setting::get('store_phone', ''),
-                'email' => \App\Models\Setting::get('store_email', ''),
-                'website' => \App\Models\Setting::get('store_website', ''),
-                'city' => \App\Models\Setting::get('store_city', ''),
+                'address' => Setting::get('store_address', ''),
+                'phone' => Setting::get('store_phone', ''),
+                'email' => Setting::get('store_email', ''),
+                'website' => Setting::get('store_website', ''),
+                'city' => Setting::get('store_city', ''),
             ];
         }
 
@@ -162,6 +163,14 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
                 'super' => $request->user() ? $request->user()->isSuperAdmin() : false,
+            ],
+            'locale' => [
+                'current' => app()->getLocale(),
+                'available' => ['id', 'en'],
+                'names' => [
+                    'id' => 'Indonesia',
+                    'en' => 'English',
+                ],
             ],
             'lowStockNotifications' => $lowStockNotifications,
             'receivableNotifications' => $receivableNotifications,

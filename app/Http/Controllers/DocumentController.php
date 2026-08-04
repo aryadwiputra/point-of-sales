@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Payable;
 use App\Models\Receivable;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\ThermalPrintService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,7 +22,7 @@ class DocumentController extends Controller
 
     private function storeProfile(): array
     {
-        $logo = \App\Models\Setting::get('store_logo');
+        $logo = Setting::get('store_logo');
         if ($logo && ! str_starts_with($logo, 'http') && ! str_starts_with($logo, '/storage')) {
             $logo = asset('storage/'.ltrim($logo, '/'));
         }
@@ -41,13 +42,13 @@ class DocumentController extends Controller
         }
 
         return [
-            'name' => \App\Models\Setting::get('store_name', 'Toko Anda'),
+            'name' => Setting::get('store_name', 'Toko Anda'),
             'logo' => $logo,
             'logo_data' => $logoData,
-            'address' => \App\Models\Setting::get('store_address', ''),
-            'phone' => \App\Models\Setting::get('store_phone', ''),
-            'email' => \App\Models\Setting::get('store_email', ''),
-            'website' => \App\Models\Setting::get('store_website', ''),
+            'address' => Setting::get('store_address', ''),
+            'phone' => Setting::get('store_phone', ''),
+            'email' => Setting::get('store_email', ''),
+            'website' => Setting::get('store_website', ''),
         ];
     }
 

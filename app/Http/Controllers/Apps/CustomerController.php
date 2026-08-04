@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerSegment;
 use App\Models\CustomerVoucher;
 use App\Models\Transaction;
 use App\Services\CustomerSegmentationService;
 use App\Services\LoyaltyService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Laravolt\Indonesia\Models\City;
@@ -26,7 +30,7 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -49,7 +53,7 @@ class CustomerController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -64,7 +68,7 @@ class CustomerController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -111,7 +115,7 @@ class CustomerController extends Controller
     /**
      * Store a newly created customer via AJAX (returns JSON, no redirect)
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function storeAjax(Request $request)
     {
@@ -180,7 +184,7 @@ class CustomerController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Customer $customer)
     {
@@ -209,7 +213,7 @@ class CustomerController extends Controller
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, Customer $customer)
     {
@@ -290,7 +294,7 @@ class CustomerController extends Controller
                 ->pluck('customer_segment_id')
                 ->values()
                 ->all(),
-            'manualSegmentOptions' => $this->segmentationService->segmentOptions(\App\Models\CustomerSegment::TYPE_MANUAL),
+            'manualSegmentOptions' => $this->segmentationService->segmentOptions(CustomerSegment::TYPE_MANUAL),
             'stats' => $stats,
             'recentTransactions' => $recentTransactions,
             'frequentProducts' => $frequentProducts,
@@ -315,7 +319,7 @@ class CustomerController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -332,7 +336,7 @@ class CustomerController extends Controller
     /**
      * Get customer purchase history
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getHistory(Customer $customer)
     {
@@ -371,7 +375,7 @@ class CustomerController extends Controller
             'stats' => [
                 'total_transactions' => (int) ($stats->total_transactions ?? 0),
                 'total_spent' => (int) ($stats->total_spent ?? 0),
-                'last_visit' => $stats->last_visit ? \Carbon\Carbon::parse($stats->last_visit)->format('d M Y') : null,
+                'last_visit' => $stats->last_visit ? Carbon::parse($stats->last_visit)->format('d M Y') : null,
             ],
             'loyalty' => [
                 'is_member' => (bool) $customer->is_loyalty_member,
@@ -463,7 +467,7 @@ class CustomerController extends Controller
                 'invoice' => $t->invoice,
                 'total' => $t->grand_total,
                 'payment_method' => $t->payment_method,
-                'date' => \Carbon\Carbon::parse($t->created_at)->format('d M Y H:i'),
+                'date' => Carbon::parse($t->created_at)->format('d M Y H:i'),
             ]);
     }
 

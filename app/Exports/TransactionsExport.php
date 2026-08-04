@@ -5,11 +5,11 @@ namespace App\Exports;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class TransactionsExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class TransactionsExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping
 {
     protected Request $request;
 
