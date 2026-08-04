@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Reports;
 
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerCampaign;
@@ -300,7 +301,7 @@ class AdvancedSalesInsightsTest extends TestCase
             'starts_at' => now()->addDays(2),
         ]);
 
-        \App\Models\AuditLog::create([
+        AuditLog::create([
             'event' => 'pricing_rule.created',
             'module' => 'pricing_rules',
             'description' => 'Rule promo dibuat.',

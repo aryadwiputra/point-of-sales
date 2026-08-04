@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\LoyaltyPointHistory;
+use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Transaction;
 use Carbon\CarbonInterface;
@@ -205,8 +206,8 @@ class LoyaltyService
         $taxService = app(TaxService::class);
         $items = data_get($pricingPreview, 'items', []);
         $productIds = collect($items)->pluck('product_id')->filter()->unique()->values();
-        $productTaxes = \App\Models\Product::whereIn('id', $productIds)->pluck('tax_rate', 'id');
-        $productTaxTypes = \App\Models\Product::whereIn('id', $productIds)->pluck('tax_type', 'id');
+        $productTaxes = Product::whereIn('id', $productIds)->pluck('tax_rate', 'id');
+        $productTaxTypes = Product::whereIn('id', $productIds)->pluck('tax_type', 'id');
 
         $effectiveRate = 0;
         $taxTotal = 0;

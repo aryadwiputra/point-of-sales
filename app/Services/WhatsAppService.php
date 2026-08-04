@@ -10,6 +10,7 @@ class WhatsAppService
     private function baseUrl(): ?string
     {
         $url = Setting::get('wa_service_url');
+
         return $url ?: null;
     }
 
@@ -23,6 +24,7 @@ class WhatsAppService
     {
         try {
             $res = Http::timeout(5)->get($this->baseUrl().'/status');
+
             return $res->successful() ? $res->json() : ['connected' => false, 'error' => 'unreachable'];
         } catch (\Exception $e) {
             return ['connected' => false, 'error' => $e->getMessage()];
@@ -33,6 +35,7 @@ class WhatsAppService
     {
         try {
             $res = Http::timeout(10)->post($this->baseUrl().'/start');
+
             return $res->successful() ? $res->json() : ['status' => false];
         } catch (\Exception $e) {
             return ['status' => false, 'error' => $e->getMessage()];
@@ -46,6 +49,7 @@ class WhatsAppService
                 'target' => $target,
                 'message' => $message,
             ]);
+
             return $res->successful() && ($res->json()['status'] ?? false);
         } catch (\Exception $e) {
             return false;
@@ -56,6 +60,7 @@ class WhatsAppService
     {
         try {
             $res = Http::timeout(10)->post($this->baseUrl().'/disconnect');
+
             return $res->successful();
         } catch (\Exception $e) {
             return false;

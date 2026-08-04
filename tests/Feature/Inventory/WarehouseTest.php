@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -10,8 +11,6 @@ use Database\Seeders\RoleSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-
-use App\Models\Category;
 
 class WarehouseTest extends TestCase
 {

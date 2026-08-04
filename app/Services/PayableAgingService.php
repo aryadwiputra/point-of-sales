@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Payable;
+use App\Models\Supplier;
 use Illuminate\Support\Collection;
 
 class PayableAgingService
@@ -30,7 +31,7 @@ class PayableAgingService
 
     public function getTopSuppliersByPayable(int $limit = 10): Collection
     {
-        return \App\Models\Supplier::withSum([
+        return Supplier::withSum([
             'payables as total_payable' => fn ($q) => $q->where('status', '!=', 'paid'),
         ], 'total')
             ->withSum([

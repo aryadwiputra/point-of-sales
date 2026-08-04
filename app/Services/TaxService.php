@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Product;
 use App\Models\Setting;
 
 class TaxService

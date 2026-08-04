@@ -3,6 +3,7 @@
 namespace Tests\Feature\Transactions;
 
 use App\Models\Cart;
+use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\PaymentSetting;
@@ -291,7 +292,7 @@ class TransactionFlowTest extends TestCase
 
     protected function openShiftFor(User $cashier)
     {
-        return \App\Models\CashierShift::create([
+        return CashierShift::create([
             'user_id' => $cashier->id,
             'opened_by' => $cashier->id,
             'opened_at' => now(),

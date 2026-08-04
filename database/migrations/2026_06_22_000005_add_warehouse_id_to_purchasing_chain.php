@@ -32,19 +32,24 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('sales_returns', function (Blueprint $table) {
-            $table->dropForeign(['warehouse_id']); $table->dropColumn('warehouse_id');
+            $table->dropForeign(['warehouse_id']);
+            $table->dropColumn('warehouse_id');
         });
         Schema::table('stock_opnames', function (Blueprint $table) {
-            $table->dropForeign(['warehouse_id']); $table->dropColumn('warehouse_id');
+            $table->dropForeign(['warehouse_id']);
+            $table->dropColumn('warehouse_id');
         });
         Schema::table('supplier_returns', function (Blueprint $table) {
-            $table->dropForeign(['warehouse_id']); $table->dropColumn('warehouse_id');
+            $table->dropForeign(['warehouse_id']);
+            $table->dropColumn('warehouse_id');
         });
         Schema::table('goods_receivings', function (Blueprint $table) {
-            $table->dropForeign(['warehouse_id']); $table->dropColumn('warehouse_id');
+            $table->dropForeign(['warehouse_id']);
+            $table->dropColumn('warehouse_id');
         });
         Schema::table('purchase_orders', function (Blueprint $table) {
-            $table->dropForeign(['warehouse_id']); $table->dropColumn('warehouse_id');
+            $table->dropForeign(['warehouse_id']);
+            $table->dropColumn('warehouse_id');
         });
     }
 };

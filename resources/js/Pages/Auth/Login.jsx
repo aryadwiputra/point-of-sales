@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
+import { useTranslation } from "react-i18next";
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
 import {
     IconShoppingCart,
@@ -12,6 +13,7 @@ import {
 import { useState } from "react";
 
 export default function Login({ status, canResetPassword, canRegister, botGuard }) {
+    const { t } = useTranslation();
     const honeypotField = botGuard?.honeypot_field || "company_website";
     const tokenField = botGuard?.token_field || "bot_guard_token";
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -34,7 +36,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
 
     return (
         <>
-            <Head title="Masuk" />
+            <Head title={t("auth.login.title")} />
 
             <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
                 {/* Left - Form */}
@@ -53,14 +55,14 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                     />
                                 </div>
                                 <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    Aplikasi Kasir
+                                    {t("auth.login.appName")}
                                 </span>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                                Selamat Datang Kembali
+                                {t("auth.login.subtitle")}
                             </h1>
                             <p className="mt-2 text-slate-600 dark:text-slate-400">
-                                Masuk untuk mengakses dashboard Anda
+                                {t("auth.login.description")}
                             </p>
                         </div>
 
@@ -86,7 +88,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             {/* Email */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Email
+                                    {t("auth.login.email")}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -98,7 +100,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         onChange={(e) =>
                                             setData("email", e.target.value)
                                         }
-                                        placeholder="nama@email.com"
+                                        placeholder={t("auth.login.emailPlaceholder")}
                                         className={`w-full h-12 pl-12 pr-4 rounded-xl border-2 ${
                                             errors.email
                                                 ? "border-danger-500 focus:border-danger-500"
@@ -116,7 +118,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             {/* Password */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    Password
+                                    {t("auth.login.password")}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -130,7 +132,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         onChange={(e) =>
                                             setData("password", e.target.value)
                                         }
-                                        placeholder="••••••••"
+                                        placeholder={t("auth.login.passwordPlaceholder")}
                                         className={`w-full h-12 pl-12 pr-12 rounded-xl border-2 ${
                                             errors.password
                                                 ? "border-danger-500 focus:border-danger-500"
@@ -173,7 +175,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-500 focus:ring-primary-500"
                                     />
                                     <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        Ingat saya
+                                        {t("auth.login.remember")}
                                     </span>
                                 </label>
 
@@ -182,7 +184,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         href={route("password.request")}
                                         className="text-sm text-primary-500 hover:text-primary-600 font-medium"
                                     >
-                                        Lupa Password?
+                                        {t("auth.login.forgotPassword")}
                                     </Link>
                                 )}
                             </div>
@@ -199,22 +201,22 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                             size={20}
                                             className="animate-spin"
                                         />
-                                        Memproses...
+                                        {t("common.labels.processing")}
                                     </>
                                 ) : (
-                                    "Masuk"
+                                    t("auth.login.submit")
                                 )}
                             </button>
 
                             {/* Register Link */}
                             {canRegister && (
                                 <p className="text-center text-sm text-slate-600 dark:text-slate-400">
-                                    Belum punya akun?{" "}
+                                    {t("auth.login.noAccount")}{" "}
                                     <Link
                                         href="/register"
                                         className="text-primary-500 hover:text-primary-600 font-semibold"
                                     >
-                                        Daftar Sekarang
+                                        {t("auth.login.registerLink")}
                                     </Link>
                                 </p>
                             )}
@@ -229,19 +231,13 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             <IconShoppingCart size={48} />
                         </div>
                         <h2 className="text-3xl font-bold mb-4">
-                            Kelola Bisnis Anda dengan Mudah
+                            {t("auth.login.heroTitle")}
                         </h2>
                         <p className="text-lg opacity-90">
-                            Sistem Point of Sale modern yang membantu Anda
-                            mengelola transaksi, inventori, dan laporan keuangan
-                            dengan efisien.
+                            {t("auth.login.heroDescription")}
                         </p>
                         <div className="mt-8 flex flex-wrap justify-center gap-3">
-                            {[
-                                "Transaksi Cepat",
-                                "Laporan Real-time",
-                                "Multi User",
-                            ].map((feature, i) => (
+                            {t("auth.login.features", { returnObjects: true }).map((feature, i) => (
                                 <span
                                     key={i}
                                     className="px-4 py-2 bg-white/20 rounded-full text-sm font-medium"

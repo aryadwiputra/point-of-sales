@@ -3,6 +3,7 @@
 namespace Tests\Feature\Loyalty;
 
 use App\Models\Cart;
+use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
@@ -247,7 +248,7 @@ class LoyaltyFlowTest extends TestCase
 
     private function openShiftFor(User $cashier)
     {
-        return \App\Models\CashierShift::create([
+        return CashierShift::create([
             'user_id' => $cashier->id,
             'opened_by' => $cashier->id,
             'opened_at' => now(),

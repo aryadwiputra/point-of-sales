@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\SalesReturn;
 
+use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
@@ -421,7 +422,7 @@ class SalesReturnTest extends TestCase
 
     private function openShiftFor(User $user)
     {
-        return \App\Models\CashierShift::create([
+        return CashierShift::create([
             'user_id' => $user->id,
             'opened_by' => $user->id,
             'opened_at' => now(),

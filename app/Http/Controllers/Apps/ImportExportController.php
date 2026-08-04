@@ -9,6 +9,8 @@ use App\Http\Controllers\Controller;
 use App\Imports\CustomersImport;
 use App\Imports\ProductsImport;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ImportExportController extends Controller
@@ -63,10 +65,19 @@ class ImportExportController extends Controller
         };
 
         return Excel::download(
-            new class($headings) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+            new class($headings) implements FromArray, WithHeadings
+            {
                 public function __construct(private array $headings) {}
-                public function headings(): array { return $this->headings; }
-                public function array(): array { return []; }
+
+                public function headings(): array
+                {
+                    return $this->headings;
+                }
+
+                public function array(): array
+                {
+                    return [];
+                }
             },
             "template-{$type}.xlsx"
         );

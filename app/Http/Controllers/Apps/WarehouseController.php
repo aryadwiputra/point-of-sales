@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ class WarehouseController extends Controller
         $warehouse = Warehouse::create($validated);
 
         // Sync all existing products to this warehouse with 0 stock
-        $productIds = \App\Models\Product::pluck('id');
+        $productIds = Product::pluck('id');
         $warehouse->products()->syncWithPivotValues(
             $productIds,
             ['stock' => 0]

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { usePage } from "@inertiajs/react";
 import { IconMenu2, IconMoon, IconSun, IconSearch } from "@tabler/icons-react";
 import AuthDropdown from "@/Components/Dashboard/AuthDropdown";
+import LanguageSwitcher from "@/Components/Dashboard/LanguageSwitcher";
 import Menu from "@/Utils/Menu";
 import Notification from "@/Components/Dashboard/Notification";
 
@@ -75,6 +76,9 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
+                {/* Language Switcher */}
+                <LanguageSwitcher />
+
                 {/* Theme Toggle */}
                 <button
                     onClick={themeSwitcher}

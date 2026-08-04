@@ -80,12 +80,15 @@ class Product extends Model
 
     public function compositeStock(): int
     {
-        if (! $this->is_composite) return $this->stockTotal();
+        if (! $this->is_composite) {
+            return $this->stockTotal();
+        }
         $minStock = null;
         foreach ($this->components as $component) {
             $available = (int) floor($component->stockTotal() / max(1, (float) $component->pivot->qty));
             $minStock = $minStock === null ? $available : min($minStock, $available);
         }
+
         return $minStock ?? 0;
     }
 
@@ -116,16 +119,22 @@ class Product extends Model
 
     public function isLowStock(?int $warehouseId = null): bool
     {
-        if ($this->min_stock <= 0) return false;
+        if ($this->min_stock <= 0) {
+            return false;
+        }
         $stock = $warehouseId
             ? (int) ($this->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
             : $this->stockTotal();
+
         return $stock <= $this->min_stock;
     }
 
     public function suggestedOrderQty(): int
     {
-        if ($this->max_stock <= 0 || $this->min_stock <= 0) return 0;
+        if ($this->max_stock <= 0 || $this->min_stock <= 0) {
+            return 0;
+        }
+
         return max(0, $this->max_stock - $this->stockTotal());
     }
 

@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class PasswordConfirmationTest extends TestCase
@@ -45,10 +47,10 @@ class PasswordConfirmationTest extends TestCase
     public function test_sensitive_routes_redirect_to_confirm_password_when_recent_confirmation_is_missing(): void
     {
         $user = User::factory()->create();
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'transactions-confirm-payment', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'transactions-confirm-payment', 'guard_name' => 'web']);
         $user->givePermissionTo('transactions-confirm-payment');
 
-        $transaction = \App\Models\Transaction::create([
+        $transaction = Transaction::create([
             'cashier_id' => $user->id,
             'invoice' => 'TRX-CONFIRM',
             'cash' => 0,
