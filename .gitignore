@@ -22,3 +22,7 @@ yarn-error.log
 # WhatsApp Service
 whatsapp-service/.wwebjs_cache/
 whatsapp-service/session/
+
+# Internal docs (private)
+planning/
+.opencode/
