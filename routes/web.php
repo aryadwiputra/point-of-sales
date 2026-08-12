@@ -56,6 +56,12 @@ Route::get('/', function () {
     ]);
 });
 
+// Public marketing pages (open source)
+Route::get('/fitur', fn () => Inertia::render('Public/Features'))->name('features.index');
+Route::get('/dokumentasi', fn () => Inertia::render('Public/Documentation'))->name('documentation.index');
+Route::get('/roadmap', fn () => Inertia::render('Public/Roadmap'))->name('roadmap.index');
+Route::get('/kontribusi', fn () => Inertia::render('Public/Contributing'))->name('contributing.index');
+
 Route::get('/dashboard/access', function () {
     return Inertia::render('Dashboard/Access');
 })->middleware(['auth', 'verified'])->name('dashboard.access');
