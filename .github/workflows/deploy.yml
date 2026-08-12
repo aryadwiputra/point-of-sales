@@ -96,7 +96,10 @@ jobs:
             sudo -u deploy php8.4 artisan storage:link || true
 
             echo "==> Permissions"
-            sudo chown -R deploy:deploy storage bootstrap/cache public/build
+            # deploy owns, www-data (php-fpm) needs group write
+            sudo chown -R deploy:www-data storage bootstrap/cache
+            sudo chmod -R g+w storage bootstrap/cache
+            sudo chown -R deploy:deploy public/build
 
             echo "==> Reload PHP-FPM"
             sudo systemctl reload php8.4-fpm
