@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->user()?->id ?: $request->ip());
         });
 
+        // API documentation (Scramble) is public — open source project, docs should be viewable
+        // by anyone. Protect via SCRAMBLE_DOCS_TOKEN env if desired (RestrictedDocsAccess).
+        \Illuminate\Support\Facades\Gate::define('viewApiDocs', fn () => true);
+
         $issues = ProductionSecurityBaseline::issues();
 
         if ($issues !== []) {
