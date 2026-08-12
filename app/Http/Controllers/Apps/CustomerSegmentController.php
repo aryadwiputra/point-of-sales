@@ -32,7 +32,7 @@ class CustomerSegmentController extends Controller
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
             ->orderBy('type')
             ->orderBy('name')
-            ->paginate(10)->withQueryString()
+            ->paginate($this->perPage())->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/CustomerSegments/Index', [

@@ -42,7 +42,7 @@ class CustomerController extends Controller
                     ->where('name', 'like', '%'.$search.'%')
                     ->orWhere('member_code', 'like', '%'.$search.'%');
             });
-        })->latest()->paginate(10)->withQueryString();
+        })->latest()->paginate($this->perPage())->withQueryString();
 
         // return inertia
         return Inertia::render('Dashboard/Customers/Index', [

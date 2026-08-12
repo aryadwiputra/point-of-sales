@@ -36,7 +36,7 @@ class PurchaseOrderController extends Controller
             ->when($filters['supplier'], fn ($q, $s) => $q->where('supplier_id', $s))
             ->when($filters['search'], fn ($q, $s) => $q->where('document_number', 'like', "%{$s}%"));
 
-        $orders = $query->paginate(10)->withQueryString();
+        $orders = $query->paginate($this->perPage())->withQueryString();
         $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Dashboard/PurchaseOrders/Index', [

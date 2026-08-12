@@ -38,7 +38,7 @@ class AuditLogController extends Controller
                 });
             })
             ->latest('created_at')
-            ->paginate(15)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         $auditLogs->through(fn (AuditLog $log) => $this->transformSummary($log));

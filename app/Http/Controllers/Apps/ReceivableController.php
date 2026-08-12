@@ -43,7 +43,7 @@ class ReceivableController extends Controller
             $q->whereDate('due_date', '<=', $date);
         });
 
-        $receivables = $query->paginate(10)->withQueryString();
+        $receivables = $query->paginate($this->perPage())->withQueryString();
         $receivables->getCollection()->transform(function ($item) {
             if ($item->status !== 'paid' && $item->due_date && now()->gt($item->due_date)) {
                 $item->status = 'overdue';

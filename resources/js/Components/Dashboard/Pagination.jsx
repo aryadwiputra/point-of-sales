@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "@inertiajs/react";
+import React, { useState } from "react";
+import { Link, router } from "@inertiajs/react";
 import {
     IconChevronRight,
     IconChevronLeft,
@@ -13,6 +13,20 @@ import {
  */
 export default function Pagination({ links }) {
     if (!links || links.length <= 3) return null;
+
+    const [perPage, setPerPage] = useState(
+        () => new URLSearchParams(window.location.search).get("per_page") || "10"
+    );
+
+    const changePerPage = (value) => {
+        setPerPage(value);
+        const url = new URL(window.location.href);
+        url.searchParams.set("per_page", value);
+        router.get(url.pathname + url.search, {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
     const numericLabels = links
         .map((l) => l.label)
@@ -45,10 +59,27 @@ export default function Pagination({ links }) {
             aria-label="Pagination"
             className="mt-4 lg:mt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
         >
-            <p className="text-sm text-slate-500 dark:text-slate-400 order-2 sm:order-1">
-                Halaman <span className="font-medium text-slate-700 dark:text-slate-200">{current}</span> dari{" "}
-                <span className="font-medium text-slate-700 dark:text-slate-200">{total}</span>
-            </p>
+            <div className="order-2 sm:order-1 flex items-center gap-3 flex-wrap">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Halaman <span className="font-medium text-slate-700 dark:text-slate-200">{current}</span> dari{" "}
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{total}</span>
+                </p>
+
+                <label className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                    <span className="hidden sm:inline">Tampilkan</span>
+                    <select
+                        value={perPage}
+                        onChange={(e) => changePerPage(e.target.value)}
+                        className="py-1 px-2 rounded-lg text-sm border bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-800 border-slate-200 focus:outline-none focus:ring-0"
+                        aria-label="Jumlah data per halaman"
+                    >
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                    <span className="hidden sm:inline">per halaman</span>
+                </label>
+            </div>
 
             <ul className="order-1 sm:order-2 flex flex-wrap items-center justify-end gap-1.5">
                 {links.map((item, i) => {

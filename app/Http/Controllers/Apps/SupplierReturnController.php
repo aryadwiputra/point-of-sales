@@ -35,7 +35,7 @@ class SupplierReturnController extends Controller
             ->when($filters['supplier'], fn ($q, $s) => $q->where('supplier_id', $s))
             ->when($filters['search'], fn ($q, $s) => $q->where('document_number', 'like', "%{$s}%"));
 
-        $returns = $query->paginate(10)->withQueryString();
+        $returns = $query->paginate($this->perPage())->withQueryString();
         $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Dashboard/SupplierReturns/Index', [

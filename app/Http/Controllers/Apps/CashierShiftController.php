@@ -43,7 +43,7 @@ class CashierShiftController extends Controller
 
         $query = $this->cashierShiftService->visibleToUser($query, $request->user());
 
-        $shifts = $query->paginate(10)->withQueryString();
+        $shifts = $query->paginate($this->perPage())->withQueryString();
         $shifts->through(fn (CashierShift $shift) => $this->transformShift($shift));
 
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);

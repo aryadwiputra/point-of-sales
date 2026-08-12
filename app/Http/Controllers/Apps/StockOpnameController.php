@@ -54,7 +54,7 @@ class StockOpnameController extends Controller
             ->when($filters['warehouse_id'], fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
             ->withCount('items')
             ->latest()
-            ->paginate(10)->withQueryString()
+            ->paginate($this->perPage())->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/StockOpnames/Index', [

@@ -45,7 +45,7 @@ class CustomerVoucherController extends Controller
                 };
             })
             ->latest()
-            ->paginate(10)
+            ->paginate($this->perPage())
             ->withQueryString();
 
         return Inertia::render('Dashboard/CustomerVouchers/Index', [

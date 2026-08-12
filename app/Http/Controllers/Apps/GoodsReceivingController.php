@@ -31,7 +31,7 @@ class GoodsReceivingController extends Controller
         $query->when($filters['search'], fn ($q, $s) => $q->where('document_number', 'like', "%{$s}%"))
             ->when($filters['purchase_order_id'], fn ($q, $id) => $q->where('purchase_order_id', $id));
 
-        $receivings = $query->paginate(10)->withQueryString();
+        $receivings = $query->paginate($this->perPage())->withQueryString();
 
         return Inertia::render('Dashboard/GoodsReceivings/Index', [
             'receivings' => $receivings,

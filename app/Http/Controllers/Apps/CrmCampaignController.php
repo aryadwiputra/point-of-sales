@@ -31,7 +31,7 @@ class CrmCampaignController extends Controller
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
             ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))
             ->orderByDesc('created_at')
-            ->paginate(10)->withQueryString()
+            ->paginate($this->perPage())->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/CrmCampaigns/Index', [

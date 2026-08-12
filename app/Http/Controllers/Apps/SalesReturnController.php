@@ -63,7 +63,7 @@ class SalesReturnController extends Controller
             ->when($filters['return_type'], fn (Builder $query, $returnType) => $query->where('return_type', $returnType))
             ->withCount('items')
             ->latest()
-            ->paginate(10)->withQueryString()
+            ->paginate($this->perPage())->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/SalesReturns/Index', [

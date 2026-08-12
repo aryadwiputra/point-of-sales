@@ -811,7 +811,7 @@ class TransactionController extends Controller
                 $builder->where('warehouse_id', $warehouseId);
             });
 
-        $transactions = $query->paginate(10)->withQueryString();
+        $transactions = $query->paginate($this->perPage())->withQueryString();
         $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
         $transactions->through(function (Transaction $transaction) use ($salesReturnTablesReady) {
             $canCreateSalesReturn = false;

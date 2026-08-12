@@ -66,7 +66,7 @@ class PricingRuleController extends Controller
             ->orderByDesc('is_active')
             ->orderByDesc('priority')
             ->orderBy('name')
-            ->paginate(10)
+            ->paginate($this->perPage())
             ->withQueryString()
             ->through(fn (PricingRule $rule) => [
                 'id' => $rule->id,
