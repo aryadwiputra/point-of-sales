@@ -56,7 +56,14 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             // Session expired / not logged in → redirect to login (bukan 500)
+            // But for JSON/API requests, return 401 JSON instead.
             if ($exception instanceof AuthenticationException) {
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'message' => 'Unauthenticated.',
+                    ], Response::HTTP_UNAUTHORIZED);
+                }
+
                 return redirect()->guest(route('login'));
             }
 
