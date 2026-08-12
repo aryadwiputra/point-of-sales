@@ -26,3 +26,6 @@ whatsapp-service/session/
 # Internal docs (private)
 planning/
 .opencode/
+
+# dompdf runtime font cache (machine-specific, regenerated at runtime)
+/storage/fonts
