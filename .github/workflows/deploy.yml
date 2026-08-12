@@ -1,0 +1,90 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: CI (Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo, pdo_mysql, sqlite3, zip, gd, exif
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate composer
+        run: composer validate --no-check-publish
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install JS dependencies
+        run: PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
+  deploy:
+    name: Deploy to VPS
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /var/www/kasir.aryadwip.com
+
+            echo "==> Sync code to production (main)"
+            sudo -u deploy git fetch origin
+            sudo -u deploy git reset --hard origin/main
+            sudo -u deploy git clean -fd
+
+            echo "==> Backend dependencies"
+            sudo -u deploy /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+            echo "==> Frontend dependencies + build"
+            sudo -u deploy bash -lc 'export PATH=/home/deploy/.nvm/versions/node/v24.15.0/bin:$PATH; cd /var/www/kasir.aryadwip.com && PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund && npm run build'
+
+            echo "==> Laravel housekeeping"
+            sudo -u deploy php8.4 artisan migrate --force
+            sudo -u deploy php8.4 artisan config:clear
+            sudo -u deploy php8.4 artisan view:clear
+            sudo -u deploy php8.4 artisan route:clear
+            sudo -u deploy php8.4 artisan storage:link || true
+
+            echo "==> Permissions"
+            sudo chown -R deploy:deploy storage bootstrap/cache public/build
+
+            echo "==> Reload PHP-FPM"
+            sudo systemctl reload php8.4-fpm
+
+            echo "==> Verify"
+            sleep 3
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dikasir.web.id/)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Deploy OK (HTTP $HTTP_CODE)"
+            else
+              echo "❌ Deploy check failed (HTTP $HTTP_CODE)"
+              exit 1
+            fi
