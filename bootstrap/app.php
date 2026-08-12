@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureRecentPasswordConfirmation;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecureHeaders;
 use App\Http\Middleware\SetLocale;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -52,6 +53,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $exception, Request $request) {
             if ($exception instanceof ValidationException) {
                 return null;
+            }
+
+            // Session expired / not logged in → redirect to login (bukan 500)
+            if ($exception instanceof AuthenticationException) {
+                return redirect()->guest(route('login'));
             }
 
             $status = match (true) {
