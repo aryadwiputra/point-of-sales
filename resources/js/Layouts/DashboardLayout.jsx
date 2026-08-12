@@ -7,6 +7,7 @@ import { useTheme } from "@/Context/ThemeSwitcherContext";
 
 export default function AppLayout({ children }) {
     const { darkMode, themeSwitcher } = useTheme();
+    const { url } = usePage();
     const { auth, security } = usePage().props;
 
     const getInitialSidebarState = () => {
@@ -24,6 +25,13 @@ export default function AppLayout({ children }) {
     useEffect(() => {
         localStorage.setItem("sidebarOpen", sidebarOpen);
     }, [sidebarOpen]);
+
+    // Auto-close sidebar on mobile after navigation
+    useEffect(() => {
+        if (isMobile) {
+            setSidebarOpen(false);
+        }
+    }, [url]);
 
     useEffect(() => {
         const handleResize = () => {

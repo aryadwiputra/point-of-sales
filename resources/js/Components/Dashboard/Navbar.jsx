@@ -7,8 +7,11 @@ import Menu from "@/Utils/Menu";
 import Notification from "@/Components/Dashboard/Notification";
 
 export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
-    const { auth } = usePage().props;
+    const { auth, storeProfile } = usePage().props;
     const menuNavigation = Menu();
+
+    const storeName = storeProfile?.name || "KASIR";
+    const storeInitial = storeName?.charAt(0)?.toUpperCase() || "K";
 
     // Get current page title
     const links = menuNavigation.flatMap((item) => item.details);
@@ -58,10 +61,10 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                 {/* Mobile Logo */}
                 <div className="md:hidden flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-                        <span className="text-white font-bold text-xs">K</span>
+                        <span className="text-white font-bold text-xs">{storeInitial}</span>
                     </div>
                     <span className="text-lg font-bold text-slate-800 dark:text-white">
-                        KASIR
+                        {storeName}
                     </span>
                 </div>
 

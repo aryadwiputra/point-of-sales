@@ -29,7 +29,7 @@ class ProductController extends Controller
     {
         $products = Product::when($request->search, function ($products, $search) {
             $products = $products->where('title', 'like', '%'.$search.'%');
-        })->with('category')->latest()->paginate(5);
+        })->with('category')->latest()->paginate(10)->withQueryString();
 
         $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
 

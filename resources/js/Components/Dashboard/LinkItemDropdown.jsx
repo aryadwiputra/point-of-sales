@@ -9,13 +9,17 @@ import { isSuperAdmin } from "@/Utils/authorization";
 
 export default function LinkItemDropdown({ icon, title, data, access, sidebarOpen, ...props }) {
     const { url } = usePage();
-    const [isOpen, setIsOpen] = useState(false);
     const { auth } = usePage().props;
     const superAdmin = isSuperAdmin(auth);
 
     const visibleItems = useMemo(
         () => data.filter((item) => superAdmin || item.permissions === true),
         [data, superAdmin]
+    );
+
+    // Auto-open dropdown when current URL is inside this submenu
+    const [isOpen, setIsOpen] = useState(() =>
+        visibleItems.some((item) => url === item.href)
     );
 
     const canRenderParent = superAdmin || access === true || visibleItems.length > 0;
@@ -55,6 +59,12 @@ export default function LinkItemDropdown({ icon, title, data, access, sidebarOpe
                     <Link
                         key={index}
                         href={item.href}
+                        onClick={() => {
+                            // Collapse submenu after navigating on mobile
+                            if (window.innerWidth < 768) {
+                                setIsOpen(false);
+                            }
+                        }}
                         className={`${
                             url === item.href &&
                             "border-r-2 border-r-gray-400 bg-gray-100 text-gray-700 dark:border-r-gray-500 dark:bg-gray-900 dark:text-white"

@@ -56,7 +56,7 @@ class MemberController extends Controller
 
         $members = (clone $baseQuery)
             ->latest()
-            ->paginate(10)
+            ->paginate(10)->withQueryString()
             ->withQueryString();
 
         $summaryQuery = Customer::query()

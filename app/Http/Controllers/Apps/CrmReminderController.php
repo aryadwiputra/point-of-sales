@@ -23,7 +23,7 @@ class CrmReminderController extends Controller
         $campaigns = $this->crmAutomationService->reminderCampaignsQuery()
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
             ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))
-            ->paginate(10)
+            ->paginate(10)->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/CrmReminders/Index', [

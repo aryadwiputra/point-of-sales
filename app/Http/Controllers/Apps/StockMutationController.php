@@ -30,7 +30,7 @@ class StockMutationController extends Controller
             ->when($filters['date_to'], fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
             ->when($filters['warehouse_id'], fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
             ->latest()
-            ->paginate(15)
+            ->paginate(15)->withQueryString()
             ->withQueryString();
 
         return Inertia::render('Dashboard/StockMutations/Index', [

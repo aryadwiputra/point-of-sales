@@ -21,7 +21,7 @@ class CategoryController extends Controller
         // get categories
         $categories = Category::when(request()->search, function ($categories) {
             $categories = $categories->where('name', 'like', '%'.request()->search.'%');
-        })->latest()->paginate(2);
+        })->latest()->paginate(10)->withQueryString();
 
         // return inertia
         return Inertia::render('Dashboard/Categories/Index', [
