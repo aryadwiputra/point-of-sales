@@ -1,8 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\PosApiController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Controllers\Api\PaymentWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +47,38 @@ Route::prefix('v1')->group(function () {
             'show' => 'api.products.show',
             'update' => 'api.products.update',
             'destroy' => 'api.products.destroy',
+        ]);
+
+        Route::apiResource('customers', CustomerController::class)->names([
+            'index' => 'api.customers.index',
+            'store' => 'api.customers.store',
+            'show' => 'api.customers.show',
+            'update' => 'api.customers.update',
+            'destroy' => 'api.customers.destroy',
+        ]);
+
+        Route::apiResource('categories', CategoryController::class)->names([
+            'index' => 'api.categories.index',
+            'store' => 'api.categories.store',
+            'show' => 'api.categories.show',
+            'update' => 'api.categories.update',
+            'destroy' => 'api.categories.destroy',
+        ]);
+
+        Route::apiResource('warehouses', WarehouseController::class)->names([
+            'index' => 'api.warehouses.index',
+            'store' => 'api.warehouses.store',
+            'show' => 'api.warehouses.show',
+            'update' => 'api.warehouses.update',
+            'destroy' => 'api.warehouses.destroy',
+        ]);
+
+        Route::apiResource('suppliers', SupplierController::class)->names([
+            'index' => 'api.suppliers.index',
+            'store' => 'api.suppliers.store',
+            'show' => 'api.suppliers.show',
+            'update' => 'api.suppliers.update',
+            'destroy' => 'api.suppliers.destroy',
         ]);
 
         // POS (mobile kasir)
