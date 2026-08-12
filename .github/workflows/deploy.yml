@@ -56,6 +56,9 @@ jobs:
             cd /var/www/kasir.aryadwip.com
             export GIT_SSH_COMMAND="ssh -o ConnectTimeout=20 -o BatchMode=yes"
 
+            # Ensure deploy user can modify the web root (fix root-owned dirs from manual ops)
+            sudo chown -R deploy:deploy public
+
             echo "==> Sync code to production (main)"
             FETCH_OK=0
             for i in 1 2 3 4 5; do
