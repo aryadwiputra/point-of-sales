@@ -66,7 +66,7 @@ class PosApiController extends Controller
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $warehouseId = $validated['warehouse_id'];
+        $warehouseId = $validated['warehouse_id'] ?? null;
         if (! $warehouseId) {
             $warehouse = Warehouse::active()->orderBy('code')->first();
             $warehouseId = $warehouse?->id;
