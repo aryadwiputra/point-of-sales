@@ -67,7 +67,7 @@ jobs:
               sleep 8
             done
             [ "$FETCH_OK" = "1" ] || { echo "❌ git fetch failed after 5 attempts"; exit 1; }
-            sudo -u deploy git reset --hard origin/main
+            sudo -u deploy git checkout -B main origin/main
             sudo -u deploy git clean -fd
 
             echo "==> Backend dependencies"
