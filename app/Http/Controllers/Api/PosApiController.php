@@ -172,7 +172,7 @@ class PosApiController extends Controller
         $shift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
         $warehouseId = $shift?->warehouse_id;
 
-        $product = Product::where('barcode', $validated['barcode'])
+        $product = Product::whereRaw('LOWER(barcode) = ?', [strtolower($validated['barcode'])])
             ->when($warehouseId, fn ($q) => $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)))
             ->first();
 
