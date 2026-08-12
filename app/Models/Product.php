@@ -14,6 +14,8 @@ class Product extends Model
     protected $casts = [
         'id' => 'integer',
         'category_id' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'buy_price' => 'integer',
         'sell_price' => 'integer',
         'stock' => 'integer',

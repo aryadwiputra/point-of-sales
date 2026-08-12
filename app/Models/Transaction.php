@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -54,6 +52,8 @@ class Transaction extends Model
         'cashier_id' => 'integer',
         'cashier_shift_id' => 'integer',
         'customer_id' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'cash' => 'integer',
         'change' => 'integer',
         'discount' => 'integer',
@@ -170,15 +170,5 @@ class Transaction extends Model
         }
 
         return false;
-    }
-
-    /**
-     * createdAt
-     */
-    protected function createdAt(): Attribute
-    {
-        return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->format('d-M-Y H:i:s'),
-        );
     }
 }
