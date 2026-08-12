@@ -54,17 +54,36 @@ jobs:
           script: |
             set -e
             cd /var/www/kasir.aryadwip.com
+            export GIT_SSH_COMMAND="ssh -o ConnectTimeout=20 -o BatchMode=yes"
 
             echo "==> Sync code to production (main)"
-            sudo -u deploy git fetch origin
+            FETCH_OK=0
+            for i in 1 2 3 4 5; do
+              if sudo -u deploy git fetch origin; then FETCH_OK=1; break; fi
+              echo "git fetch failed (attempt $i/5), retrying in 8s..."
+              sleep 8
+            done
+            [ "$FETCH_OK" = "1" ] || { echo "❌ git fetch failed after 5 attempts"; exit 1; }
             sudo -u deploy git reset --hard origin/main
             sudo -u deploy git clean -fd
 
             echo "==> Backend dependencies"
-            sudo -u deploy /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+            COMPOSER_OK=0
+            for i in 1 2 3; do
+              if sudo -u deploy /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-progress; then COMPOSER_OK=1; break; fi
+              echo "composer install failed (attempt $i/3), retrying in 8s..."
+              sleep 8
+            done
+            [ "$COMPOSER_OK" = "1" ] || { echo "❌ composer install failed after 3 attempts"; exit 1; }
 
             echo "==> Frontend dependencies + build"
-            sudo -u deploy bash -lc 'export PATH=/home/deploy/.nvm/versions/node/v24.15.0/bin:$PATH; cd /var/www/kasir.aryadwip.com && PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund && npm run build'
+            NPM_OK=0
+            for i in 1 2 3; do
+              if sudo -u deploy bash -lc 'export PATH=/home/deploy/.nvm/versions/node/v24.15.0/bin:$PATH; cd /var/www/kasir.aryadwip.com && PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund && npm run build'; then NPM_OK=1; break; fi
+              echo "npm ci/build failed (attempt $i/3), retrying in 8s..."
+              sleep 8
+            done
+            [ "$NPM_OK" = "1" ] || { echo "❌ npm ci/build failed after 3 attempts"; exit 1; }
 
             echo "==> Laravel housekeeping"
             sudo -u deploy php8.4 artisan migrate --force
