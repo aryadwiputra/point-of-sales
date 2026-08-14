@@ -39,6 +39,7 @@ import {
     IconAlertCircle,
     IconListDetails,
     IconBrandWhatsapp,
+    IconToolsKitchen2,
 } from "@tabler/icons-react";
 import hasAnyPermission from "./Permission";
 import React from "react";
@@ -249,6 +250,32 @@ export default function Menu() {
                     active: url.startsWith("/dashboard/crm-reminders"),
                     icon: <IconClockHour6 size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["crm-reminders-access"]),
+                },
+            ],
+        },
+        {
+            title: t("sidebar.sections.dineIn"),
+            details: [
+                {
+                    title: t("sidebar.items.dineAreas"),
+                    href: route("dine-areas.index"),
+                    active: url.startsWith("/dashboard/dine-areas"),
+                    icon: <IconFolder size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["dine-tables-access"]),
+                },
+                {
+                    title: t("sidebar.items.dineTables"),
+                    href: route("dine-tables.index"),
+                    active: url.startsWith("/dashboard/dine-tables"),
+                    icon: <IconTable size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["dine-tables-access"]),
+                },
+                {
+                    title: t("sidebar.items.dineOrders"),
+                    href: route("dine-orders.index"),
+                    active: url.startsWith("/dashboard/dine-orders"),
+                    icon: <IconToolsKitchen2 size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["dine-orders-access"]),
                 },
             ],
         },

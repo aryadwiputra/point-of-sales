@@ -159,6 +159,14 @@ class PermissionSeeder extends Seeder
         $create('whatsapp-settings-access');
         $create('whatsapp-settings-update');
 
+        // dine-in
+        $create('dine-tables-access');
+        $create('dine-tables-create');
+        $create('dine-tables-update');
+        $create('dine-tables-delete');
+        $create('dine-orders-access');
+        $create('dine-orders-process');
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
