@@ -57,6 +57,9 @@ class RoleSeeder extends Seeder
         $this->createRoleWithPermissions('price-lists-access', '%price-lists%');
         $this->createRoleWithPermissions('warehouses-access', '%warehouses%');
 
+        $this->createRoleWithPermissions('dine-tables-access', '%dine-tables%');
+        $this->createRoleWithPermissions('dine-orders-access', '%dine-orders%');
+
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
         $superAdminRole->syncPermissions(Permission::all());
 
@@ -75,6 +78,8 @@ class RoleSeeder extends Seeder
             'payables-access',
             'payables-pay',
             'suppliers-access',
+            'dine-orders-access',
+            'dine-orders-process',
         ])->get();
         $cashierRole->syncPermissions($cashierPermissions);
 
