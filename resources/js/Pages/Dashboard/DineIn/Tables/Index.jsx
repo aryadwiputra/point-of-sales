@@ -13,7 +13,6 @@ import {
 import Table from "@/Components/Dashboard/Table";
 import Modal from "@/Components/Dashboard/Modal";
 import Input from "@/Components/Dashboard/Input";
-import Select from "@/Components/Dashboard/Select";
 import { useAuthorization } from "@/Utils/authorization";
 import toast from "react-hot-toast";
 
@@ -426,19 +425,22 @@ export default function Index({ tables, areas, filters }) {
                         placeholder="Contoh: M1, Outdoor-1"
                         required
                     />
-                    <Select
-                        label="Area"
-                        value={data.dine_area_id}
-                        onChange={(e) => setData("dine_area_id", e.target.value)}
-                        error={errors.dine_area_id}
-                    >
-                        <option value="">Tanpa Area</option>
-                        {areas.map((area) => (
-                            <option key={area.id} value={area.id}>
-                                {area.name}
-                            </option>
-                        ))}
-                    </Select>
+                    <div>
+                        <label className="text-sm text-slate-600 dark:text-slate-400 mb-1 block">Area</label>
+                        <select
+                            value={data.dine_area_id}
+                            onChange={(e) => setData("dine_area_id", e.target.value)}
+                            className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-0"
+                        >
+                            <option value="">Tanpa Area</option>
+                            {areas.map((area) => (
+                                <option key={area.id} value={area.id}>
+                                    {area.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.dine_area_id && <p className="text-xs text-danger-500 mt-1">{errors.dine_area_id}</p>}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input
                             label="Kapasitas (org)"
@@ -448,14 +450,17 @@ export default function Index({ tables, areas, filters }) {
                             onChange={(e) => setData("capacity", parseInt(e.target.value) || 1)}
                             error={errors.capacity}
                         />
-                        <Select
-                            label="Bentuk"
-                            value={data.shape}
-                            onChange={(e) => setData("shape", e.target.value)}
-                        >
-                            <option value="square">Kotak</option>
-                            <option value="circle">Bulat</option>
-                        </Select>
+                        <div>
+                            <label className="text-sm text-slate-600 dark:text-slate-400 mb-1 block">Bentuk</label>
+                            <select
+                                value={data.shape}
+                                onChange={(e) => setData("shape", e.target.value)}
+                                className="w-full px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-0"
+                            >
+                                <option value="square">Kotak</option>
+                                <option value="circle">Bulat</option>
+                            </select>
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input

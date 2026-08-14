@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Head, usePage, router } from "@inertiajs/react";
-import { IconShoppingCart, IconMinus, IconPlus, IconX, IconChecks } from "@tabler/icons-react";
+import { Head, router } from "@inertiajs/react";
+import { IconShoppingCart, IconMinus, IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 
 const fmt = (v) => Number(v || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
@@ -36,12 +36,11 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
         });
     };
 
-    const cartTotal = () => {
-        return cart.reduce((sum, item) => {
+    const cartTotal = () =>
+        cart.reduce((sum, item) => {
             const p = products.find((pr) => pr.id === item.product_id);
             return sum + (p?.sell_price ?? 0) * item.qty;
         }, 0);
-    };
 
     const cartCount = () => cart.reduce((s, i) => s + i.qty, 0);
 
@@ -56,18 +55,13 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
             return;
         }
         if (cart.length === 0) {
-            toast.error("Pilihminimal satu item.");
+            toast.error("Pilih minimal satu item.");
             return;
         }
-
         setSubmitting(true);
         router.post(
             route("dine-order.store", table.token),
-            {
-                items: cart,
-                notes,
-                payment_option: paymentOption,
-            },
+            { items: cart, notes, payment_option: paymentOption },
             {
                 onSuccess: () => setSubmitting(false),
                 onError: () => {
@@ -88,12 +82,12 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                     <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
                         <div>
                             <h1 className="font-bold text-slate-900 text-lg">{storeName}</h1>
-                            <p className="text-xs text-slate-500">Meja {table.name}{table.area_name ? ` · ${table.area_name}` : ""}</p>
+                            <p className="text-xs text-slate-500">
+                                Meja {table.name}
+                                {table.area_name ? ` · ${table.area_name}` : ""}
+                            </p>
                         </div>
-                        <button
-                            onClick={() => window.history.back()}
-                            className="text-sm text-slate-500 hover:text-slate-700"
-                        >
+                        <button onClick={() => window.history.back()} className="text-sm text-slate-500 hover:text-slate-700">
                             Kembali
                         </button>
                     </div>
@@ -178,7 +172,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-30">
                         <div className="max-w-lg mx-auto px-4 py-3">
                             <button
-                                onClick={() => document.getElementById("cart-modal").showModal()}
+                                onClick={() => document.getElementById("cart-modal")?.showModal()}
                                 className="w-full flex items-center justify-between bg-primary-500 hover:bg-primary-600 text-white rounded-xl px-4 py-3 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
@@ -204,7 +198,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                             {cart.map((item) => {
                                 const p = products.find((pr) => pr.id === item.product_id);
                                 return (
-                                    <div key={item.product_id} className="flex items-center justify-between py-2 border-b border-slate-100">
+                                    <div key={item.product_id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                                         <div>
                                             <p className="font-medium text-sm">{p?.title}</p>
                                             <p className="text-xs text-slate-500">{fmt(p?.sell_price ?? 0)}</p>
@@ -236,7 +230,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                             </div>
                             <button
                                 onClick={() => {
-                                    document.getElementById("cart-modal").close();
+                                    document.getElementById("cart-modal")?.close();
                                     handleSubmit("pay_at_counter");
                                 }}
                                 disabled={submitting}
@@ -247,7 +241,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                             {payOnlineEnabled && (
                                 <button
                                     onClick={() => {
-                                        document.getElementById("cart-modal").close();
+                                        document.getElementById("cart-modal")?.close();
                                         handleSubmit("pay_online");
                                     }}
                                     disabled={submitting}
@@ -262,7 +256,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                         <button>close</button>
                     </form>
                 </dialog>
-            </>
-        );
-    }
+            </div>
+        </>
+    );
 }
