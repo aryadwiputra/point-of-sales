@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\CashierShift;
+use App\Models\DineOrder;
 use App\Models\Payable;
 use App\Models\Product;
 use App\Models\Receivable;
@@ -36,12 +37,17 @@ class HandleInertiaRequests extends Middleware
         $payableAgingSummary = null;
         $receivableAgingSummary = null;
         $pendingApprovalCount = 0;
+        $pendingDineOrdersCount = 0;
 
         if ($request->user()) {
             $userId = $request->user()->id;
 
             if ($request->user()->can('discounts-approve')) {
                 $pendingApprovalCount = Transaction::where('discount_approval_status', 'pending')->count();
+            }
+
+            if ($request->user()->can('dine-orders-access')) {
+                $pendingDineOrdersCount = DineOrder::pending()->count();
             }
 
             $lowStockNotifications = Product::where('min_stock', '>', 0)
@@ -180,6 +186,7 @@ class HandleInertiaRequests extends Middleware
             'activeCashierShift' => $activeCashierShift,
             'storeProfile' => $storeProfile,
             'pendingApprovalCount' => $pendingApprovalCount,
+            'pendingDineOrdersCount' => $pendingDineOrdersCount,
             'appVersion' => config('app.version'),
             'security' => [
                 'warnings' => $securityWarnings,
