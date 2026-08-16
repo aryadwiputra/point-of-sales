@@ -12,6 +12,8 @@ class DiningTable extends Model
 {
     use HasFactory;
 
+    protected $table = 'dine_tables';
+
     protected $fillable = [
         'dine_area_id',
         'name',

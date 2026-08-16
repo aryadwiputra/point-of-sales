@@ -25,6 +25,7 @@ return new class extends Migration
             $table->integer('subtotal')->default(0);
             $table->integer('item_count')->default(0);
             $table->timestamps();
+            $table->timestamp('submitted_at')->nullable();
 
             $table->index('status');
             $table->index('access_token');

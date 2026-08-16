@@ -96,6 +96,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                     </div>
                                     <input
                                         type="email"
+                                        name="email"
                                         value={data.email}
                                         onChange={(e) =>
                                             setData("email", e.target.value)
@@ -128,6 +129,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         type={
                                             showPassword ? "text" : "password"
                                         }
+                                        name="password"
                                         value={data.password}
                                         onChange={(e) =>
                                             setData("password", e.target.value)
