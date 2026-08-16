@@ -49,8 +49,9 @@ export default function Button({
     return (
         <>
             {type === "link" && (
-                <Link
-                    href={href}
+                <button
+                    type="button"
+                    onClick={href ? undefined : props.onClick}
                     className={`${baseStyles} ${sizeStyles} ${className}`}
                 >
                     {icon}{" "}
@@ -59,7 +60,7 @@ export default function Button({
                     >
                         {label}
                     </span>
-                </Link>
+                </button>
             )}
             {type === "button" && (
                 <button
