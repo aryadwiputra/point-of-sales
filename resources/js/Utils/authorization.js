@@ -14,7 +14,7 @@ export function isSuperAdmin(auth = {}) {
 export function can(permission, auth = {}) {
     const state = resolveAuthorizationState(auth);
 
-    return state.super || state.permissions?.[permission] === true;
+    return state.super || !!state.permissions?.[permission];
 }
 
 export function canAny(permissions = [], auth = {}) {
