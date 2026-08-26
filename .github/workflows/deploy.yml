@@ -53,7 +53,7 @@ jobs:
           port: 22
           script: |
             set -e
-            cd /var/www/kasir.aryadwip.com
+            cd /var/www/dikasir.web.id
             export GIT_SSH_COMMAND="ssh -o ConnectTimeout=20 -o BatchMode=yes"
 
             # Ensure deploy user can modify the web root (fix root-owned dirs from manual ops)
@@ -82,7 +82,7 @@ jobs:
             echo "==> Frontend dependencies + build"
             NPM_OK=0
             for i in 1 2 3; do
-              if sudo -u deploy bash -lc 'export PATH=/home/deploy/.nvm/versions/node/v24.15.0/bin:$PATH; cd /var/www/kasir.aryadwip.com && PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund && npm run build'; then NPM_OK=1; break; fi
+              if sudo -u deploy bash -lc 'export PATH=/home/deploy/.nvm/versions/node/v24.15.0/bin:$PATH; cd /var/www/dikasir.web.id && PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund && npm run build'; then NPM_OK=1; break; fi
               echo "npm ci/build failed (attempt $i/3), retrying in 8s..."
               sleep 8
             done
