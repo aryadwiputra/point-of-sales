@@ -86,7 +86,7 @@ class TransactionController extends Controller
         $customers = Customer::latest()->get();
 
         // get products with stock > 0 in active warehouse
-        $products = Product::with('category:id,name')
+        $products = Product::with(['category:id,name', 'units'])
             ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id')
             ->when($warehouseId, function ($q) use ($warehouseId) {
                 $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
@@ -102,6 +102,14 @@ class TransactionController extends Controller
 
             return [
                 ...$product->toArray(),
+                'units' => $product->units->map(fn ($u) => [
+                    'unit_id' => $u->id,
+                    'code' => $u->code,
+                    'is_base' => (bool) $u->pivot->is_base,
+                    'conversion_factor' => (float) $u->pivot->conversion_factor,
+                    'sell_price' => (int) $u->pivot->sell_price,
+                    'barcode' => $u->pivot->barcode,
+                ]),
                 'pricing_badge' => $pricing && ! empty($pricing['pricing_rule']) ? [
                     'label' => $pricing['pricing_rule']['label'],
                     'promo_price' => $pricing['pricing_rule']['price_context']

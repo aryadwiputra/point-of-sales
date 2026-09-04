@@ -313,7 +313,7 @@ export default function Index({
     };
 
     // Handle add product to cart
-    const handleAddToCart = async (product) => {
+    const handleAddToCart = async (product, unit = null) => {
         if (!product?.id) return;
 
         setAddingProductId(product.id);
@@ -322,13 +322,14 @@ export default function Index({
             route("transactions.addToCart"),
             {
                 product_id: product.id,
-                sell_price: product.sell_price,
+                sell_price: unit ? unit.sell_price : product.sell_price,
                 qty: 1,
+                unit_id: unit ? unit.unit_id : undefined,
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success(`${product.title} ditambahkan`);
+                    toast.success(`${product.title}${unit ? ` (${unit.code})` : ""} ditambahkan`);
                     setAddingProductId(null);
                 },
                 onError: () => {

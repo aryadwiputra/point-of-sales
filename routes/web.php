@@ -31,6 +31,7 @@ use App\Http\Controllers\Apps\StockTransferController;
 use App\Http\Controllers\Apps\SupplierController;
 use App\Http\Controllers\Apps\SupplierReturnController;
 use App\Http\Controllers\Apps\TransactionController;
+use App\Http\Controllers\Apps\UnitController;
 use App\Http\Controllers\Apps\WarehouseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DineMenuController;
@@ -347,6 +348,15 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
         ->middlewareFor('store', 'permission:warehouses-create')
         ->middlewareFor('update', 'permission:warehouses-update')
         ->middlewareFor('destroy', 'permission:warehouses-delete');
+
+    // settings units
+    Route::resource('/settings/units', UnitController::class)
+        ->except('show')
+        ->names('settings.units')
+        ->middlewareFor('index', 'permission:units-access')
+        ->middlewareFor('store', 'permission:units-create')
+        ->middlewareFor('update', 'permission:units-update')
+        ->middlewareFor('destroy', 'permission:units-delete');
 
     // confirm payment for bank transfer
     Route::patch('/transactions/{transaction}/confirm-payment', [TransactionController::class, 'confirmPayment'])->middleware(['permission:transactions-confirm-payment', 'step_up'])->name('transactions.confirm-payment');
