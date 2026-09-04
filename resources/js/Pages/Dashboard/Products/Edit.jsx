@@ -32,6 +32,8 @@ export default function Edit({ categories, product, products = [], units = [] })
         sell_price: product.sell_price,
         min_stock: product.min_stock ?? "",
         max_stock: product.max_stock ?? "",
+        tax_type: product.tax_type ?? "exclusive",
+        tax_rate: product.tax_rate ?? "11",
         is_composite: product.is_composite ?? false,
         components: (product.components ?? []).map((c) => ({
             component_product_id: c.id,
@@ -549,6 +551,67 @@ export default function Edit({ categories, product, products = [], units = [] })
                                     otomatis dibuat oleh sistem (reorder:generate
                                     harian).
                                 </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        Tipe Pajak
+                                    </label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input
+                                                type="radio"
+                                                name="tax_type"
+                                                value="exclusive"
+                                                checked={
+                                                    data.tax_type ===
+                                                    "exclusive"
+                                                }
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "tax_type",
+                                                        e.target.value
+                                                    )
+                                                }
+                                            />
+                                            Exclusive
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <input
+                                                type="radio"
+                                                name="tax_type"
+                                                value="inclusive"
+                                                checked={
+                                                    data.tax_type ===
+                                                    "inclusive"
+                                                }
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "tax_type",
+                                                        e.target.value
+                                                    )
+                                                }
+                                            />
+                                            Inclusive
+                                        </label>
+                                    </div>
+                                    {errors.tax_type && (
+                                        <p className="text-xs text-danger-500 mt-1">
+                                            {errors.tax_type}
+                                        </p>
+                                    )}
+                                </div>
+                                <Input
+                                    type="number"
+                                    label="Persentase Pajak (%)"
+                                    value={data.tax_rate}
+                                    onChange={(e) =>
+                                        setData("tax_rate", e.target.value)
+                                    }
+                                    errors={errors.tax_rate}
+                                    placeholder="11"
+                                />
                             </div>
 
                             {/* Profit Estimation */}
