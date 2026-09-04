@@ -46,6 +46,7 @@ function ProductCard({
     const rowNumber = index + 1 + (currentPage - 1) * perPage;
     const lowStock = product.stock > 0 && product.stock <= 5;
     const outOfStock = product.stock === 0;
+    const isComposite = product.is_composite;
 
     return (
         <div
@@ -84,7 +85,12 @@ function ProductCard({
                 )}
 
                 {/* Stock Badge */}
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+                    {isComposite && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-primary-500 text-white rounded-full">
+                            Komposit
+                        </span>
+                    )}
                     {outOfStock ? (
                         <span className="px-2 py-1 text-xs font-semibold bg-danger-500 text-white rounded-full">
                             Habis

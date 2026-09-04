@@ -156,7 +156,10 @@ class PricingService
     private function buildPreview(Collection $carts, ?Customer $customer, Collection $rules): array
     {
         $items = $carts->map(function (Cart $cart) {
-            $baseUnitPrice = (int) $cart->product->sell_price;
+            // ponytail: composite sell_price is 0; unit price = stored cart price / qty
+            $baseUnitPrice = $cart->product->is_composite
+                ? (int) round($cart->price / max(1, (int) $cart->qty))
+                : (int) $cart->product->sell_price;
 
             return [
                 'cart_id' => $cart->id,

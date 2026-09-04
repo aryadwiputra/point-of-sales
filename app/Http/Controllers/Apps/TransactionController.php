@@ -236,6 +236,9 @@ class TransactionController extends Controller
             return redirect()->back()->with('error', 'Product not found.');
         }
 
+        // ponytail: composite branch skips unit logic; null unit_id is fine for composite carts
+        $unitId = null;
+
         // Composite: check component stock
         if ($product->is_composite) {
             $product->load('components');
