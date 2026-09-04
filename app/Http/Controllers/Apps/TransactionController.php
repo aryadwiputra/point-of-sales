@@ -12,11 +12,13 @@ use App\Models\CustomerVoucher;
 use App\Models\DiscountApprovalLog;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
+use App\Services\BatchService;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
@@ -38,7 +40,8 @@ class TransactionController extends Controller
         private readonly AuditLogService $auditLogService,
         private readonly PricingService $pricingService,
         private readonly LoyaltyService $loyaltyService,
-        private readonly PriceListService $priceListService
+        private readonly PriceListService $priceListService,
+        private readonly BatchService $batchService
     ) {}
 
     /**
@@ -706,6 +709,19 @@ class TransactionController extends Controller
                         'warehouse_id' => $activeShift->warehouse_id,
                     ])->decrement('stock', $baseQty);
                     $product->decrement('stock', $baseQty);
+
+                    // FEFO: consume batch stock when the product has batches, else legacy path unchanged
+                    if (ProductBatch::where('product_id', $product->id)
+                        ->where('warehouse_id', $activeShift->warehouse_id)
+                        ->where('stock', '>', 0)->exists()) {
+                        $allocations = $this->batchService->allocate($product, $activeShift->warehouse_id, $baseQty);
+                        foreach ($allocations as $allocation) {
+                            ProductBatch::where('id', $allocation['batch_id'])->decrement('stock', $allocation['qty']);
+                        }
+                        if ($allocations !== []) {
+                            $detail->update(['product_batch_id' => $allocations[0]['batch_id']]);
+                        }
+                    }
                 }
             }
 

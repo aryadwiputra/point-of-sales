@@ -6,6 +6,7 @@ use App\Models\CashierShift;
 use App\Models\DineOrder;
 use App\Models\Payable;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\Receivable;
 use App\Models\Setting;
 use App\Models\Transaction;
@@ -29,6 +30,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $lowStockNotifications = [];
+        $expiringBatchNotifications = [];
         $receivableNotifications = [];
         $payableNotifications = [];
         $activeCashierShift = null;
@@ -68,6 +70,23 @@ class HandleInertiaRequests extends Middleware
                         'title' => $product->title,
                         'stock' => (int) $product->stock,
                         'time' => optional($product->updated_at)->diffForHumans(),
+                    ];
+                });
+
+            $expiringBatchNotifications = ProductBatch::with('product:id,title')
+                ->where('stock', '>', 0)
+                ->whereNotNull('expired_at')
+                ->whereBetween('expired_at', [now(), now()->addDays(30)])
+                ->orderBy('expired_at')
+                ->limit(10)
+                ->get()
+                ->map(function ($batch) {
+                    return [
+                        'id' => $batch->id,
+                        'title' => $batch->product?->title,
+                        'batch_number' => $batch->batch_number,
+                        'stock' => (int) $batch->stock,
+                        'time' => optional($batch->expired_at)->diffForHumans(),
                     ];
                 });
 
@@ -179,6 +198,7 @@ class HandleInertiaRequests extends Middleware
                 ],
             ],
             'lowStockNotifications' => $lowStockNotifications,
+            'expiringBatchNotifications' => $expiringBatchNotifications,
             'receivableNotifications' => $receivableNotifications,
             'payableNotifications' => $payableNotifications,
             'payableAgingSummary' => $payableAgingSummary,
