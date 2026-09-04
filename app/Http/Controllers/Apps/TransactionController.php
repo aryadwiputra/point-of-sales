@@ -20,6 +20,7 @@ use App\Services\AuditLogService;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\UnitConversionService;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,7 +37,8 @@ class TransactionController extends Controller
         private readonly CashierShiftService $cashierShiftService,
         private readonly AuditLogService $auditLogService,
         private readonly PricingService $pricingService,
-        private readonly LoyaltyService $loyaltyService
+        private readonly LoyaltyService $loyaltyService,
+        private readonly PriceListService $priceListService
     ) {}
 
     /**
@@ -639,6 +641,7 @@ class TransactionController extends Controller
                 'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
                 'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                 'customer_npwp' => $request->customer_npwp,
+                'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
             ]);
 
             foreach ($carts as $cart) {

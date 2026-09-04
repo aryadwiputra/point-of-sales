@@ -3,32 +3,32 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Responses\ApiResponse;
 use App\Http\Resources\CartResource;
 use App\Http\Resources\CashierShiftResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\TransactionResource;
 use App\Http\Traits\ApiResponder;
-use App\Exceptions\PaymentGatewayException;
 use App\Models\Cart;
-use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\DiscountApprovalLog;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PosApiController extends Controller
 {
@@ -39,6 +39,7 @@ class PosApiController extends Controller
         private readonly PricingService $pricingService,
         private readonly LoyaltyService $loyaltyService,
         private readonly UnitConversionService $unitConversionService,
+        private readonly PriceListService $priceListService,
     ) {}
 
     /**
@@ -80,7 +81,7 @@ class PosApiController extends Controller
                 notes: $validated['notes'] ?? null,
                 warehouseId: $warehouseId,
             );
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return $this->validationError($e->errors(), $e->getMessage());
         }
 
@@ -588,6 +589,7 @@ class PosApiController extends Controller
                     'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
                     'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                     'customer_npwp' => $validated['customer_npwp'] ?? null,
+                    'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
                 ]);
 
                 foreach ($carts as $cart) {
@@ -629,7 +631,7 @@ class PosApiController extends Controller
                         $product->load('components');
                         foreach ($product->components as $component) {
                             $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                            \App\Models\ProductWarehouse::where([
+                            ProductWarehouse::where([
                                 'product_id' => $component->id,
                                 'warehouse_id' => $activeShift->warehouse_id,
                             ])->decrement('stock', $componentQty);
@@ -637,7 +639,7 @@ class PosApiController extends Controller
                         }
                     } else {
                         $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                        \App\Models\ProductWarehouse::where([
+                        ProductWarehouse::where([
                             'product_id' => $product->id,
                             'warehouse_id' => $activeShift->warehouse_id,
                         ])->decrement('stock', $baseQty);
@@ -667,7 +669,7 @@ class PosApiController extends Controller
             if (str_contains($e->getMessage(), 'Keranjang kosong')) {
                 return $this->error('Keranjang kosong.', 422);
             }
-            if ($e instanceof \Illuminate\Validation\ValidationException) {
+            if ($e instanceof ValidationException) {
                 return $this->validationError($e->errors(), $e->getMessage());
             }
 

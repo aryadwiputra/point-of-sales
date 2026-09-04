@@ -14,8 +14,15 @@ use Illuminate\Support\Collection;
 class PricingService
 {
     public function __construct(
-        private readonly LoyaltyService $loyaltyService
+        private readonly LoyaltyService $loyaltyService,
+        private readonly PriceListService $priceListService
     ) {}
+
+    // ponytail: per-cart price-list lookup is N+1 by design; price lists are tiny, cache if it ever shows up
+    private function basePriceFor(Product $product, ?Customer $customer = null): int
+    {
+        return $this->priceListService->getBasePrice($product, $customer);
+    }
 
     public function getActiveRules(?CarbonInterface $at = null): Collection
     {
@@ -93,7 +100,7 @@ class PricingService
                     ? max($quantity, (int) ($rule->preview_quantity_multiplier ?: $rule->qtyBreaks->max('min_qty') ?: 1))
                     : $quantity;
 
-                return $this->calculateLineCandidate($rule, $product, $previewQuantity);
+                return $this->calculateLineCandidate($rule, $product, $previewQuantity, $customer);
             })
             ->filter()
             ->sortBy([
@@ -133,11 +140,11 @@ class PricingService
             ->first();
 
         return [
-            'base_unit_price' => (int) $product->sell_price,
-            'effective_unit_price' => (int) $product->sell_price,
+            'base_unit_price' => $this->basePriceFor($product, $customer),
+            'effective_unit_price' => $this->basePriceFor($product, $customer),
             'quantity' => $quantity,
-            'line_base_total' => (int) $product->sell_price * $quantity,
-            'line_total' => (int) $product->sell_price * $quantity,
+            'line_base_total' => $this->basePriceFor($product, $customer) * $quantity,
+            'line_total' => $this->basePriceFor($product, $customer) * $quantity,
             'line_discount_total' => 0,
             'pricing_rule' => $complexRule ? $this->serializeRule($complexRule, false) : null,
         ];
@@ -155,11 +162,11 @@ class PricingService
 
     private function buildPreview(Collection $carts, ?Customer $customer, Collection $rules): array
     {
-        $items = $carts->map(function (Cart $cart) {
+        $items = $carts->map(function (Cart $cart) use ($customer) {
             // ponytail: composite sell_price is 0; unit price = stored cart price / qty
             $baseUnitPrice = $cart->product->is_composite
                 ? (int) round($cart->price / max(1, (int) $cart->qty))
-                : (int) $cart->product->sell_price;
+                : $this->basePriceFor($cart->product, $customer);
 
             return [
                 'cart_id' => $cart->id,
@@ -220,7 +227,7 @@ class PricingService
                     PricingRule::KIND_QTY_BREAK,
                     PricingRule::KIND_STANDARD_DISCOUNT,
                 ], true))
-                ->map(fn (PricingRule $rule) => $this->calculateLineCandidate($rule, $cartProduct, $remainingQty))
+                ->map(fn (PricingRule $rule) => $this->calculateLineCandidate($rule, $cartProduct, $remainingQty, $customer))
                 ->filter()
                 ->sortBy([
                     ['rule.priority', 'desc'],
@@ -510,13 +517,13 @@ class PricingService
         return $allocated;
     }
 
-    private function calculateLineCandidate(PricingRule $rule, Product $product, int $quantity): ?array
+    private function calculateLineCandidate(PricingRule $rule, Product $product, int $quantity, ?Customer $customer = null): ?array
     {
         if (! $this->matchesTarget($rule, $product)) {
             return null;
         }
 
-        $baseUnitPrice = (int) $product->sell_price;
+        $baseUnitPrice = $product->is_composite ? (int) $product->sell_price : $this->basePriceFor($product, $customer);
         $lineBaseTotal = $baseUnitPrice * $quantity;
 
         if ($rule->kind === PricingRule::KIND_QTY_BREAK) {
