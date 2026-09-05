@@ -606,13 +606,7 @@ class TransactionController extends Controller
             }
         }
 
-        $length = 10;
-        $random = '';
-        for ($i = 0; $i < $length; $i++) {
-            $random .= rand(0, 1) ? rand(0, 9) : chr(rand(ord('a'), ord('z')));
-        }
-
-        $invoice = 'TRX-'.Str::upper($random);
+        $invoice = 'TRX-'.Str::upper(Str::random(10));
         $isCashPayment = empty($paymentGateway) && ! $isPayLater;
         $manualDiscount = max(0, (int) $request->input('discount', 0));
         $shippingCost = max(0, (int) $request->input('shipping_cost', 0));

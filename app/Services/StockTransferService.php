@@ -6,6 +6,7 @@ use App\Models\ProductWarehouse;
 use App\Models\StockMutation;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -36,40 +37,45 @@ class StockTransferService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $items, $userId) {
-            $transfer = StockTransfer::create([
-                'source_warehouse_id' => $data['source_warehouse_id'],
-                'destination_warehouse_id' => $data['destination_warehouse_id'],
-                'document_number' => $data['document_number'] ?? $this->generateDocumentNumber(),
-                'status' => 'draft',
-                'notes' => $data['notes'] ?? null,
-                'created_by' => $userId,
-            ]);
-
-            foreach ($items as $item) {
-                StockTransferItem::create([
-                    'stock_transfer_id' => $transfer->id,
-                    'product_id' => $item['product_id'],
-                    'qty' => $item['qty'],
-                ]);
-            }
-
-            $this->auditLogService->log(
-                event: 'stock_transfer.created',
-                module: 'stock',
-                auditable: $transfer,
-                description: 'Transfer stok '.$transfer->document_number.' dibuat.',
-                after: [
-                    'document_number' => $transfer->document_number,
-                    'source_warehouse_id' => $transfer->source_warehouse_id,
-                    'destination_warehouse_id' => $transfer->destination_warehouse_id,
+        // ponytail: retry only on document_number unique collisions (concurrent drafts pick the same next number)
+        return retry(3, function () use ($data, $items, $userId) {
+            return DB::transaction(function () use ($data, $items, $userId) {
+                $transfer = StockTransfer::create([
+                    'source_warehouse_id' => $data['source_warehouse_id'],
+                    'destination_warehouse_id' => $data['destination_warehouse_id'],
+                    'document_number' => $data['document_number'] ?? $this->generateDocumentNumber(),
                     'status' => 'draft',
-                    'total_items' => count($items),
-                ],
-                meta: ['stock_transfer_id' => $transfer->id],
-            );
+                    'notes' => $data['notes'] ?? null,
+                    'created_by' => $userId,
+                ]);
 
-            return $transfer;
+                foreach ($items as $item) {
+                    StockTransferItem::create([
+                        'stock_transfer_id' => $transfer->id,
+                        'product_id' => $item['product_id'],
+                        'qty' => $item['qty'],
+                    ]);
+                }
+
+                $this->auditLogService->log(
+                    event: 'stock_transfer.created',
+                    module: 'stock',
+                    auditable: $transfer,
+                    description: 'Transfer stok '.$transfer->document_number.' dibuat.',
+                    after: [
+                        'document_number' => $transfer->document_number,
+                        'source_warehouse_id' => $transfer->source_warehouse_id,
+                        'destination_warehouse_id' => $transfer->destination_warehouse_id,
+                        'status' => 'draft',
+                        'total_items' => count($items),
+                    ],
+                    meta: ['stock_transfer_id' => $transfer->id],
+                );
+
+                return $transfer;
+            });
+        }, 0, function ($e) {
+            return $e instanceof QueryException && str_contains($e->getMessage(), 'document_number');
         });
     }
 

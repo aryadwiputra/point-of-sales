@@ -136,6 +136,12 @@ class PosApiController extends Controller
 
         $products = Product::query()
             ->with('category')
+            ->when($warehouseId, function ($q) use ($warehouseId) {
+                $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
+                    ->where('product_warehouse.stock', '>', 0));
+            }, function ($q) {
+                $q->where('stock', '>', 0);
+            })
             ->when($request->string('search')->toString(), function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('title', 'like', "%{$search}%")
