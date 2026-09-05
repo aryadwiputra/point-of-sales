@@ -13,9 +13,11 @@ import {
     IconPhoto,
     IconBarcode,
     IconCurrencyDollar,
+    IconTrash,
+    IconBoxes,
 } from "@tabler/icons-react";
 
-export default function Create({ categories }) {
+export default function Create({ categories, products }) {
     const { errors } = usePage().props;
 
     const { data, setData, post, processing } = useForm({
@@ -28,6 +30,8 @@ export default function Create({ categories }) {
         buy_price: "",
         sell_price: "",
         stock: "",
+        is_composite: false,
+        components: [],
     });
 
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -38,6 +42,53 @@ export default function Create({ categories }) {
         setData("category_id", value?.id || "");
     };
 
+    const toggleComposite = (checked) => {
+        setData("is_composite", checked);
+    };
+
+    const addComponent = () => {
+        setData("components", [
+            ...data.components,
+            { component_product_id: "", qty: 1 },
+        ]);
+    };
+
+    const updateComponent = (index, field, value) => {
+        const components = data.components.map((c, i) =>
+            i === index ? { ...c, [field]: value } : c
+        );
+        setData("components", components);
+    };
+
+    const removeComponent = (index) => {
+        setData(
+            "components",
+            data.components.filter((_, i) => i !== index)
+        );
+    };
+
+    const availableProducts = (selectedIndex) =>
+        products.filter(
+            (p) =>
+                !p.is_composite &&
+                !data.components.some(
+                    (c, i) =>
+                        i !== selectedIndex &&
+                        c.component_product_id === p.id
+                )
+        );
+
+    const estimatedSellPrice = data.is_composite
+        ? data.components.reduce((total, c) => {
+              const product = products.find(
+                  (p) => p.id === Number(c.component_product_id)
+              );
+              return product
+                  ? total + product.sell_price * (Number(c.qty) || 0)
+                  : total;
+          }, 0)
+        : data.sell_price;
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -46,8 +97,13 @@ export default function Create({ categories }) {
         }
     };
 
-    const submit = (e) => {
+    // ponytail: zero-out stock/sell_price for composite; collapse if Inertia ever accepts pre-send transforms
+    const submitCompositeAware = (e) => {
         e.preventDefault();
+        if (data.is_composite) {
+            setData("sell_price", 0);
+            setData("stock", 0);
+        }
         post(route("products.store"), {
             onSuccess: () => toast.success("Produk berhasil ditambahkan"),
             onError: () => toast.error("Gagal menyimpan produk"),
@@ -73,7 +129,7 @@ export default function Create({ categories }) {
                 </h1>
             </div>
 
-            <form onSubmit={submit}>
+            <form onSubmit={submitCompositeAware}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column - Image */}
                     <div className="lg:col-span-1">
@@ -184,6 +240,21 @@ export default function Create({ categories }) {
                                 <IconCurrencyDollar size={18} />
                                 Harga & Stok
                             </h3>
+                            <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={data.is_composite}
+                                    onChange={(e) =>
+                                        toggleComposite(e.target.checked)
+                                    }
+                                    className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                />
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                    <IconBoxes size={16} />
+                                    Produk Komposit (bundling /
+                                    paket)
+                                </span>
+                            </label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Input
                                     type="number"
@@ -198,22 +269,32 @@ export default function Create({ categories }) {
                                 <Input
                                     type="number"
                                     label="Harga Jual"
-                                    value={data.sell_price}
+                                    value={data.is_composite ? "" : data.sell_price}
+                                    disabled={data.is_composite}
                                     onChange={(e) =>
                                         setData("sell_price", e.target.value)
                                     }
                                     errors={errors.sell_price}
-                                    placeholder="0"
+                                    placeholder={
+                                        data.is_composite
+                                            ? "Otomatis dari komponen"
+                                            : "0"
+                                    }
                                 />
                                 <Input
                                     type="number"
                                     label="Stok"
-                                    value={data.stock}
+                                    value={data.is_composite ? "" : data.stock}
+                                    disabled={data.is_composite}
                                     onChange={(e) =>
                                         setData("stock", e.target.value)
                                     }
                                     errors={errors.stock}
-                                    placeholder="0"
+                                    placeholder={
+                                        data.is_composite
+                                            ? "Dari stok komponen"
+                                            : "0"
+                                    }
                                 />
                             </div>
 
@@ -251,6 +332,118 @@ export default function Create({ categories }) {
                                 </div>
                             )}
                         </div>
+
+                        {/* Composite Components */}
+                        {data.is_composite && (
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                        <IconBoxes size={18} />
+                                        Komponen Paket
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={addComponent}
+                                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                                    >
+                                        + Tambah Komponen
+                                    </button>
+                                </div>
+                                {errors.components && (
+                                    <p className="text-sm text-danger-600 mb-2">
+                                        {errors.components}
+                                    </p>
+                                )}
+                                {data.components.length === 0 && (
+                                    <p className="text-sm text-slate-500">
+                                        Belum ada komponen. Stok dan harga jual
+                                        dihitung otomatis dari komponen.
+                                    </p>
+                                )}
+                                <div className="space-y-3">
+                                    {data.components.map((component, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-end gap-3"
+                                        >
+                                            <div className="flex-1">
+                                                <InputSelect
+                                                    data={availableProducts(
+                                                        index
+                                                    )}
+                                                    selected={
+                                                        products.find(
+                                                            (p) =>
+                                                                p.id ===
+                                                                Number(
+                                                                    component.component_product_id
+                                                                )
+                                                        ) || null
+                                                    }
+                                                    setSelected={(
+                                                        value
+                                                    ) =>
+                                                        updateComponent(
+                                                            index,
+                                                            "component_product_id",
+                                                            value?.id ?? ""
+                                                        )
+                                                    }
+                                                    placeholder="Pilih produk komponen"
+                                                    errors={
+                                                        errors[
+                                                            `components.${index}.component_product_id`
+                                                        ]
+                                                    }
+                                                    searchable={true}
+                                                    displayKey="title"
+                                                />
+                                            </div>
+                                            <div className="w-28">
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    value={component.qty}
+                                                    onChange={(e) =>
+                                                        updateComponent(
+                                                            index,
+                                                            "qty",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    errors={
+                                                        errors[
+                                                            `components.${index}.qty`
+                                                        ]
+                                                    }
+                                                    placeholder="Qty"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeComponent(index)
+                                                }
+                                                className="p-2.5 rounded-xl text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/30 transition-colors"
+                                            >
+                                                <IconTrash size={18} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                {data.is_composite && estimatedSellPrice > 0 && (
+                                    <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                                        Estimasi harga jual dari komponen:{" "}
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                                            Rp{" "}
+                                            {estimatedSellPrice.toLocaleString(
+                                                "id-ID"
+                                            )}
+                                        </span>
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Submit */}
                         <div className="flex justify-end gap-3">

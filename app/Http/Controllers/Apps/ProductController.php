@@ -49,9 +49,15 @@ class ProductController extends Controller
         // get categories
         $categories = Category::all();
 
+        // get non-composite products for composite component selection
+        $products = Product::where('is_composite', false)
+            ->orderBy('title')
+            ->get(['id', 'title', 'sell_price', 'is_composite']);
+
         // return inertia
         return Inertia::render('Dashboard/Products/Create', [
             'categories' => $categories,
+            'products' => $products,
         ]);
     }
 
@@ -76,6 +82,7 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
+            ...$this->compositeRules(),
         ]);
         // upload image
         $image = $request->file('image');
@@ -94,9 +101,15 @@ class ProductController extends Controller
             'stock' => $request->stock,
             'min_stock' => $request->min_stock ?? 0,
             'max_stock' => $request->max_stock ?? 0,
+            'is_composite' => $request->boolean('is_composite'),
         ]);
 
-        $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
+        if ($request->boolean('is_composite')) {
+            $this->validateComponentProducts($request);
+            $this->syncComponents($product, $request->input('components'));
+        } else {
+            $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
+        }
         $this->auditLogService->log(
             event: 'product.created',
             module: 'products',
@@ -120,9 +133,16 @@ class ProductController extends Controller
         // get categories
         $categories = Category::all();
 
+        // get non-composite products for composite component selection
+        $products = Product::where('is_composite', false)
+            ->where('id', '!=', $product->id)
+            ->orderBy('title')
+            ->get(['id', 'title', 'sell_price', 'is_composite']);
+
         return Inertia::render('Dashboard/Products/Edit', [
-            'product' => $product,
+            'product' => $product->load('components'),
             'categories' => $categories,
+            'products' => $products,
         ]);
     }
 
@@ -149,7 +169,16 @@ class ProductController extends Controller
             'sell_price' => 'required',
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
+            ...$this->compositeRules(),
         ]);
+
+        if ($request->boolean('is_composite')) {
+            $this->validateComponentProducts($request, $product);
+        } elseif ($product->is_composite && $product->components()->exists()) {
+            return back()->withErrors([
+                'components' => 'Produk komposit harus memiliki minimal satu komponen.',
+            ]);
+        }
 
         // check image update
         if ($request->file('image')) {
@@ -171,7 +200,12 @@ class ProductController extends Controller
                 'category_id' => $request->category_id,
                 'buy_price' => $request->buy_price,
                 'sell_price' => $request->sell_price,
+                'is_composite' => $request->boolean('is_composite'),
             ]);
+
+            if ($request->boolean('is_composite')) {
+                $this->syncComponents($product, $request->input('components'));
+            }
 
             $this->logProductUpdate($product, $before);
 
@@ -187,7 +221,12 @@ class ProductController extends Controller
             'category_id' => $request->category_id,
             'buy_price' => $request->buy_price,
             'sell_price' => $request->sell_price,
+            'is_composite' => $request->boolean('is_composite'),
         ]);
+
+        if ($request->boolean('is_composite')) {
+            $this->syncComponents($product, $request->input('components'));
+        }
 
         $this->logProductUpdate($product, $before);
 
@@ -223,6 +262,42 @@ class ProductController extends Controller
 
         // redirect
         return back();
+    }
+
+    private function compositeRules(): array
+    {
+        return [
+            'is_composite' => 'nullable|boolean',
+            'components' => 'required_if:is_composite,1,true|array|min:1',
+            'components.*.component_product_id' => 'required|integer|distinct|exists:products,id',
+            'components.*.qty' => 'required|integer|min:1',
+        ];
+    }
+
+    private function validateComponentProducts(Request $request, ?Product $product = null): void
+    {
+        $componentIds = collect($request->input('components'))
+            ->pluck('component_product_id')
+            ->unique();
+
+        if ($product && $componentIds->contains($product->id)) {
+            abort(422, 'Produk tidak bisa menjadi komponen dirinya sendiri.');
+        }
+
+        $compositeCount = Product::whereIn('id', $componentIds)->where('is_composite', true)->count();
+
+        if ($compositeCount > 0) {
+            abort(422, 'Komponen tidak boleh produk komposit lain.');
+        }
+    }
+
+    private function syncComponents(Product $product, ?array $components): void
+    {
+        $product->components()->sync(
+            collect($components)->mapWithKeys(fn (array $c) => [
+                $c['component_product_id'] => ['qty' => (int) $c['qty']],
+            ])
+        );
     }
 
     private function logProductUpdate(Product $product, array $before): void

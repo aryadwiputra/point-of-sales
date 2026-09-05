@@ -42,6 +42,7 @@ class Transaction extends Model
         'tax_rate',
         'tax_total',
         'customer_npwp',
+        'price_list_id',
         'discount_approved_by',
         'discount_approved_at',
         'discount_approval_status',
