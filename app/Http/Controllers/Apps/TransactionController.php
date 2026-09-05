@@ -803,6 +803,11 @@ class TransactionController extends Controller
                                 $batch->decrement('stock', $take);
                                 $remaining -= $take;
                                 $firstBatchId ??= $batch->id;
+                                // record every batch consumed so multi-batch lines are fully traceable
+                                $detail->batchAllocations()->create([
+                                    'product_batch_id' => $batch->id,
+                                    'qty' => $take,
+                                ]);
                             }
                             $detail->update(['product_batch_id' => $firstBatchId]);
                         }
