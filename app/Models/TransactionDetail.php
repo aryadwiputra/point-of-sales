@@ -24,6 +24,7 @@ class TransactionDetail extends Model
         'unit_price',
         'price',
         'discount_total',
+        'product_batch_id',
         'pricing_rule_id',
         'pricing_rule_name',
         'pricing_rule_kind',
