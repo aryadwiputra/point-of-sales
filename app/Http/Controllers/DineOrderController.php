@@ -6,7 +6,6 @@ use App\Models\DineOrder;
 use App\Models\DiningTable;
 use App\Models\Product;
 use App\Models\Setting;
-use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -16,7 +15,6 @@ class DineOrderController extends Controller
 {
     public function __construct(
         private PricingService $pricingService,
-        private PaymentGatewayManager $paymentManager,
     ) {}
 
     public function store(Request $request, string $token)
@@ -106,7 +104,6 @@ class DineOrderController extends Controller
             ->firstOrFail();
 
         $storeName = Setting::get('store_name', 'Restoran');
-        $payOnlineEnabled = Setting::getBool('dine_in_pay_online_enabled', true);
 
         return Inertia::render('Public/DineOrderStatus', [
             'order' => $order,
@@ -116,7 +113,6 @@ class DineOrderController extends Controller
                 'name' => $table->name,
             ],
             'storeName' => $storeName,
-            'payOnlineEnabled' => $payOnlineEnabled,
         ]);
     }
 
@@ -135,49 +131,5 @@ class DineOrderController extends Controller
         }
 
         return response()->json(['order' => $order]);
-    }
-
-    public function webhook(Request $request)
-    {
-        $orderId = $request->input('order_id');
-        $status = $request->input('status');
-        $signatureKey = $request->input('signature_key');
-
-        if (! $this->validateMidtransSignature($orderId, $status, $signatureKey)) {
-            return response()->json(['error' => 'Invalid signature'], 403);
-        }
-
-        $order = DineOrder::where('payment_reference', $orderId)->first();
-
-        if (! $order) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
-
-        if ($status === 'paid' || $status === 'settlement') {
-            $order->update([
-                'payment_status' => 'paid',
-                'status' => DineOrder::STATUS_COMPLETED,
-            ]);
-        } elseif ($status === 'expired' || $status === 'cancel') {
-            $order->update([
-                'payment_status' => 'failed',
-            ]);
-        }
-
-        return response()->json(['success' => true]);
-    }
-
-    private function validateMidtransSignature(string $orderId, string $status, ?string $signatureKey): bool
-    {
-        $serverKey = config('midtrans.server_key');
-
-        if (empty($serverKey) || empty($signatureKey)) {
-            return false;
-        }
-
-        $hashString = $orderId.$status.$serverKey;
-        $expectedSignature = hash('sha512', $hashString);
-
-        return hash_equals($expectedSignature, $signatureKey);
     }
 }

@@ -28,14 +28,3 @@ export function getImageUrl(image, folder = "products") {
 export function getProductImageUrl(image) {
     return getImageUrl(image, "products");
 }
-
-/**
- * Get category image URL
- * @param {string} image - Category image
- * @returns {string|null}
- */
-export function getCategoryImageUrl(image) {
-    return getImageUrl(image, "categories");
-}
-
-export default { getImageUrl, getProductImageUrl, getCategoryImageUrl };
