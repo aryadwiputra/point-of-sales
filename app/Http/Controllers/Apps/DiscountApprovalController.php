@@ -57,16 +57,33 @@ class DiscountApprovalController extends Controller
     private function logAndUpdate(Transaction $transaction, string $status, ?string $notes = null): void
     {
         \DB::transaction(function () use ($transaction, $status, $notes) {
-            $transaction->update([
+            // ponytail: approval only settles the approval state — payment stays tied to the actual method.
+            // grand_total already excludes the manual discount (LoyaltyService), so denying re-adds it.
+            $paymentStatus = match ($transaction->payment_method) {
+                'cash' => 'paid',
+                'pay_later' => 'unpaid',
+                default => 'pending',
+            };
+
+            $updates = [
                 'discount_approval_status' => $status,
                 'discount_approved_by' => auth()->id(),
                 'discount_approved_at' => now(),
-                'payment_status' => $status === 'approved' ? 'paid' : 'paid',
-            ]);
+            ];
+
+            $deniedDiscount = (int) $transaction->discount;
 
             if ($status === 'denied') {
-                $transaction->decrement('grand_total', $transaction->discount ?? 0);
-                $transaction->update(['discount' => 0]);
+                $updates['discount'] = 0;
+                $updates['payment_status'] = 'unpaid';
+            } else {
+                $updates['payment_status'] = $paymentStatus;
+            }
+
+            $transaction->update($updates);
+
+            if ($status === 'denied' && $deniedDiscount > 0) {
+                $transaction->increment('grand_total', $deniedDiscount);
             }
 
             DiscountApprovalLog::where('transaction_id', $transaction->id)

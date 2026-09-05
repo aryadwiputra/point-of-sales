@@ -973,6 +973,24 @@ class TransactionController extends Controller
                 ->with('error', 'Transaksi sudah dibayar.');
         }
 
+        if ($transaction->payment_method !== 'bank_transfer') {
+            return redirect()
+                ->back()
+                ->with('error', 'Hanya transaksi transfer bank yang dapat dikonfirmasi pembayarannya.');
+        }
+
+        if (! $transaction->bank_account_id) {
+            return redirect()
+                ->back()
+                ->with('error', 'Transaksi transfer bank belum memiliki rekening tujuan.');
+        }
+
+        if (! in_array($transaction->payment_status, ['pending', 'pending_approval'], true)) {
+            return redirect()
+                ->back()
+                ->with('error', 'Status transaksi tidak dapat dikonfirmasi saat ini.');
+        }
+
         $beforeStatus = $transaction->payment_status;
         $transaction->update([
             'payment_status' => 'paid',
