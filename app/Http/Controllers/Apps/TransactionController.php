@@ -31,6 +31,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TransactionController extends Controller
@@ -629,6 +630,12 @@ class TransactionController extends Controller
             $appliedManualDiscount = (int) data_get($checkoutPreview, 'summary.manual_discount_total', 0);
             $grandTotal = (int) data_get($checkoutPreview, 'summary.grand_total', 0);
             $changeAmount = $isCashPayment ? max(0, $cashAmount - $grandTotal) : 0;
+
+            if ($isCashPayment && $cashAmount < $grandTotal) {
+                throw ValidationException::withMessages([
+                    'cash' => 'Uang tunai kurang dari total belanja.',
+                ]);
+            }
 
             $transaction = Transaction::create([
                 'cashier_id' => auth()->user()->id,

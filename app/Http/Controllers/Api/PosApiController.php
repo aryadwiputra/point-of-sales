@@ -567,6 +567,12 @@ class PosApiController extends Controller
                 $grandTotal = (int) data_get($checkoutPreview, 'summary.grand_total', 0);
                 $changeAmount = $isCashPayment ? max(0, $cashAmount - $grandTotal) : 0;
 
+                if ($isCashPayment && $cashAmount < $grandTotal) {
+                    throw ValidationException::withMessages([
+                        'cash' => 'Uang tunai kurang dari total belanja.',
+                    ]);
+                }
+
                 $transaction = Transaction::create([
                     'cashier_id' => $request->user()->id,
                     'cashier_shift_id' => $activeShift->id,
