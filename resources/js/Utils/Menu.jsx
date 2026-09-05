@@ -405,7 +405,7 @@ export default function Menu() {
                 },
                 {
                     title: t("sidebar.items.priceLists"),
-                    href: route("settings.price-lists.index"),
+                    href: route("price-lists.index"),
                     active: url.startsWith("/dashboard/settings/price-lists"),
                     icon: <IconListDetails size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["price-lists-access"]),
