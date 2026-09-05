@@ -10,6 +10,7 @@ use App\Models\ProductWarehouse;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class GoodsReceivingService
 {
@@ -33,6 +34,15 @@ class GoodsReceivingService
     public function receive(PurchaseOrder $order, array $items, ?string $notes, int $userId): GoodsReceiving
     {
         return DB::transaction(function () use ($order, $items, $notes, $userId) {
+            // ponytail: lock the order + its items so concurrent receipts cannot double-consume the same PO item
+            $order = PurchaseOrder::with('items')->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($order->status, ['ordered', 'partial_received'])) {
+                throw ValidationException::withMessages([
+                    'purchase_order_id' => 'Hanya PO berstatus ordered/partial yang dapat diterima.',
+                ]);
+            }
+
             $receiving = GoodsReceiving::create([
                 'purchase_order_id' => $order->id,
                 'supplier_id' => $order->supplier_id,
@@ -44,8 +54,20 @@ class GoodsReceivingService
             ]);
 
             foreach ($items as $item) {
-                $poItem = $order->items()->findOrFail($item['purchase_order_item_id']);
+                $poItem = $order->items->firstWhere('id', $item['purchase_order_item_id']);
+                if (! $poItem) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Item tidak ditemukan di PO.',
+                    ]);
+                }
                 $qtyReceived = (int) $item['qty_received'];
+
+                $outstanding = $poItem->qty_ordered - $poItem->qty_received;
+                if ($qtyReceived > $outstanding) {
+                    throw ValidationException::withMessages([
+                        'items' => "Qty diterima melebihi sisa item {$poItem->product_id}.",
+                    ]);
+                }
 
                 GoodsReceivingItem::create([
                     'goods_receiving_id' => $receiving->id,
