@@ -41,6 +41,7 @@ class DineOrder extends Model
         'transaction_id',
         'subtotal',
         'item_count',
+        'submitted_at',
     ];
 
     protected function casts(): array
@@ -48,6 +49,7 @@ class DineOrder extends Model
         return [
             'subtotal' => 'integer',
             'item_count' => 'integer',
+            'submitted_at' => 'datetime',
         ];
     }
 

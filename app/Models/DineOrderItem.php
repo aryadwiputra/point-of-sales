@@ -14,7 +14,6 @@ class DineOrderItem extends Model
         'dine_order_id',
         'product_id',
         'unit_id',
-        'conversion_factor',
         'qty',
         'price',
         'note',
@@ -25,7 +24,6 @@ class DineOrderItem extends Model
         return [
             'qty' => 'integer',
             'price' => 'integer',
-            'conversion_factor' => 'decimal:4',
         ];
     }
 

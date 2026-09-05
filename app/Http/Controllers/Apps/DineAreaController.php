@@ -11,7 +11,7 @@ class DineAreaController extends Controller
 {
     public function index()
     {
-        $areas = DineArea::orderBy('sort_order')->get();
+        $areas = DineArea::with('tables')->orderBy('sort_order')->get();
 
         return Inertia::render('Dashboard/DineIn/Areas/Index', [
             'areas' => $areas,

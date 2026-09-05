@@ -23,7 +23,6 @@ class DineMenuController extends Controller
             ->firstOrFail();
 
         $selfOrderEnabled = Setting::getBool('dine_in_self_order_enabled', true);
-        $payOnlineEnabled = Setting::getBool('dine_in_pay_online_enabled', true);
 
         $categories = Category::where('is_active', true)
             ->orderBy('sort_order')
@@ -63,7 +62,6 @@ class DineMenuController extends Controller
             'categories' => $categories,
             'products' => $products,
             'selfOrderEnabled' => $selfOrderEnabled,
-            'payOnlineEnabled' => $payOnlineEnabled,
             'storeName' => $storeName,
             'storeLogo' => $storeLogo,
         ]);
