@@ -30,6 +30,8 @@ export default function Edit({ categories, product, products = [], units = [] })
         description: product.description,
         buy_price: product.buy_price,
         sell_price: product.sell_price,
+        min_stock: product.min_stock ?? "",
+        max_stock: product.max_stock ?? "",
         is_composite: product.is_composite ?? false,
         components: (product.components ?? []).map((c) => ({
             component_product_id: c.id,
@@ -515,7 +517,37 @@ export default function Edit({ categories, product, products = [], units = [] })
                                         : product.stock}
                                 </p>
                                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                    Perubahan stok dilakukan melalui transaksi atau stock opname.
+                                    Perubahan stok dilakukan melalui transaksi
+                                    atau stock opname.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                <Input
+                                    type="number"
+                                    label="Stok Minimum"
+                                    value={data.min_stock}
+                                    onChange={(e) =>
+                                        setData("min_stock", e.target.value)
+                                    }
+                                    errors={errors.min_stock}
+                                    placeholder="0"
+                                />
+                                <Input
+                                    type="number"
+                                    label="Stok Maksimum"
+                                    value={data.max_stock}
+                                    onChange={(e) =>
+                                        setData("max_stock", e.target.value)
+                                    }
+                                    errors={errors.max_stock}
+                                    placeholder="0"
+                                />
+                                <p className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                                    Dipakai untuk reorder point: saat stok
+                                    menyentuh minimum, draft purchase order
+                                    otomatis dibuat oleh sistem (reorder:generate
+                                    harian).
                                 </p>
                             </div>
 

@@ -31,6 +31,8 @@ export default function Create({ categories, products, units = [] }) {
         buy_price: "",
         sell_price: "",
         stock: "",
+        min_stock: "",
+        max_stock: "",
         is_composite: false,
         components: [],
         units: [],
@@ -340,6 +342,35 @@ export default function Create({ categories, products, units = [] }) {
                                             : "0"
                                     }
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                <Input
+                                    type="number"
+                                    label="Stok Minimum"
+                                    value={data.min_stock}
+                                    onChange={(e) =>
+                                        setData("min_stock", e.target.value)
+                                    }
+                                    errors={errors.min_stock}
+                                    placeholder="0"
+                                />
+                                <Input
+                                    type="number"
+                                    label="Stok Maksimum"
+                                    value={data.max_stock}
+                                    onChange={(e) =>
+                                        setData("max_stock", e.target.value)
+                                    }
+                                    errors={errors.max_stock}
+                                    placeholder="0"
+                                />
+                                <p className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                                    Dipakai untuk reorder point: saat stok
+                                    menyentuh minimum, draft purchase order
+                                    otomatis dibuat oleh sistem (reorder:generate
+                                    harian).
+                                </p>
                             </div>
 
                             {/* Profit Estimation */}
