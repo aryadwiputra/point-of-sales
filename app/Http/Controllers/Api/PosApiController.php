@@ -637,23 +637,42 @@ class PosApiController extends Controller
                     ]);
 
                     $product = Product::find($cart->product_id);
+                    $warehouseId = $activeShift->warehouse_id;
 
                     if ($product->is_composite) {
                         $product->load('components');
                         foreach ($product->components as $component) {
                             $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                            ProductWarehouse::where([
-                                'product_id' => $component->id,
-                                'warehouse_id' => $activeShift->warehouse_id,
-                            ])->decrement('stock', $componentQty);
+                            $pw = $warehouseId
+                                ? ProductWarehouse::where([
+                                    'product_id' => $component->id,
+                                    'warehouse_id' => $warehouseId,
+                                ])->lockForUpdate()->first()
+                                : null;
+                            $available = $pw ? (int) $pw->stock : (int) $component->stock;
+                            if ($available < $componentQty) {
+                                throw ValidationException::withMessages(['stock' => "Stok komponen {$component->title} tidak mencukupi. Tersedia: {$available}."]);
+                            }
+                            if ($pw) {
+                                $pw->decrement('stock', $componentQty);
+                            }
                             $component->decrement('stock', $componentQty);
                         }
                     } else {
                         $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                        ProductWarehouse::where([
-                            'product_id' => $product->id,
-                            'warehouse_id' => $activeShift->warehouse_id,
-                        ])->decrement('stock', $baseQty);
+                        $pw = $warehouseId
+                            ? ProductWarehouse::where([
+                                'product_id' => $product->id,
+                                'warehouse_id' => $warehouseId,
+                            ])->lockForUpdate()->first()
+                            : null;
+                        $available = $pw ? (int) $pw->stock : (int) $product->stock;
+                        if ($available < $baseQty) {
+                            throw ValidationException::withMessages(['stock' => "Stok {$product->title} tidak mencukupi. Tersedia: {$available}."]);
+                        }
+                        if ($pw) {
+                            $pw->decrement('stock', $baseQty);
+                        }
                         $product->decrement('stock', $baseQty);
                     }
                 }

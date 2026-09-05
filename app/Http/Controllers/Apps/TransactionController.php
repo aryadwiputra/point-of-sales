@@ -734,35 +734,77 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
+                $warehouseId = $activeShift->warehouse_id;
 
                 if ($product->is_composite) {
                     $product->load('components');
                     foreach ($product->components as $component) {
                         $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                        ProductWarehouse::where([
-                            'product_id' => $component->id,
-                            'warehouse_id' => $activeShift->warehouse_id,
-                        ])->decrement('stock', $componentQty);
+                        // ponytail: lock pivot row, re-check stock inside the transaction to prevent overselling
+                        $pw = $warehouseId
+                            ? ProductWarehouse::where([
+                                'product_id' => $component->id,
+                                'warehouse_id' => $warehouseId,
+                            ])->lockForUpdate()->first()
+                            : null;
+                        $available = $pw ? (int) $pw->stock : (int) $component->stock;
+                        if ($available < $componentQty) {
+                            throw ValidationException::withMessages(['stock' => "Stok komponen {$component->title} tidak mencukupi. Tersedia: {$available}."]);
+                        }
+                        if ($pw) {
+                            $pw->decrement('stock', $componentQty);
+                        }
                         $component->decrement('stock', $componentQty);
                     }
                 } else {
                     $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                    ProductWarehouse::where([
-                        'product_id' => $product->id,
-                        'warehouse_id' => $activeShift->warehouse_id,
-                    ])->decrement('stock', $baseQty);
+
+                    // ponytail: lock pivot row and re-check stock at checkout time (cart add only checks once)
+                    $pw = $warehouseId
+                        ? ProductWarehouse::where([
+                            'product_id' => $product->id,
+                            'warehouse_id' => $warehouseId,
+                        ])->lockForUpdate()->first()
+                        : null;
+                    $available = $pw ? (int) $pw->stock : (int) $product->stock;
+                    if ($available < $baseQty) {
+                        throw ValidationException::withMessages(['stock' => "Stok {$product->title} tidak mencukupi. Tersedia: {$available}."]);
+                    }
+                    if ($pw) {
+                        $pw->decrement('stock', $baseQty);
+                    }
                     $product->decrement('stock', $baseQty);
 
-                    // FEFO: consume batch stock when the product has batches, else legacy path unchanged
-                    if (ProductBatch::where('product_id', $product->id)
-                        ->where('warehouse_id', $activeShift->warehouse_id)
-                        ->where('stock', '>', 0)->exists()) {
-                        $allocations = $this->batchService->allocate($product, $activeShift->warehouse_id, $baseQty);
-                        foreach ($allocations as $allocation) {
-                            ProductBatch::where('id', $allocation['batch_id'])->decrement('stock', $allocation['qty']);
-                        }
-                        if ($allocations !== []) {
-                            $detail->update(['product_batch_id' => $allocations[0]['batch_id']]);
+                    // FEFO: consume non-expired batch stock (locked). Products with partial batch coverage are rejected.
+                    if ($warehouseId) {
+                        $batches = ProductBatch::where('product_id', $product->id)
+                            ->where('warehouse_id', $warehouseId)
+                            ->where('stock', '>', 0)
+                            ->where(function (Builder $q) {
+                                $q->whereNull('expired_at')->orWhere('expired_at', '>', now());
+                            })
+                            ->orderBy('expired_at')
+                            ->orderBy('received_at')
+                            ->lockForUpdate()
+                            ->get();
+
+                        if ($batches->isNotEmpty()) {
+                            $covered = (int) $batches->sum('stock');
+                            if ($covered < $baseQty) {
+                                throw ValidationException::withMessages(['stock' => "Stok batch {$product->title} tidak mencukupi. Tersedia: {$covered}."]);
+                            }
+                            $remaining = $baseQty;
+                            $firstBatchId = null;
+                            foreach ($batches as $batch) {
+                                if ($remaining <= 0) {
+                                    break;
+                                }
+                                $take = min((int) $batch->stock, $remaining);
+                                $batch->decrement('stock', $take);
+                                $remaining -= $take;
+                                $firstBatchId ??= $batch->id;
+                            }
+                            $detail->update(['product_batch_id' => $firstBatchId]);
                         }
                     }
                 }
