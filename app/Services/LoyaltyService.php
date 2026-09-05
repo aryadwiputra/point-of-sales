@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class LoyaltyService
 {
@@ -342,11 +343,20 @@ class LoyaltyService
         }
 
         if ($voucher) {
-            $voucher->forceFill([
-                'is_used' => true,
-                'used_at' => now(),
-                'used_transaction_id' => $transaction->id,
-            ])->save();
+            // ponytail: atomic single-use claim — reject when another checkout already used it concurrently
+            $claimed = CustomerVoucher::whereKey($voucher->id)
+                ->where('is_used', false)
+                ->update([
+                    'is_used' => true,
+                    'used_at' => now(),
+                    'used_transaction_id' => $transaction->id,
+                ]);
+
+            if ($claimed !== 1) {
+                throw ValidationException::withMessages([
+                    'voucher_code' => 'Voucher sudah digunakan pada transaksi lain.',
+                ]);
+            }
 
             $this->recordHistory(
                 $customer->fresh(),

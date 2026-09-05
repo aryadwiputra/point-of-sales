@@ -401,6 +401,6 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
 Route::get('/dine/{token}', [DineMenuController::class, 'show'])->name('dine.menu');
 Route::post('/dine/{token}/order', [DineOrderController::class, 'store'])->name('dine-order.store');
 Route::get('/dine-order/{accessToken}', [DineOrderController::class, 'status'])->name('dine-order.status');
-Route::get('/dine-order/{accessToken}/check', [DineOrderController::class, 'statusCheck'])->name('dine-order.status-check');
+Route::get('/dine-order/{accessToken}/check', [DineOrderController::class, 'statusCheck'])->middleware('throttle:30,1')->name('dine-order.status-check');
 
 require __DIR__.'/auth.php';

@@ -122,9 +122,17 @@ class DineOrderController extends Controller
 
     public function statusCheck(string $accessToken)
     {
-        $order = DineOrder::with(['items.product'])
-            ->where('access_token', $accessToken)
-            ->first(['id', 'status', 'payment_option', 'payment_status', 'subtotal', 'item_count', 'notes', 'created_at', 'submitted_at']);
+        $order = DineOrder::where('access_token', $accessToken)
+            ->first(['id', 'status', 'payment_option', 'payment_status', 'subtotal', 'item_count', 'updated_at']);
+
+        if (! $order) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan.'], 404);
+        }
+
+        // ponytail: the URL token is the only auth factor — poll access is bounded by a 24h window and a rate limit on the route
+        if ($order->updated_at->lt(now()->subHours(24))) {
+            return response()->json(['message' => 'Pesanan sudah kedaluwarsa.'], 410);
+        }
 
         return response()->json(['order' => $order]);
     }

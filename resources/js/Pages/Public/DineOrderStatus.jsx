@@ -26,7 +26,8 @@ export default function DineOrderStatus({ order, table, storeName }) {
                     });
                     const data = await res.json();
                     if (data.order) {
-                        setCurrentOrder(data.order);
+                        // status-check returns minimal scalar fields — merge so items/product rows from the initial render are kept
+                        setCurrentOrder((prev) => ({ ...prev, ...data.order }));
                         if (data.order.status !== "submitted") {
                             clearInterval(interval);
                         }
