@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductWarehouse;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
@@ -74,6 +75,7 @@ class ProductController extends Controller
          * validate
          */
         $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
             'barcode' => 'required|unique:products,barcode',
             'sku' => 'required|unique:products,sku',
             'title' => 'required',
@@ -82,6 +84,7 @@ class ProductController extends Controller
             'buy_price' => 'required',
             'sell_price' => 'required',
             'stock' => 'required|integer|min:0',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
             'tax_type' => 'nullable|in:exclusive,inclusive',
@@ -116,7 +119,20 @@ class ProductController extends Controller
             $this->syncComponents($product, $request->input('components'));
         } else {
             $this->syncUnits($product, $request->input('units'));
-            $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
+
+            // ponytail: keep global products.stock and per-warehouse pivot in sync; PUSAT (first active main) is the default warehouse
+            $warehouse = Warehouse::find($request->warehouse_id)
+                ?? Warehouse::active()->where('type', 'main')->orderBy('sort_order')->orderBy('code')->first()
+                ?? Warehouse::active()->orderBy('sort_order')->orderBy('code')->first();
+
+            if ($warehouse) {
+                ProductWarehouse::updateOrCreate(
+                    ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
+                    ['stock' => (int) $request->stock]
+                );
+            }
+
+            $this->stockMutationService->recordInitialStock($product, $request->user()?->id, $warehouse?->id);
         }
         $this->auditLogService->log(
             event: 'product.created',
@@ -212,6 +228,8 @@ class ProductController extends Controller
                 'category_id' => $request->category_id,
                 'buy_price' => $request->buy_price,
                 'sell_price' => $request->sell_price,
+                'min_stock' => $request->min_stock ?? 0,
+                'max_stock' => $request->max_stock ?? 0,
                 'tax_type' => $request->input('tax_type', 'exclusive'),
                 'tax_rate' => $request->input('tax_rate', 11.00),
                 'is_composite' => $request->boolean('is_composite'),
@@ -237,6 +255,8 @@ class ProductController extends Controller
             'category_id' => $request->category_id,
             'buy_price' => $request->buy_price,
             'sell_price' => $request->sell_price,
+            'min_stock' => $request->min_stock ?? 0,
+            'max_stock' => $request->max_stock ?? 0,
             'tax_type' => $request->input('tax_type', 'exclusive'),
             'tax_rate' => $request->input('tax_rate', 11.00),
             'is_composite' => $request->boolean('is_composite'),

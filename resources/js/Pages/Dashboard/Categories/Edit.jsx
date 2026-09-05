@@ -22,9 +22,7 @@ export default function Edit({ category }) {
         _method: "PUT",
     });
 
-    const [imagePreview, setImagePreview] = useState(
-        category.image ? `/storage/categories/${category.image}` : null
-    );
+    const [imagePreview, setImagePreview] = useState(category.image || null);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];

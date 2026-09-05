@@ -231,19 +231,26 @@ class StockOpnameController extends Controller
                     continue;
                 }
 
-                $stockBefore = (int) $product->stock;
                 $stockAfter = (int) $item->physical_stock;
 
-                $product->update([
-                    'stock' => $stockAfter,
-                ]);
-
-                // Update pivot stock for warehouse
                 if ($stockOpname->warehouse_id) {
-                    ProductWarehouse::where([
+                    // ponytail: opname is per-warehouse — only touch that warehouse's pivot, then recompute the legacy aggregate
+                    $before = ProductWarehouse::where([
                         'product_id' => $product->id,
                         'warehouse_id' => $stockOpname->warehouse_id,
-                    ])->update(['stock' => $stockAfter]);
+                    ])->lockForUpdate()->first();
+
+                    $stockBefore = (int) ($before?->stock ?? 0);
+
+                    ProductWarehouse::updateOrCreate(
+                        ['product_id' => $product->id, 'warehouse_id' => $stockOpname->warehouse_id],
+                        ['stock' => $stockAfter]
+                    );
+
+                    $product->update(['stock' => $product->stockTotal()]);
+                } else {
+                    $stockBefore = (int) $product->stock;
+                    $product->update(['stock' => $stockAfter]);
                 }
 
                 $this->stockMutationService->recordStockOpnameAdjustment(

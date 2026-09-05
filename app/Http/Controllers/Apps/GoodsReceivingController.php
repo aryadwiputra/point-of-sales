@@ -68,9 +68,15 @@ class GoodsReceivingController extends Controller
             'items.*.purchase_order_item_id' => ['required', 'exists:purchase_order_items,id'],
             'items.*.qty_received' => ['required', 'integer', 'min:1'],
             'items.*.notes' => ['nullable', 'string', 'max:500'],
+            'items.*.batch_number' => ['nullable', 'string', 'max:255'],
+            'items.*.expired_at' => ['nullable', 'date'],
         ]);
 
         $order = PurchaseOrder::with('items')->findOrFail($data['purchase_order_id']);
+
+        if (! in_array($order->status, ['ordered', 'partial_received'])) {
+            return back()->with('error', 'Hanya PO berstatus ordered/partial yang dapat diterima.');
+        }
 
         foreach ($data['items'] as $item) {
             $poItem = $order->items->firstWhere('id', $item['purchase_order_item_id']);
