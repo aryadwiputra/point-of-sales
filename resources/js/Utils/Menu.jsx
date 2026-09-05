@@ -29,6 +29,7 @@ import {
     IconUsersPlus,
     IconFileInvoice,
     IconBuildingWarehouse,
+IconRulerMeasure,
     IconCurrencyDollar,
     IconWallet,
     IconFileSearch,
@@ -415,6 +416,13 @@ export default function Menu() {
                     active: url === "/dashboard/settings/warehouses",
                     icon: <IconBuildingWarehouse size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["warehouses-access"]),
+                },
+                {
+                    title: t("sidebar.items.units"),
+                    href: route("settings.units.index"),
+                    active: url === "/dashboard/settings/units",
+                    icon: <IconRulerMeasure size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["units-access"]),
                 },
                 {
                     title: t("sidebar.items.whatsApp"),

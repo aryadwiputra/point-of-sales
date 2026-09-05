@@ -56,6 +56,7 @@ class RoleSeeder extends Seeder
         $this->createRoleWithPermissions('discounts-approve', 'discounts-approve');
         $this->createRoleWithPermissions('price-lists-access', '%price-lists%');
         $this->createRoleWithPermissions('warehouses-access', '%warehouses%');
+        $this->createRoleWithPermissions('units-access', '%units%');
 
         $this->createRoleWithPermissions('dine-tables-access', '%dine-tables%');
         $this->createRoleWithPermissions('dine-orders-access', '%dine-orders%');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\StockMutationService;
@@ -58,6 +59,7 @@ class ProductController extends Controller
         return Inertia::render('Dashboard/Products/Create', [
             'categories' => $categories,
             'products' => $products,
+            'units' => Unit::orderBy('code')->get(['id', 'code', 'symbol']),
         ]);
     }
 
@@ -83,6 +85,7 @@ class ProductController extends Controller
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
             ...$this->compositeRules(),
+            ...$this->unitRules(),
         ]);
         // upload image
         $image = $request->file('image');
@@ -108,6 +111,7 @@ class ProductController extends Controller
             $this->validateComponentProducts($request);
             $this->syncComponents($product, $request->input('components'));
         } else {
+            $this->syncUnits($product, $request->input('units'));
             $this->stockMutationService->recordInitialStock($product, $request->user()?->id);
         }
         $this->auditLogService->log(
@@ -140,9 +144,10 @@ class ProductController extends Controller
             ->get(['id', 'title', 'sell_price', 'is_composite']);
 
         return Inertia::render('Dashboard/Products/Edit', [
-            'product' => $product->load('components'),
+            'product' => $product->load('components', 'units'),
             'categories' => $categories,
             'products' => $products,
+            'units' => Unit::orderBy('code')->get(['id', 'code', 'symbol']),
         ]);
     }
 
@@ -170,6 +175,7 @@ class ProductController extends Controller
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
             ...$this->compositeRules(),
+            ...$this->unitRules(),
         ]);
 
         if ($request->boolean('is_composite')) {
@@ -205,6 +211,8 @@ class ProductController extends Controller
 
             if ($request->boolean('is_composite')) {
                 $this->syncComponents($product, $request->input('components'));
+            } else {
+                $this->syncUnits($product, $request->input('units'));
             }
 
             $this->logProductUpdate($product, $before);
@@ -226,6 +234,8 @@ class ProductController extends Controller
 
         if ($request->boolean('is_composite')) {
             $this->syncComponents($product, $request->input('components'));
+        } else {
+            $this->syncUnits($product, $request->input('units'));
         }
 
         $this->logProductUpdate($product, $before);
@@ -298,6 +308,59 @@ class ProductController extends Controller
                 $c['component_product_id'] => ['qty' => (int) $c['qty']],
             ])
         );
+    }
+
+    private function unitRules(): array
+    {
+        return [
+            'units' => 'nullable|array',
+            'units.*.unit_id' => 'required|integer|distinct|exists:units,id',
+            'units.*.is_base' => 'required|boolean',
+            'units.*.conversion_factor' => 'required|numeric|min:0.0001',
+            'units.*.buy_price' => 'nullable|integer|min:0',
+            'units.*.sell_price' => 'nullable|integer|min:0',
+            'units.*.barcode' => 'nullable|string|max:255',
+        ];
+    }
+
+    private function syncUnits(Product $product, ?array $units): void
+    {
+        $rows = collect($units ?? [])
+            ->keyBy('unit_id')
+            ->map(fn (array $u) => [
+                'is_base' => $u['is_base'],
+                'conversion_factor' => $u['conversion_factor'],
+                'buy_price' => $u['buy_price'] ?? $product->buy_price,
+                'sell_price' => $u['sell_price'] ?? $product->sell_price,
+                'barcode' => $u['barcode'] ?? null,
+            ]);
+
+        if ($rows->isEmpty()) {
+            // ponytail: no units sent — only seed default PCS base when product has none (matches docs/features/unit-conversion.md)
+            if ($product->units()->exists()) {
+                return;
+            }
+
+            $pcs = Unit::where('code', 'PCS')->first();
+            if ($pcs) {
+                $product->units()->attach($pcs->id, [
+                    'is_base' => true,
+                    'conversion_factor' => 1,
+                    'buy_price' => $product->buy_price,
+                    'sell_price' => $product->sell_price,
+                ]);
+            }
+
+            return;
+        }
+
+        if (! $rows->contains(fn ($r) => $r['is_base'])) {
+            // ponytail: no explicit base unit sent — treat first row as base with factor 1
+            $first = $rows->keys()->first();
+            $rows[$first] = ['is_base' => true, 'conversion_factor' => 1] + $rows[$first];
+        }
+
+        $product->units()->sync($rows->all());
     }
 
     private function logProductUpdate(Product $product, array $before): void

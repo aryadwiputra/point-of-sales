@@ -23,22 +23,40 @@ function ProductCard({ product, onAddToCart, isAdding }) {
     const basePrice = Number(promoBadge?.base_price || product.sell_price || 0);
     const showPromo = promoBadge && promoPrice > 0 && promoPrice < basePrice;
     const showBadge = Boolean(promoBadge?.label);
+    const multiUnits = (product.units || []).filter(
+        (u) => !u.is_base
+    );
+    const [selectedUnitId, setSelectedUnitId] = React.useState(null);
+    const selectedUnit =
+        multiUnits.find((u) => u.unit_id === selectedUnitId) || null;
+    const displayPrice = selectedUnit
+        ? selectedUnit.sell_price
+        : showPromo
+          ? promoPrice
+          : product.sell_price;
 
     return (
-        <button
-            onClick={() => hasStock && onAddToCart(product)}
-            disabled={!hasStock || isAdding}
+        <div
             className={`
                 group relative flex flex-col bg-white dark:bg-slate-900
                 rounded-2xl border border-slate-200 dark:border-slate-800
                 overflow-hidden transition-all duration-200
                 ${
                     hasStock
-                        ? "hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
-                        : "opacity-60 cursor-not-allowed"
+                        ? "hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
+                        : "opacity-60"
                 }
             `}
         >
+            {/* Product Image — click adds base unit */}
+            <button
+                type="button"
+                onClick={() => hasStock && onAddToCart(product, selectedUnit)}
+                disabled={!hasStock || isAdding}
+                className={`block text-left ${
+                    hasStock ? "cursor-pointer" : "cursor-not-allowed"
+                }`}
+            >
             {/* Product Image */}
             <div className="relative aspect-square bg-slate-100 dark:bg-slate-800 overflow-hidden">
                 {product.image ? (
@@ -88,6 +106,7 @@ function ProductCard({ product, onAddToCart, isAdding }) {
                     </div>
                 )}
             </div>
+            </button>
 
             {/* Product Info */}
             <div className="flex-1 p-3 flex flex-col justify-between min-h-[80px]">
@@ -95,23 +114,57 @@ function ProductCard({ product, onAddToCart, isAdding }) {
                     {product.title}
                 </h3>
                 <div className="mt-2">
-                    {showPromo && (
+                    {showPromo && !selectedUnit && (
                         <p className="text-xs text-slate-400 line-through">
                             {formatPrice(basePrice)}
                         </p>
                     )}
                     <p className="text-base font-bold text-primary-600 dark:text-primary-400">
-                        {formatPrice(showPromo ? promoPrice : product.sell_price)}
+                        {formatPrice(displayPrice)}
+                        {selectedUnit && (
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                {" "}/{selectedUnit.code}
+                            </span>
+                        )}
                     </p>
-                    {showBadge && !showPromo && (
+                    {showBadge && !showPromo && !selectedUnit && (
                         <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                             Promo tersedia
                         </p>
                     )}
+                    {multiUnits.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedUnitId(null)}
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-colors ${
+                                    selectedUnit === null
+                                        ? "bg-primary-500 text-white border-primary-500"
+                                        : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                }`}
+                            >
+                                Dasar
+                            </button>
+                            {multiUnits.map((u) => (
+                                <button
+                                    key={u.unit_id}
+                                    type="button"
+                                    onClick={() => setSelectedUnitId(u.unit_id)}
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border transition-colors ${
+                                        selectedUnitId === u.unit_id
+                                            ? "bg-primary-500 text-white border-primary-500"
+                                            : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    }`}
+                                >
+                                    {u.code}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
-        </button>
+        </div>
     );
 }
 
