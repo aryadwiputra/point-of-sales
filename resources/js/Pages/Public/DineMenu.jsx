@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 const fmt = (v) => Number(v || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
 
-export default function DineMenu({ table, categories, products, selfOrderEnabled, payOnlineEnabled, storeName }) {
+export default function DineMenu({ table, categories, products, selfOrderEnabled, storeName }) {
     const [cart, setCart] = useState([]);
     const [activeCategory, setActiveCategory] = useState("all");
     const [notes, setNotes] = useState("");
@@ -238,18 +238,6 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                             >
                                 {submitting ? "Mengirim..." : "Pesan — Bayar di Kasir"}
                             </button>
-                            {payOnlineEnabled && (
-                                <button
-                                    onClick={() => {
-                                        document.getElementById("cart-modal")?.close();
-                                        handleSubmit("pay_online");
-                                    }}
-                                    disabled={submitting}
-                                    className="btn btn-outline border-primary-500 text-primary-600 hover:bg-primary-50"
-                                >
-                                    Pesan — Bayar Online
-                                </button>
-                            )}
                         </div>
                     </div>
                     <form method="dialog" className="modal-backdrop">

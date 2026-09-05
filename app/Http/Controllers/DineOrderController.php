@@ -9,7 +9,6 @@ use App\Models\Setting;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -31,22 +30,40 @@ class DineOrderController extends Controller
             'items.*.unit_id' => ['nullable', 'exists:units,id'],
             'items.*.note' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:500'],
-            'payment_option' => ['required', 'in:pay_at_counter,pay_online'],
+            // ponytail: online payment (gateway + webhook) is not wired yet — enforce counter payment only
+            'payment_option' => ['required', 'in:pay_at_counter'],
         ]);
 
         $items = collect($validated['items']);
         $productIds = $items->pluck('product_id')->toArray();
 
-        $products = Product::whereIn('id', $productIds)->get();
-        $products = $this->pricingService->previewProducts($products);
+        $productModels = Product::with('components')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
 
-        $priceMap = $products->keyBy('id')->map(fn($p) => $p->sell_price);
+        $previews = $this->pricingService->previewProducts($productModels);
 
         $subtotal = 0;
         $orderItems = [];
 
         foreach ($items as $item) {
-            $price = $priceMap[$item['product_id']] ?? 0;
+            $product = $productModels->get($item['product_id']);
+            if (! $product) {
+                continue;
+            }
+
+            // Server-side availability check against global stock (tables have no warehouse context).
+            $available = $product->is_composite
+                ? $product->compositeStock()
+                : (int) $product->stock;
+
+            if ($available < $item['qty']) {
+                return back()->with('error', "Stok {$product->title} tidak mencukupi (tersedia: {$available}).");
+            }
+
+            $preview = $previews->get($product->id);
+            $price = (int) ($preview['effective_unit_price'] ?? $product->sell_price);
             $subtotal += $price * $item['qty'];
             $orderItems[] = [
                 'product_id' => $item['product_id'],
@@ -150,7 +167,7 @@ class DineOrderController extends Controller
             return false;
         }
 
-        $hashString = $orderId . $status . $serverKey;
+        $hashString = $orderId.$status.$serverKey;
         $expectedSignature = hash('sha512', $hashString);
 
         return hash_equals($expectedSignature, $signatureKey);
