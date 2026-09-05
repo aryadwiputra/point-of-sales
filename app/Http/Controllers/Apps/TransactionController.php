@@ -31,6 +31,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TransactionController extends Controller
@@ -240,10 +241,16 @@ class TransactionController extends Controller
      */
     public function addToCart(Request $request)
     {
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'qty' => ['required', 'numeric', 'min:0.01'],
+            'unit_id' => ['nullable', 'integer'],
+        ]);
+
         $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
         $warehouseId = $activeShift?->warehouse_id;
 
-        $product = Product::whereId($request->product_id)->first();
+        $product = Product::whereId($validated['product_id'])->first();
 
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
@@ -256,7 +263,7 @@ class TransactionController extends Controller
         if ($product->is_composite) {
             $product->load('components');
             foreach ($product->components as $component) {
-                $needed = (float) $component->pivot->qty * $request->qty;
+                $needed = (float) $component->pivot->qty * $validated['qty'];
                 $whProduct = $component->warehouses()->where('warehouse_id', $warehouseId)->first();
                 $avail = $whProduct?->pivot->stock ?? 0;
                 if ($avail < $needed) {
@@ -266,9 +273,15 @@ class TransactionController extends Controller
             // Composite price = sum component prices
             $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
         } else {
-            $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
+            $unitId = (int) (($validated['unit_id'] ?? null) ?: $product->baseUnit()?->id ?: 1);
+
+            // Reject an explicitly provided unit that does not belong to this product
+            if (! empty($validated['unit_id'] ?? null) && ! $product->units()->whereKey($unitId)->exists()) {
+                return redirect()->back()->with('error', 'Satuan tidak valid untuk produk ini.');
+            }
+
             $unitConversion = app(UnitConversionService::class);
-            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
+            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
 
             $availableStock = $warehouseId
                 ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
@@ -287,24 +300,24 @@ class TransactionController extends Controller
         }
 
         $cart = Cart::with('product')
-            ->where('product_id', $request->product_id)
+            ->where('product_id', $validated['product_id'])
             ->where('cashier_id', auth()->user()->id)
             ->active()
             ->first();
 
         if ($cart) {
-            $cart->increment('qty', $request->qty);
+            $cart->increment('qty', $validated['qty']);
             $cart->price = $sellPrice * $cart->qty;
             $cart->save();
         } else {
             Cart::create([
                 'cashier_id' => auth()->user()->id,
                 'warehouse_id' => $warehouseId,
-                'product_id' => $request->product_id,
+                'product_id' => $validated['product_id'],
                 'unit_id' => $unitId,
                 'conversion_factor' => $conversionFactor,
-                'qty' => $request->qty,
-                'price' => $sellPrice * $request->qty,
+                'qty' => $validated['qty'],
+                'price' => $sellPrice * $validated['qty'],
             ]);
         }
 
@@ -319,7 +332,11 @@ class TransactionController extends Controller
      */
     public function destroyCart($cart_id)
     {
-        $cart = Cart::with('product')->whereId($cart_id)->first();
+        $cart = Cart::with('product')
+            ->whereId($cart_id)
+            ->where('cashier_id', auth()->user()->id)
+            ->active()
+            ->first();
 
         if ($cart) {
             $cart->delete();
@@ -359,21 +376,41 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        // Check stock availability
-        $availableStock = $warehouseId
-            ? (int) ($cart->product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
-            : (int) $cart->product->stock;
+        $product = $cart->product;
 
-        if ($availableStock < $request->qty) {
+        if (! $product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk tidak ditemukan',
+            ], 404);
+        }
+
+        if ($product->is_composite) {
+            $product->load('components');
+        }
+
+        // Check stock availability (convert display qty to base qty for the cart's unit)
+        $unitConversion = app(UnitConversionService::class);
+        $baseQty = $product->is_composite
+            ? (int) $request->qty
+            : $unitConversion->toBaseUnit($product, (int) $cart->unit_id, $request->qty);
+
+        $availableStock = $warehouseId
+            ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+            : (int) $product->stock;
+
+        if ($availableStock < $baseQty) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok tidak mencukupi. Tersedia: '.$availableStock,
             ], 422);
         }
 
-        // Update quantity and price
+        // Update quantity and price (derive price from DB, not from request/global sell_price)
         $cart->qty = $request->qty;
-        $cart->price = $cart->product->sell_price * $request->qty;
+        $cart->price = $product->is_composite
+            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty) * $request->qty
+            : $unitConversion->getSellPrice($product, (int) $cart->unit_id) * $request->qty;
         $cart->save();
 
         return back()->with('success', 'Quantity updated successfully');
@@ -569,13 +606,7 @@ class TransactionController extends Controller
             }
         }
 
-        $length = 10;
-        $random = '';
-        for ($i = 0; $i < $length; $i++) {
-            $random .= rand(0, 1) ? rand(0, 9) : chr(rand(ord('a'), ord('z')));
-        }
-
-        $invoice = 'TRX-'.Str::upper($random);
+        $invoice = 'TRX-'.Str::upper(Str::random(10));
         $isCashPayment = empty($paymentGateway) && ! $isPayLater;
         $manualDiscount = max(0, (int) $request->input('discount', 0));
         $shippingCost = max(0, (int) $request->input('shipping_cost', 0));
@@ -629,6 +660,12 @@ class TransactionController extends Controller
             $appliedManualDiscount = (int) data_get($checkoutPreview, 'summary.manual_discount_total', 0);
             $grandTotal = (int) data_get($checkoutPreview, 'summary.grand_total', 0);
             $changeAmount = $isCashPayment ? max(0, $cashAmount - $grandTotal) : 0;
+
+            if ($isCashPayment && $cashAmount < $grandTotal) {
+                throw ValidationException::withMessages([
+                    'cash' => 'Uang tunai kurang dari total belanja.',
+                ]);
+            }
 
             $transaction = Transaction::create([
                 'cashier_id' => auth()->user()->id,
@@ -691,35 +728,82 @@ class TransactionController extends Controller
                 ]);
 
                 $product = Product::find($cart->product_id);
+                $warehouseId = $activeShift->warehouse_id;
 
                 if ($product->is_composite) {
                     $product->load('components');
                     foreach ($product->components as $component) {
                         $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                        ProductWarehouse::where([
-                            'product_id' => $component->id,
-                            'warehouse_id' => $activeShift->warehouse_id,
-                        ])->decrement('stock', $componentQty);
+                        // ponytail: lock pivot row, re-check stock inside the transaction to prevent overselling
+                        $pw = $warehouseId
+                            ? ProductWarehouse::where([
+                                'product_id' => $component->id,
+                                'warehouse_id' => $warehouseId,
+                            ])->lockForUpdate()->first()
+                            : null;
+                        $available = $pw ? (int) $pw->stock : (int) $component->stock;
+                        if ($available < $componentQty) {
+                            throw ValidationException::withMessages(['stock' => "Stok komponen {$component->title} tidak mencukupi. Tersedia: {$available}."]);
+                        }
+                        if ($pw) {
+                            $pw->decrement('stock', $componentQty);
+                        }
                         $component->decrement('stock', $componentQty);
                     }
                 } else {
                     $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                    ProductWarehouse::where([
-                        'product_id' => $product->id,
-                        'warehouse_id' => $activeShift->warehouse_id,
-                    ])->decrement('stock', $baseQty);
+
+                    // ponytail: lock pivot row and re-check stock at checkout time (cart add only checks once)
+                    $pw = $warehouseId
+                        ? ProductWarehouse::where([
+                            'product_id' => $product->id,
+                            'warehouse_id' => $warehouseId,
+                        ])->lockForUpdate()->first()
+                        : null;
+                    $available = $pw ? (int) $pw->stock : (int) $product->stock;
+                    if ($available < $baseQty) {
+                        throw ValidationException::withMessages(['stock' => "Stok {$product->title} tidak mencukupi. Tersedia: {$available}."]);
+                    }
+                    if ($pw) {
+                        $pw->decrement('stock', $baseQty);
+                    }
                     $product->decrement('stock', $baseQty);
 
-                    // FEFO: consume batch stock when the product has batches, else legacy path unchanged
-                    if (ProductBatch::where('product_id', $product->id)
-                        ->where('warehouse_id', $activeShift->warehouse_id)
-                        ->where('stock', '>', 0)->exists()) {
-                        $allocations = $this->batchService->allocate($product, $activeShift->warehouse_id, $baseQty);
-                        foreach ($allocations as $allocation) {
-                            ProductBatch::where('id', $allocation['batch_id'])->decrement('stock', $allocation['qty']);
-                        }
-                        if ($allocations !== []) {
-                            $detail->update(['product_batch_id' => $allocations[0]['batch_id']]);
+                    // FEFO: consume non-expired batch stock (locked). Products with partial batch coverage are rejected.
+                    if ($warehouseId) {
+                        $batches = ProductBatch::where('product_id', $product->id)
+                            ->where('warehouse_id', $warehouseId)
+                            ->where('stock', '>', 0)
+                            ->where(function (Builder $q) {
+                                $q->whereNull('expired_at')->orWhere('expired_at', '>', now());
+                            })
+                            ->orderBy('expired_at')
+                            ->orderBy('received_at')
+                            ->lockForUpdate()
+                            ->get();
+
+                        if ($batches->isNotEmpty()) {
+                            $covered = (int) $batches->sum('stock');
+                            if ($covered < $baseQty) {
+                                throw ValidationException::withMessages(['stock' => "Stok batch {$product->title} tidak mencukupi. Tersedia: {$covered}."]);
+                            }
+                            $remaining = $baseQty;
+                            $firstBatchId = null;
+                            foreach ($batches as $batch) {
+                                if ($remaining <= 0) {
+                                    break;
+                                }
+                                $take = min((int) $batch->stock, $remaining);
+                                $batch->decrement('stock', $take);
+                                $remaining -= $take;
+                                $firstBatchId ??= $batch->id;
+                                // record every batch consumed so multi-batch lines are fully traceable
+                                $detail->batchAllocations()->create([
+                                    'product_batch_id' => $batch->id,
+                                    'qty' => $take,
+                                ]);
+                            }
+                            $detail->update(['product_batch_id' => $firstBatchId]);
                         }
                     }
                 }
@@ -886,6 +970,24 @@ class TransactionController extends Controller
             return redirect()
                 ->back()
                 ->with('error', 'Transaksi sudah dibayar.');
+        }
+
+        if ($transaction->payment_method !== 'bank_transfer') {
+            return redirect()
+                ->back()
+                ->with('error', 'Hanya transaksi transfer bank yang dapat dikonfirmasi pembayarannya.');
+        }
+
+        if (! $transaction->bank_account_id) {
+            return redirect()
+                ->back()
+                ->with('error', 'Transaksi transfer bank belum memiliki rekening tujuan.');
+        }
+
+        if (! in_array($transaction->payment_status, ['pending', 'pending_approval'], true)) {
+            return redirect()
+                ->back()
+                ->with('error', 'Status transaksi tidak dapat dikonfirmasi saat ini.');
         }
 
         $beforeStatus = $transaction->payment_status;

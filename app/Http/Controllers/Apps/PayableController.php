@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PayableController extends Controller
@@ -159,12 +160,17 @@ class PayableController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $remaining = $payable->remaining;
-        if ($validated['amount'] > $remaining) {
-            return back()->with('error', 'Nominal melebihi sisa hutang.');
-        }
-
         DB::transaction(function () use ($validated, $payable, $request) {
+            // ponytail: lock the payable row so concurrent payments cannot double-apply past the remaining balance
+            $payable = Payable::whereKey($payable->id)->lockForUpdate()->firstOrFail();
+
+            $remaining = $payable->remaining;
+            if ($validated['amount'] > $remaining) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Nominal melebihi sisa hutang.',
+                ]);
+            }
+
             PayablePayment::create([
                 'payable_id' => $payable->id,
                 'paid_at' => $validated['paid_at'],

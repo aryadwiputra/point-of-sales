@@ -72,4 +72,9 @@ class TransactionDetail extends Model
     {
         return $this->hasMany(SalesReturnItem::class);
     }
+
+    public function batchAllocations()
+    {
+        return $this->hasMany(TransactionDetailBatchAllocation::class);
+    }
 }

@@ -365,7 +365,7 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                                             `Invoice ${transaction.invoice}: ${route(
                                                                 "transactions.public",
                                                                 transaction.invoice,
-                                                                true
+                                                                { token: transaction.access_token }
                                                             )}`
                                                         )}`}
                                                         target="_blank"
@@ -542,7 +542,8 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                         <a
                                             href={route(
                                                 "transactions.public",
-                                                transaction.invoice
+                                                transaction.invoice,
+                                                { token: transaction.access_token }
                                             )}
                                             target="_blank"
                                             rel="noopener noreferrer"

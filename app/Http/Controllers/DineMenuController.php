@@ -34,7 +34,20 @@ class DineMenuController extends Controller
             ->with(['category', 'units.unit'])
             ->get();
 
-        $products = $this->pricingService->previewProducts($products);
+        // ponytail: previewProducts() returns arrays keyed by product id (pricing fields only) — merge the effective price back onto model-shaped payloads the menu page expects (id/title/image/category_id/sell_price)
+        $previews = $this->pricingService->previewProducts($products);
+
+        $products = $products->map(function (Product $product) use ($previews) {
+            $preview = $previews->get($product->id);
+
+            return [
+                'id' => $product->id,
+                'title' => $product->title,
+                'image' => $product->image,
+                'category_id' => $product->category_id,
+                'sell_price' => (int) ($preview['effective_unit_price'] ?? $product->sell_price),
+            ];
+        })->values();
 
         $storeName = Setting::get('store_name', 'Restoran');
         $storeLogo = Setting::get('store_logo');

@@ -4,7 +4,6 @@ namespace Tests\Feature\Api;
 
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,7 +21,7 @@ class MasterDataApiTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
     }
 
     public function test_customers_index_paginates_and_searches(): void
@@ -127,11 +126,11 @@ class MasterDataApiTest extends TestCase
     public function test_warehouses_crud(): void
     {
         $response = $this->postJson('/api/v1/warehouses', [
-     'code' => 'WH-A',
-     'name' => 'Gudang A',
-     'type' => 'branch',
-     'is_active' => true,
- ])->assertCreated()
+            'code' => 'WH-A',
+            'name' => 'Gudang A',
+            'type' => 'branch',
+            'is_active' => true,
+        ])->assertCreated()
             ->assertJsonPath('data.code', 'WH-A');
 
         $warehouseId = $response->json('data.id');

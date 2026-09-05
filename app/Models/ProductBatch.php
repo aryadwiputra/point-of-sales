@@ -38,4 +38,9 @@ class ProductBatch extends Model
     {
         return $q->where('expired_at', '<', now())->where('stock', '>', 0);
     }
+
+    public function transactionDetailAllocations()
+    {
+        return $this->hasMany(TransactionDetailBatchAllocation::class);
+    }
 }

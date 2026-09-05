@@ -3,6 +3,7 @@
 namespace Tests\Feature\AuditLogs;
 
 use App\Models\AuditLog;
+use App\Models\BankAccount;
 use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
@@ -269,6 +270,14 @@ class AuditLogTest extends TestCase
             'module' => 'stock',
         ]);
 
+        $bankAccount = BankAccount::create([
+            'bank_name' => 'BCA',
+            'account_number' => '1234567890',
+            'account_name' => 'Toko',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
         $transaction = Transaction::create([
             'cashier_id' => $user->id,
             'customer_id' => null,
@@ -280,6 +289,7 @@ class AuditLogTest extends TestCase
             'grand_total' => 50000,
             'payment_method' => 'bank_transfer',
             'payment_status' => 'pending',
+            'bank_account_id' => $bankAccount->id,
         ]);
 
         $this->withSession($this->recentlyConfirmedSession())->actingAs($user)

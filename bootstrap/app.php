@@ -16,6 +16,8 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Sanctum\Exceptions\MissingAbilityException;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -47,12 +49,20 @@ return Application::configure(basePath: dirname(__DIR__))
             'registration.enabled' => EnsurePublicRegistrationEnabled::class,
             'bot.guard' => EnsureBotGuard::class,
             'step_up' => EnsureRecentPasswordConfirmation::class,
+            'abilities' => CheckAbilities::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (Throwable $exception, Request $request) {
             if ($exception instanceof ValidationException) {
                 return null;
+            }
+
+            // Authenticated token lacks a required ability → 403, not 401/500.
+            if ($exception instanceof MissingAbilityException) {
+                return response()->json([
+                    'message' => $exception->getMessage() ?: 'Missing required ability.',
+                ], Response::HTTP_FORBIDDEN);
             }
 
             // Session expired / not logged in → redirect to login (bukan 500)

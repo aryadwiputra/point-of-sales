@@ -9,6 +9,7 @@ use App\Models\ReceivablePayment;
 use App\Services\ReceivableService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ReceivableController extends Controller
@@ -86,12 +87,17 @@ class ReceivableController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $remaining = $receivable->remaining;
-        if ($validated['amount'] > $remaining) {
-            return back()->with('error', 'Nominal melebihi sisa piutang.');
-        }
-
         DB::transaction(function () use ($validated, $receivable, $request) {
+            // ponytail: lock the receivable row so concurrent payments cannot double-apply past the remaining balance
+            $receivable = Receivable::whereKey($receivable->id)->lockForUpdate()->firstOrFail();
+
+            $remaining = $receivable->remaining;
+            if ($validated['amount'] > $remaining) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Nominal melebihi sisa piutang.',
+                ]);
+            }
+
             ReceivablePayment::create([
                 'receivable_id' => $receivable->id,
                 'paid_at' => $validated['paid_at'],
