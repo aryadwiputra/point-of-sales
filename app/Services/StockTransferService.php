@@ -75,57 +75,48 @@ class StockTransferService
 
     public function send(StockTransfer $transfer, int $userId): void
     {
-        if (! $transfer->isDraft()) {
-            throw ValidationException::withMessages([
-                'transfer' => 'Hanya transfer dengan status draft yang bisa dikirim.',
-            ]);
-        }
-
         DB::transaction(function () use ($transfer, $userId) {
+            // ponytail: lock the transfer row and re-check status inside the transaction (prevents double-send / send-after-cancel races)
+            $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+            if (! $transfer->isDraft()) {
+                throw ValidationException::withMessages([
+                    'transfer' => 'Hanya transfer dengan status draft yang bisa dikirim.',
+                ]);
+            }
+
             $transfer->load('items.product');
             $before = $transfer->replicate();
 
-            // Validate stock availability
+            // Validate stock availability and decrement source warehouse stock (locked rows)
             foreach ($transfer->items as $item) {
-                $wh = ProductWarehouse::where([
+                $pw = ProductWarehouse::where([
                     'product_id' => $item->product_id,
                     'warehouse_id' => $transfer->source_warehouse_id,
-                ])->first();
+                ])->lockForUpdate()->first();
 
-                $available = $wh ? (int) $wh->stock : 0;
+                $available = $pw ? (int) $pw->stock : 0;
                 if ($available < $item->qty) {
                     throw ValidationException::withMessages([
                         'transfer' => "Stok {$item->product->title} tidak mencukupi di gudang asal (tersedia: {$available}).",
                     ]);
                 }
-            }
 
-            // Decrement source warehouse stock
-            foreach ($transfer->items as $item) {
-                $product = $item->product;
-                $pw = ProductWarehouse::where([
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $transfer->source_warehouse_id,
-                ])->first();
-                $stockBefore = $pw ? (int) $pw->stock : 0;
-                $stockAfter = max(0, $stockBefore - $item->qty);
-
-                ProductWarehouse::where([
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $transfer->source_warehouse_id,
-                ])->decrement('stock', $item->qty);
-
-                $product->decrement('stock', $item->qty);
+                $stockAfter = $available - $item->qty;
+                if ($pw) {
+                    $pw->decrement('stock', $item->qty);
+                }
+                $item->product->decrement('stock', $item->qty);
 
                 StockMutation::create([
-                    'product_id' => $product->id,
+                    'product_id' => $item->product_id,
                     'warehouse_id' => $transfer->source_warehouse_id,
                     'reference_type' => 'stock_transfer',
                     'reference_id' => $transfer->id,
                     'mutation_type' => 'out',
                     'qty' => $item->qty,
-                    'stock_before' => $stockBefore,
-                    'stock_after' => max(0, $stockBefore - $item->qty),
+                    'stock_before' => $available,
+                    'stock_after' => $stockAfter,
                     'notes' => 'Transfer ke '.$transfer->destinationWarehouse->code,
                     'created_by' => $userId,
                 ]);
@@ -149,21 +140,26 @@ class StockTransferService
 
     public function receive(StockTransfer $transfer, int $userId): void
     {
-        if (! $transfer->isInTransit()) {
-            throw ValidationException::withMessages([
-                'transfer' => 'Hanya transfer dengan status in_transit yang bisa diterima.',
-            ]);
-        }
-
         DB::transaction(function () use ($transfer, $userId) {
+            // ponytail: lock the transfer row and re-check status inside the transaction (prevents double-receive)
+            $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+            if (! $transfer->isInTransit()) {
+                throw ValidationException::withMessages([
+                    'transfer' => 'Hanya transfer dengan status in_transit yang bisa diterima.',
+                ]);
+            }
+
             $transfer->load('items.product');
             $before = $transfer->replicate();
 
             // Increment destination warehouse stock + legacy stock
             foreach ($transfer->items as $item) {
                 $product = $item->product;
+                $stockBefore = (int) $product->stock;
 
-                ProductWarehouse::updateOrCreate(
+                // ponytail: firstOrCreate (NOT updateOrCreate with stock=0, which would reset an existing row)
+                ProductWarehouse::firstOrCreate(
                     ['product_id' => $item->product_id, 'warehouse_id' => $transfer->destination_warehouse_id],
                     ['stock' => 0]
                 )->increment('stock', $item->qty);
@@ -177,7 +173,7 @@ class StockTransferService
                     'reference_id' => $transfer->id,
                     'mutation_type' => 'in',
                     'qty' => $item->qty,
-                    'stock_before' => (int) $product->stock - $item->qty,
+                    'stock_before' => $stockBefore,
                     'stock_after' => (int) $product->stock,
                     'notes' => 'Transfer dari '.$transfer->sourceWarehouse->code,
                     'created_by' => $userId,
@@ -203,13 +199,16 @@ class StockTransferService
 
     public function cancel(StockTransfer $transfer, int $userId): void
     {
-        if (! in_array($transfer->status, ['draft', 'in_transit'])) {
-            throw ValidationException::withMessages([
-                'transfer' => 'Hanya transfer draft atau in_transit yang bisa dibatalkan.',
-            ]);
-        }
-
         DB::transaction(function () use ($transfer) {
+            // ponytail: lock the transfer row and re-check status inside the transaction (prevents cancel-after-complete races)
+            $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($transfer->status, ['draft', 'in_transit'])) {
+                throw ValidationException::withMessages([
+                    'transfer' => 'Hanya transfer draft atau in_transit yang bisa dibatalkan.',
+                ]);
+            }
+
             $before = $transfer->replicate();
             $returnStock = $transfer->isInTransit();
 
@@ -218,12 +217,14 @@ class StockTransferService
                 $transfer->load('items.product');
 
                 foreach ($transfer->items as $item) {
-                    ProductWarehouse::updateOrCreate(
+                    $product = $item->product;
+
+                    // ponytail: firstOrCreate (NOT updateOrCreate with stock=0, which would reset an existing row)
+                    ProductWarehouse::firstOrCreate(
                         ['product_id' => $item->product_id, 'warehouse_id' => $transfer->source_warehouse_id],
                         ['stock' => 0]
                     )->increment('stock', $item->qty);
 
-                    $product = $item->product;
                     $product->increment('stock', $item->qty);
                 }
             }
