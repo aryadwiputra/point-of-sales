@@ -8,8 +8,10 @@ use App\Models\Payable;
 use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\PurchaseOrder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class GoodsReceivingService
 {
@@ -32,86 +34,112 @@ class GoodsReceivingService
 
     public function receive(PurchaseOrder $order, array $items, ?string $notes, int $userId): GoodsReceiving
     {
-        return DB::transaction(function () use ($order, $items, $notes, $userId) {
-            $receiving = GoodsReceiving::create([
-                'purchase_order_id' => $order->id,
-                'supplier_id' => $order->supplier_id,
-                'warehouse_id' => $order->warehouse_id,
-                'document_number' => $this->generateDocumentNumber(),
-                'notes' => $notes,
-                'received_by' => $userId,
-                'received_at' => now(),
-            ]);
+        // ponytail: retry only on document_number unique collisions (concurrent receipts pick the same next number)
+        return retry(3, function () use ($order, $items, $notes, $userId) {
+            return DB::transaction(function () use ($order, $items, $notes, $userId) {
+                // ponytail: lock the order + its items so concurrent receipts cannot double-consume the same PO item
+                $order = PurchaseOrder::with('items')->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            foreach ($items as $item) {
-                $poItem = $order->items()->findOrFail($item['purchase_order_item_id']);
-                $qtyReceived = (int) $item['qty_received'];
-
-                GoodsReceivingItem::create([
-                    'goods_receiving_id' => $receiving->id,
-                    'purchase_order_item_id' => $poItem->id,
-                    'product_id' => $poItem->product_id,
-                    'qty_received' => $qtyReceived,
-                    'notes' => $item['notes'] ?? null,
-                ]);
-
-                $poItem->increment('qty_received', $qtyReceived);
-
-                $product = $poItem->product;
-                $stockBefore = (int) $product->stock;
-                // Increment legacy stock
-                $product->increment('stock', $qtyReceived);
-                // Increment warehouse pivot stock
-                if ($order->warehouse_id) {
-                    ProductWarehouse::firstOrCreate(
-                        ['product_id' => $product->id, 'warehouse_id' => $order->warehouse_id],
-                        ['stock' => 0]
-                    )->increment('stock', $qtyReceived);
-                }
-
-                // Create batch record
-                if (! empty($item['batch_number']) && $order->warehouse_id) {
-                    ProductBatch::create([
-                        'product_id' => $product->id,
-                        'warehouse_id' => $order->warehouse_id,
-                        'batch_number' => $item['batch_number'],
-                        'expired_at' => $item['expired_at'] ?? null,
-                        'received_at' => now(),
-                        'stock' => $qtyReceived,
+                if (! in_array($order->status, ['ordered', 'partial_received'])) {
+                    throw ValidationException::withMessages([
+                        'purchase_order_id' => 'Hanya PO berstatus ordered/partial yang dapat diterima.',
                     ]);
                 }
 
-                $this->stockMutationService->recordPurchaseInbound(
-                    product: $product,
-                    goodsReceiving: $receiving,
-                    qty: $qtyReceived,
-                    stockBefore: $stockBefore,
-                    stockAfter: (int) $product->stock,
-                    notes: 'Penerimaan dari PO '.$order->document_number,
-                    userId: $userId,
-                );
-            }
-
-            $this->updateOrderStatus($order);
-
-            if ($receiving->supplier_id) {
-                $this->createOrUpdatePayable($order, $receiving, $userId);
-            }
-
-            $this->auditLogService->log(
-                event: 'goods_receiving.created',
-                module: 'purchase',
-                auditable: $receiving,
-                description: 'Barang diterima dari PO '.$order->document_number,
-                after: [
-                    'document_number' => $receiving->document_number,
+                $receiving = GoodsReceiving::create([
                     'purchase_order_id' => $order->id,
-                    'total_items' => count($items),
-                ],
-                meta: ['goods_receiving_id' => $receiving->id],
-            );
+                    'supplier_id' => $order->supplier_id,
+                    'warehouse_id' => $order->warehouse_id,
+                    'document_number' => $this->generateDocumentNumber(),
+                    'notes' => $notes,
+                    'received_by' => $userId,
+                    'received_at' => now(),
+                ]);
 
-            return $receiving;
+                foreach ($items as $item) {
+                    $poItem = $order->items->firstWhere('id', $item['purchase_order_item_id']);
+                    if (! $poItem) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Item tidak ditemukan di PO.',
+                        ]);
+                    }
+                    $qtyReceived = (int) $item['qty_received'];
+
+                    $outstanding = $poItem->qty_ordered - $poItem->qty_received;
+                    if ($qtyReceived > $outstanding) {
+                        throw ValidationException::withMessages([
+                            'items' => "Qty diterima melebihi sisa item {$poItem->product_id}.",
+                        ]);
+                    }
+
+                    GoodsReceivingItem::create([
+                        'goods_receiving_id' => $receiving->id,
+                        'purchase_order_item_id' => $poItem->id,
+                        'product_id' => $poItem->product_id,
+                        'qty_received' => $qtyReceived,
+                        'notes' => $item['notes'] ?? null,
+                    ]);
+
+                    $poItem->increment('qty_received', $qtyReceived);
+
+                    $product = $poItem->product;
+                    $stockBefore = (int) $product->stock;
+                    // Increment legacy stock
+                    $product->increment('stock', $qtyReceived);
+                    // Increment warehouse pivot stock
+                    if ($order->warehouse_id) {
+                        ProductWarehouse::firstOrCreate(
+                            ['product_id' => $product->id, 'warehouse_id' => $order->warehouse_id],
+                            ['stock' => 0]
+                        )->increment('stock', $qtyReceived);
+                    }
+
+                    // Create batch record
+                    if (! empty($item['batch_number']) && $order->warehouse_id) {
+                        ProductBatch::create([
+                            'product_id' => $product->id,
+                            'warehouse_id' => $order->warehouse_id,
+                            'batch_number' => $item['batch_number'],
+                            'expired_at' => $item['expired_at'] ?? null,
+                            'received_at' => now(),
+                            'stock' => $qtyReceived,
+                        ]);
+                    }
+
+                    $this->stockMutationService->recordPurchaseInbound(
+                        product: $product,
+                        goodsReceiving: $receiving,
+                        qty: $qtyReceived,
+                        stockBefore: $stockBefore,
+                        stockAfter: (int) $product->stock,
+                        notes: 'Penerimaan dari PO '.$order->document_number,
+                        userId: $userId,
+                    );
+                }
+
+                $this->updateOrderStatus($order);
+
+                if ($receiving->supplier_id) {
+                    $this->createOrUpdatePayable($order, $receiving, $userId);
+                }
+
+                $this->auditLogService->log(
+                    event: 'goods_receiving.created',
+                    module: 'purchase',
+                    auditable: $receiving,
+                    description: 'Barang diterima dari PO '.$order->document_number,
+                    after: [
+                        'document_number' => $receiving->document_number,
+                        'purchase_order_id' => $order->id,
+                        'total_items' => count($items),
+                    ],
+                    meta: ['goods_receiving_id' => $receiving->id],
+                );
+
+                return $receiving;
+            });
+        }, 0, function ($e) {
+            return $e instanceof QueryException && str_contains($e->getMessage(), 'document_number');
         });
     }
 

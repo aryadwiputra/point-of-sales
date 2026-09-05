@@ -14,6 +14,7 @@ class ProductApiTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Category $category;
 
     protected function setUp(): void
@@ -55,7 +56,7 @@ class ProductApiTest extends TestCase
 
     public function test_products_index_paginates(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         for ($i = 1; $i <= 25; $i++) {
             $this->makeProduct('Produk '.$i, 'BC-'.$i);
@@ -73,7 +74,7 @@ class ProductApiTest extends TestCase
 
     public function test_products_search_filters(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $this->makeProduct('Minyak Goreng', 'BC-MG');
         $this->makeProduct('Gula Pasir', 'BC-GP');
@@ -87,7 +88,7 @@ class ProductApiTest extends TestCase
 
     public function test_products_store_creates(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $response = $this->postJson('/api/v1/products', [
             'title' => 'Produk Baru',
@@ -106,7 +107,7 @@ class ProductApiTest extends TestCase
 
     public function test_products_store_validation_duplicate_barcode(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $this->makeProduct('Produk Ada', 'DUP-001');
 
@@ -121,7 +122,7 @@ class ProductApiTest extends TestCase
 
     public function test_products_update_partial(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $product = $this->makeProduct('Produk Update', 'UPD-001');
 
@@ -132,14 +133,14 @@ class ProductApiTest extends TestCase
 
     public function test_products_show_404_for_missing(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $this->getJson('/api/v1/products/99999')->assertStatus(404);
     }
 
     public function test_products_destroy_returns_204(): void
     {
-        Sanctum::actingAs($this->user);
+        Sanctum::actingAs($this->user, ['*']);
 
         $product = $this->makeProduct('Produk Hapus', 'DEL-001');
 

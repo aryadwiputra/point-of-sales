@@ -214,4 +214,46 @@ class GoodsReceivingTest extends TestCase
         $this->assertEquals('completed', $order->fresh()->status);
         $this->assertNotNull($order->fresh()->completed_at);
     }
+
+    public function test_receiving_rejects_duplicate_po_item_in_one_payload(): void
+    {
+        $product = $this->createProduct(100);
+        $order = $this->createOrderedPo($product, 10, $this->warehouse->id);
+        $poItemId = $order->items->first()->id;
+
+        $payload = [
+            'purchase_order_id' => $order->id,
+            'items' => [
+                ['purchase_order_item_id' => $poItemId, 'qty_received' => 4],
+                ['purchase_order_item_id' => $poItemId, 'qty_received' => 4],
+            ],
+        ];
+
+        $response = $this->post(route('goods-receivings.store'), $payload);
+
+        $response->assertSessionHas('error');
+        $this->assertEquals(0, GoodsReceiving::count());
+        $this->assertEquals(100, $product->fresh()->stock);
+        $this->assertEquals(0, $order->items->first()->fresh()->qty_received);
+    }
+
+    public function test_receiving_service_rejects_duplicate_items_each_within_outstanding(): void
+    {
+        $product = $this->createProduct(100);
+        $order = $this->createOrderedPo($product, 10, $this->warehouse->id);
+        $poItemId = $order->items->first()->id;
+
+        $this->post(route('goods-receivings.store'), [
+            'purchase_order_id' => $order->id,
+            'items' => [
+                ['purchase_order_item_id' => $poItemId, 'qty_received' => 6],
+                ['purchase_order_item_id' => $poItemId, 'qty_received' => 6],
+            ],
+        ])->assertSessionHas('error');
+
+        $this->assertEquals(0, GoodsReceiving::count());
+        $this->assertEquals(100, $product->fresh()->stock);
+        $this->assertEquals(0, $order->items->first()->fresh()->qty_received);
+        $this->assertEquals('ordered', $order->fresh()->status);
+    }
 }

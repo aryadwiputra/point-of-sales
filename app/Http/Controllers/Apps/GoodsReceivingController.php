@@ -78,7 +78,13 @@ class GoodsReceivingController extends Controller
             return back()->with('error', 'Hanya PO berstatus ordered/partial yang dapat diterima.');
         }
 
+        $seen = [];
         foreach ($data['items'] as $item) {
+            if (in_array($item['purchase_order_item_id'], $seen)) {
+                return back()->with('error', 'Item PO duplikat dalam satu penerimaan.');
+            }
+            $seen[] = $item['purchase_order_item_id'];
+
             $poItem = $order->items->firstWhere('id', $item['purchase_order_item_id']);
             if (! $poItem) {
                 return back()->with('error', 'Item tidak ditemukan di PO.');
