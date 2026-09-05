@@ -13,6 +13,7 @@ import { usePage, router } from "@inertiajs/react";
 export default function Notification() {
     const {
         lowStockNotifications = [],
+        expiringBatchNotifications = [],
         receivableNotifications = [],
         payableNotifications = [],
     } = usePage().props;
@@ -46,6 +47,16 @@ export default function Notification() {
                 title: `Stok habis: ${n.title}`,
                 subtitle: `Stok: ${n.stock}`,
                 type: "stock",
+            }))
+        ),
+        ...mapItems(
+            expiringBatchNotifications.map((n) => ({
+                ...n,
+                id: `batch-${n.id}`,
+                title: `Batch kedaluwarsa: ${n.title}`,
+                subtitle: `${n.batch_number} • Stok: ${n.stock}`,
+                type: "stock",
+                noAck: true,
             }))
         ),
         ...mapItems(
@@ -94,11 +105,14 @@ export default function Notification() {
     // Sync when low stock changes (e.g., restocked items disappear)
     useEffect(() => {
         setData(mergeData());
-    }, [lowStockNotifications, receivableNotifications, payableNotifications]);
+    },         [lowStockNotifications, expiringBatchNotifications, receivableNotifications, payableNotifications]);
 
     const handleMarkRead = (id) => {
-        setData((prev) => prev.filter((item) => item.id !== id));
         const item = data.find((d) => d.id === id);
+        if (item?.noAck) {
+            return;
+        }
+        setData((prev) => prev.filter((item) => item.id !== id));
         if (item?.type === "stock") {
             router.post(
                 route("notifications.stock.read"),
@@ -144,7 +158,8 @@ export default function Notification() {
                     </div>
                     <button
                         onClick={() => handleMarkRead(item.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-primary-600 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30 border border-transparent hover:border-primary-200 dark:hover:border-primary-800"
+                        disabled={item.noAck}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-primary-600 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30 border border-transparent hover:border-primary-200 dark:hover:border-primary-800 ${item.noAck ? "opacity-50 cursor-default" : ""}`}
                     >
                         <IconCircleCheck size={16} />
                         Dibaca

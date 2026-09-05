@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('crm:sync-segments')->dailyAt('01:00');
 Schedule::command('crm:generate-reminders')->dailyAt('01:15');
+Schedule::command('reorder:generate')->dailyAt('02:00');

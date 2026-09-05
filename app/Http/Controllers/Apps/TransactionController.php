@@ -12,14 +12,17 @@ use App\Models\CustomerVoucher;
 use App\Models\DiscountApprovalLog;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
+use App\Services\BatchService;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\UnitConversionService;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,7 +39,9 @@ class TransactionController extends Controller
         private readonly CashierShiftService $cashierShiftService,
         private readonly AuditLogService $auditLogService,
         private readonly PricingService $pricingService,
-        private readonly LoyaltyService $loyaltyService
+        private readonly LoyaltyService $loyaltyService,
+        private readonly PriceListService $priceListService,
+        private readonly BatchService $batchService
     ) {}
 
     /**
@@ -84,7 +89,7 @@ class TransactionController extends Controller
         $customers = Customer::latest()->get();
 
         // get products with stock > 0 in active warehouse
-        $products = Product::with('category:id,name')
+        $products = Product::with(['category:id,name', 'units'])
             ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id')
             ->when($warehouseId, function ($q) use ($warehouseId) {
                 $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
@@ -100,6 +105,14 @@ class TransactionController extends Controller
 
             return [
                 ...$product->toArray(),
+                'units' => $product->units->map(fn ($u) => [
+                    'unit_id' => $u->id,
+                    'code' => $u->code,
+                    'is_base' => (bool) $u->pivot->is_base,
+                    'conversion_factor' => (float) $u->pivot->conversion_factor,
+                    'sell_price' => (int) $u->pivot->sell_price,
+                    'barcode' => $u->pivot->barcode,
+                ]),
                 'pricing_badge' => $pricing && ! empty($pricing['pricing_rule']) ? [
                     'label' => $pricing['pricing_rule']['label'],
                     'promo_price' => $pricing['pricing_rule']['price_context']
@@ -235,6 +248,9 @@ class TransactionController extends Controller
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
         }
+
+        // ponytail: composite branch skips unit logic; null unit_id is fine for composite carts
+        $unitId = null;
 
         // Composite: check component stock
         if ($product->is_composite) {
@@ -636,6 +652,7 @@ class TransactionController extends Controller
                 'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
                 'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                 'customer_npwp' => $request->customer_npwp,
+                'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
             ]);
 
             foreach ($carts as $cart) {
@@ -692,6 +709,19 @@ class TransactionController extends Controller
                         'warehouse_id' => $activeShift->warehouse_id,
                     ])->decrement('stock', $baseQty);
                     $product->decrement('stock', $baseQty);
+
+                    // FEFO: consume batch stock when the product has batches, else legacy path unchanged
+                    if (ProductBatch::where('product_id', $product->id)
+                        ->where('warehouse_id', $activeShift->warehouse_id)
+                        ->where('stock', '>', 0)->exists()) {
+                        $allocations = $this->batchService->allocate($product, $activeShift->warehouse_id, $baseQty);
+                        foreach ($allocations as $allocation) {
+                            ProductBatch::where('id', $allocation['batch_id'])->decrement('stock', $allocation['qty']);
+                        }
+                        if ($allocations !== []) {
+                            $detail->update(['product_batch_id' => $allocations[0]['batch_id']]);
+                        }
+                    }
                 }
             }
 
