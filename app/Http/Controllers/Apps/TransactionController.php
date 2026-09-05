@@ -241,10 +241,16 @@ class TransactionController extends Controller
      */
     public function addToCart(Request $request)
     {
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'qty' => ['required', 'numeric', 'min:0.01'],
+            'unit_id' => ['nullable', 'integer'],
+        ]);
+
         $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
         $warehouseId = $activeShift?->warehouse_id;
 
-        $product = Product::whereId($request->product_id)->first();
+        $product = Product::whereId($validated['product_id'])->first();
 
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
@@ -257,7 +263,7 @@ class TransactionController extends Controller
         if ($product->is_composite) {
             $product->load('components');
             foreach ($product->components as $component) {
-                $needed = (float) $component->pivot->qty * $request->qty;
+                $needed = (float) $component->pivot->qty * $validated['qty'];
                 $whProduct = $component->warehouses()->where('warehouse_id', $warehouseId)->first();
                 $avail = $whProduct?->pivot->stock ?? 0;
                 if ($avail < $needed) {
@@ -267,9 +273,15 @@ class TransactionController extends Controller
             // Composite price = sum component prices
             $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
         } else {
-            $unitId = (int) ($request->unit_id ?: $product->baseUnit()?->id ?: 1);
+            $unitId = (int) (($validated['unit_id'] ?? null) ?: $product->baseUnit()?->id ?: 1);
+
+            // Reject an explicitly provided unit that does not belong to this product
+            if (! empty($validated['unit_id'] ?? null) && ! $product->units()->whereKey($unitId)->exists()) {
+                return redirect()->back()->with('error', 'Satuan tidak valid untuk produk ini.');
+            }
+
             $unitConversion = app(UnitConversionService::class);
-            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $request->qty);
+            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
 
             $availableStock = $warehouseId
                 ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
@@ -288,24 +300,24 @@ class TransactionController extends Controller
         }
 
         $cart = Cart::with('product')
-            ->where('product_id', $request->product_id)
+            ->where('product_id', $validated['product_id'])
             ->where('cashier_id', auth()->user()->id)
             ->active()
             ->first();
 
         if ($cart) {
-            $cart->increment('qty', $request->qty);
+            $cart->increment('qty', $validated['qty']);
             $cart->price = $sellPrice * $cart->qty;
             $cart->save();
         } else {
             Cart::create([
                 'cashier_id' => auth()->user()->id,
                 'warehouse_id' => $warehouseId,
-                'product_id' => $request->product_id,
+                'product_id' => $validated['product_id'],
                 'unit_id' => $unitId,
                 'conversion_factor' => $conversionFactor,
-                'qty' => $request->qty,
-                'price' => $sellPrice * $request->qty,
+                'qty' => $validated['qty'],
+                'price' => $sellPrice * $validated['qty'],
             ]);
         }
 
@@ -320,7 +332,11 @@ class TransactionController extends Controller
      */
     public function destroyCart($cart_id)
     {
-        $cart = Cart::with('product')->whereId($cart_id)->first();
+        $cart = Cart::with('product')
+            ->whereId($cart_id)
+            ->where('cashier_id', auth()->user()->id)
+            ->active()
+            ->first();
 
         if ($cart) {
             $cart->delete();
@@ -360,21 +376,41 @@ class TransactionController extends Controller
             ], 404);
         }
 
-        // Check stock availability
-        $availableStock = $warehouseId
-            ? (int) ($cart->product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
-            : (int) $cart->product->stock;
+        $product = $cart->product;
 
-        if ($availableStock < $request->qty) {
+        if (! $product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk tidak ditemukan',
+            ], 404);
+        }
+
+        if ($product->is_composite) {
+            $product->load('components');
+        }
+
+        // Check stock availability (convert display qty to base qty for the cart's unit)
+        $unitConversion = app(UnitConversionService::class);
+        $baseQty = $product->is_composite
+            ? (int) $request->qty
+            : $unitConversion->toBaseUnit($product, (int) $cart->unit_id, $request->qty);
+
+        $availableStock = $warehouseId
+            ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+            : (int) $product->stock;
+
+        if ($availableStock < $baseQty) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok tidak mencukupi. Tersedia: '.$availableStock,
             ], 422);
         }
 
-        // Update quantity and price
+        // Update quantity and price (derive price from DB, not from request/global sell_price)
         $cart->qty = $request->qty;
-        $cart->price = $cart->product->sell_price * $request->qty;
+        $cart->price = $product->is_composite
+            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty) * $request->qty
+            : $unitConversion->getSellPrice($product, (int) $cart->unit_id) * $request->qty;
         $cart->save();
 
         return back()->with('success', 'Quantity updated successfully');

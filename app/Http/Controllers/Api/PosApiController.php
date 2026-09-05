@@ -278,6 +278,11 @@ class PosApiController extends Controller
             $conversionFactor = 1;
         } else {
             $unitId = (int) ($validated['unit_id'] ?? $product->baseUnit()?->id ?? 1);
+
+            if (isset($validated['unit_id']) && ! $product->units()->whereKey($unitId)->exists()) {
+                return $this->error('Satuan tidak valid untuk produk ini.', 422);
+            }
+
             $baseQty = $this->unitConversionService->toBaseUnit($product, $unitId, $validated['qty']);
 
             $availableStock = $warehouseId
