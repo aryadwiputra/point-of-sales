@@ -173,6 +173,6 @@ API tests must use `Sanctum::actingAs($user, ['*'])` or real tokens via `$user->
 
 ## Route Naming Gotchas
 
-- Price list sidebar link: `settings.price-lists.index` (NOT `price-lists.index`)
+- Price list sidebar link: `price-lists.index` (NOT `settings.price-lists.index`)
 - Profile URL: `/dashboard/profile` (NOT `/apps/profile`)
 - Public invoice: `/share/transactions/{invoice}?token={access_token}`
