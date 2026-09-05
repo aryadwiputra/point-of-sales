@@ -71,8 +71,9 @@ Route::get('/dashboard/access', function () {
     return Inertia::render('Dashboard/Access');
 })->middleware(['auth', 'verified'])->name('dashboard.access');
 
-// Public share routes (no login)
+// Public share routes (no login, but require the transaction access token)
 Route::get('/share/transactions/{invoice}', [DocumentController::class, 'publicInvoice'])
+    ->middleware('throttle:10,1')
     ->name('transactions.public');
 
 // Customer portal routes (no login, token-based)

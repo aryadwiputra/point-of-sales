@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\ThermalPrintService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class DocumentController extends Controller
@@ -78,11 +79,24 @@ class DocumentController extends Controller
     }
 
     /**
-     * Public version of invoice (no auth needed).
+     * Public version of invoice (no auth needed, but requires the transaction access token).
      */
-    public function publicInvoice(string $invoice)
+    public function publicInvoice(string $invoice, Request $request)
     {
-        return $this->invoice($invoice);
+        $this->ensureFontDirectory();
+
+        $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
+            ->where('invoice', $invoice)
+            ->where('access_token', $request->query('token'))
+            ->firstOrFail();
+
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'transaction' => $transaction,
+            'store' => $this->storeProfile(),
+            'barcode' => $this->barcode($transaction->invoice),
+        ])->setPaper('a4');
+
+        return $pdf->stream("invoice-{$transaction->invoice}.pdf");
     }
 
     public function receipt(string $invoice, string $size = '80')
