@@ -58,21 +58,22 @@ class GoodsReceivingService
                 $poItem->increment('qty_received', $qtyReceived);
 
                 $product = $poItem->product;
-                // Decrement legacy stock
-                $product->decrement('stock', $qtyReceived);
+                $stockBefore = (int) $product->stock;
+                // Increment legacy stock
+                $product->increment('stock', $qtyReceived);
                 // Increment warehouse pivot stock
                 if ($order->warehouse_id) {
-                    ProductWarehouse::where([
-                        'product_id' => $product->id,
-                        'warehouse_id' => $order->warehouse_id,
-                    ])->increment('stock', $qtyReceived);
+                    ProductWarehouse::firstOrCreate(
+                        ['product_id' => $product->id, 'warehouse_id' => $order->warehouse_id],
+                        ['stock' => 0]
+                    )->increment('stock', $qtyReceived);
                 }
 
                 // Create batch record
-                if (! empty($item['batch_number'])) {
+                if (! empty($item['batch_number']) && $order->warehouse_id) {
                     ProductBatch::create([
                         'product_id' => $product->id,
-                        'warehouse_id' => $order->warehouse_id ?? 1,
+                        'warehouse_id' => $order->warehouse_id,
                         'batch_number' => $item['batch_number'],
                         'expired_at' => $item['expired_at'] ?? null,
                         'received_at' => now(),
@@ -84,7 +85,7 @@ class GoodsReceivingService
                     product: $product,
                     goodsReceiving: $receiving,
                     qty: $qtyReceived,
-                    stockBefore: (int) $product->stock + $qtyReceived,
+                    stockBefore: $stockBefore,
                     stockAfter: (int) $product->stock,
                     notes: 'Penerimaan dari PO '.$order->document_number,
                     userId: $userId,
