@@ -84,6 +84,8 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
+            'tax_type' => 'nullable|in:exclusive,inclusive',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
             ...$this->compositeRules(),
             ...$this->unitRules(),
         ]);
@@ -104,6 +106,8 @@ class ProductController extends Controller
             'stock' => $request->stock,
             'min_stock' => $request->min_stock ?? 0,
             'max_stock' => $request->max_stock ?? 0,
+            'tax_type' => $request->input('tax_type', 'exclusive'),
+            'tax_rate' => $request->input('tax_rate', 11.00),
             'is_composite' => $request->boolean('is_composite'),
         ]);
 
@@ -174,6 +178,8 @@ class ProductController extends Controller
             'sell_price' => 'required',
             'min_stock' => 'nullable|integer|min:0',
             'max_stock' => 'nullable|integer|min:0',
+            'tax_type' => 'nullable|in:exclusive,inclusive',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
             ...$this->compositeRules(),
             ...$this->unitRules(),
         ]);
@@ -206,6 +212,8 @@ class ProductController extends Controller
                 'category_id' => $request->category_id,
                 'buy_price' => $request->buy_price,
                 'sell_price' => $request->sell_price,
+                'tax_type' => $request->input('tax_type', 'exclusive'),
+                'tax_rate' => $request->input('tax_rate', 11.00),
                 'is_composite' => $request->boolean('is_composite'),
             ]);
 
@@ -229,6 +237,8 @@ class ProductController extends Controller
             'category_id' => $request->category_id,
             'buy_price' => $request->buy_price,
             'sell_price' => $request->sell_price,
+            'tax_type' => $request->input('tax_type', 'exclusive'),
+            'tax_rate' => $request->input('tax_rate', 11.00),
             'is_composite' => $request->boolean('is_composite'),
         ]);
 
