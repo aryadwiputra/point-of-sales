@@ -3,7 +3,7 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
-## [v2.10.5] - 2026-09-12
+## [v2.10.6] - 2026-09-12
 
 ### Fixed
 
