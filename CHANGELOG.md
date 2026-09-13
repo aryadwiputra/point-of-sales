@@ -3,6 +3,14 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [v2.10.6] - 2026-09-13
+
+### Added
+
+- Added `php artisan seed:demo` command for one-command full demo dataset regeneration (with `--force` to skip confirmation; truncates 19 tables).
+- Demo accounts created by `UserSeeder` are now pre-verified, so seeded admin/cashier can log in without email verification.
+- Added migration for `cashier_shifts.cash_in_total` / `cash_out_total` columns so fresh installs match the shift summary schema.
+
 ## [v2.10.5] - 2026-09-12
 
 ### Fixed
