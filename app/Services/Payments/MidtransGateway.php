@@ -8,18 +8,18 @@ use Illuminate\Support\Facades\Http;
 
 class MidtransGateway
 {
-    public function createCharge(Transaction $transaction, array $config): array
+    public function createCharge(Transaction $transaction, array $config, ?int $amount = null, ?string $orderId = null): array
     {
-        return $this->createTransaction($transaction, $config);
+        return $this->createTransaction($transaction, $config, null, $amount, $orderId);
     }
 
     /**
      * Dynamic QRIS charge — Snap transaction restricted to QR-compatible
      * e-wallet payments; returns qr_string for on-counter rendering.
      */
-    public function createQrisCharge(Transaction $transaction, array $config): array
+    public function createQrisCharge(Transaction $transaction, array $config, ?int $amount = null, ?string $orderId = null): array
     {
-        $result = $this->createTransaction($transaction, $config, ['qris', 'gopay', 'shopeepay']);
+        $result = $this->createTransaction($transaction, $config, ['qris', 'gopay', 'shopeepay'], $amount, $orderId);
 
         return [
             ...$result,
@@ -27,7 +27,7 @@ class MidtransGateway
         ];
     }
 
-    private function createTransaction(Transaction $transaction, array $config, ?array $enabledPayments = null): array
+    private function createTransaction(Transaction $transaction, array $config, ?array $enabledPayments = null, ?int $amount = null, ?string $orderId = null): array
     {
         if (! ($config['enabled'] ?? false)) {
             throw new PaymentGatewayException('Midtrans tidak aktif atau belum dikonfigurasi.');
@@ -41,8 +41,8 @@ class MidtransGateway
 
         $payload = [
             'transaction_details' => [
-                'order_id' => $transaction->invoice,
-                'gross_amount' => (int) $transaction->grand_total,
+                'order_id' => $orderId ?? $transaction->invoice,
+                'gross_amount' => $amount ?? (int) $transaction->grand_total,
             ],
             'customer_details' => [
                 'first_name' => optional($customer)->name ?? 'Customer',
@@ -68,7 +68,7 @@ class MidtransGateway
         }
 
         return [
-            'reference' => $response->json('order_id', $transaction->invoice),
+            'reference' => $response->json('order_id', $orderId ?? $transaction->invoice),
             'payment_url' => $response->json('redirect_url'),
             'token' => $response->json('token'),
             'raw' => $response->json(),

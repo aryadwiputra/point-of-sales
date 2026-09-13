@@ -59,7 +59,26 @@ class ThermalPrintService
         $lines[] = $this->line($maxWidth);
         $lines[] = $this->leftRight('TOTAL', number_format((int) $transaction->grand_total, 0, ',', '.'), $maxWidth);
 
-        if ($transaction->payment_method === 'cash' && $transaction->cash > 0) {
+        $tenders = $transaction->relationLoaded('tenders')
+            ? $transaction->tenders
+            : $transaction->tenders()->get();
+
+        if ($tenders->isNotEmpty()) {
+            foreach ($tenders as $tender) {
+                $label = match ($tender->method) {
+                    'cash' => 'Tunai',
+                    'bank_transfer' => 'Transfer Bank',
+                    'midtrans' => 'Midtrans',
+                    'xendit' => 'Xendit',
+                    'qris' => 'QRIS',
+                    default => ucfirst(str_replace('_', ' ', $tender->method)),
+                };
+                $lines[] = $this->leftRight($label, number_format((int) $tender->amount, 0, ',', '.'), $maxWidth);
+                if ($tender->method === 'cash' && $tender->change > 0) {
+                    $lines[] = $this->leftRight('Kembali', number_format((int) $tender->change, 0, ',', '.'), $maxWidth);
+                }
+            }
+        } elseif ($transaction->payment_method === 'cash' && $transaction->cash > 0) {
             $lines[] = $this->leftRight('Tunai', number_format((int) $transaction->cash, 0, ',', '.'), $maxWidth);
             if (($transaction->change ?? 0) > 0) {
                 $lines[] = $this->leftRight('Kembali', number_format((int) $transaction->change, 0, ',', '.'), $maxWidth);

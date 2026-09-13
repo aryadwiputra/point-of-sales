@@ -3,6 +3,21 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [v2.11.0] - 2026-09-13
+
+### Added
+
+- Added split payments with up to two tenders per transaction.
+- Added tender-level payment tracking, gateway webhooks, receipt output, and shift cash summaries.
+
+### Improved
+
+- Transaction exports now show individual tender methods for split payments.
+
+### Notes
+
+- Split payments are online-only in this release; split refunds remain cash refunds.
+
 ## [v2.10.6] - 2026-09-13
 
 ### Added

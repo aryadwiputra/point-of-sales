@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentSetting;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
+use App\Services\TransactionTenderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -44,8 +46,9 @@ class PaymentWebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Invalid signature'], 403);
             }
 
-            // Find transaction by invoice (order_id)
-            $transaction = Transaction::where('invoice', $orderId)->first();
+            // Split gateway tenders use invoice-method as the provider order id.
+            $invoice = $this->baseInvoice($orderId);
+            $transaction = Transaction::where('invoice', $invoice)->first();
 
             if (! $transaction) {
                 Log::warning('Midtrans Webhook: Transaction not found', [
@@ -64,10 +67,27 @@ class PaymentWebhookController extends Controller
 
             $newStatus = $this->mapMidtransStatus($transactionStatus, $fraudStatus);
 
-            $transaction->update([
-                'payment_status' => $newStatus,
-                'payment_reference' => $request->input('transaction_id') ?: $transaction->payment_reference,
-            ]);
+            // Split payments: tender-level update when order_id targets one (invoice-{method})
+            $tender = TransactionTender::where('transaction_id', $transaction->id)
+                ->whereIn('method', [TransactionTender::METHOD_MIDTRANS, TransactionTender::METHOD_QRIS])
+                ->get()
+                ->first(fn (TransactionTender $t) => $orderId === $t->order_reference);
+
+            if ($tender) {
+                $tender->update([
+                    'payment_status' => $newStatus,
+                    'payment_reference' => $request->input('transaction_id') ?: $tender->payment_reference,
+                    'paid_at' => $newStatus === 'paid' ? now() : $tender->paid_at,
+                ]);
+                $transaction->update(['payment_status' => app(TransactionTenderService::class)->aggregateStatus(
+                    $transaction->tenders()->get()->map(fn (TransactionTender $t) => ['method' => $t->method, 'payment_status' => $t->payment_status])->all()
+                )]);
+            } else {
+                $transaction->update([
+                    'payment_status' => $newStatus,
+                    'payment_reference' => $request->input('transaction_id') ?: $transaction->payment_reference,
+                ]);
+            }
 
             Log::info('Midtrans Webhook: Transaction updated', [
                 'provider' => 'midtrans',
@@ -138,8 +158,9 @@ class PaymentWebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 422);
             }
 
-            // Find transaction by invoice
-            $transaction = Transaction::where('invoice', $externalId)->first();
+            // Split gateway tenders use invoice-method as the provider external id.
+            $invoice = $this->baseInvoice($externalId);
+            $transaction = Transaction::where('invoice', $invoice)->first();
 
             if (! $transaction) {
                 Log::warning('Xendit Webhook: Transaction not found', [
@@ -155,10 +176,27 @@ class PaymentWebhookController extends Controller
             // Map Xendit status to our status
             $newStatus = $this->mapXenditStatus($status);
 
-            $transaction->update([
-                'payment_status' => $newStatus,
-                'payment_reference' => $paymentId ?: $transaction->payment_reference,
-            ]);
+            // Split payments: tender-level update when external_id targets one (invoice-{method})
+            $tender = TransactionTender::where('transaction_id', $transaction->id)
+                ->whereIn('method', [TransactionTender::METHOD_XENDIT, TransactionTender::METHOD_QRIS])
+                ->get()
+                ->first(fn (TransactionTender $t) => $externalId === $t->order_reference);
+
+            if ($tender) {
+                $tender->update([
+                    'payment_status' => $newStatus,
+                    'payment_reference' => $paymentId ?: $tender->payment_reference,
+                    'paid_at' => $newStatus === 'paid' ? now() : $tender->paid_at,
+                ]);
+                $transaction->update(['payment_status' => app(TransactionTenderService::class)->aggregateStatus(
+                    $transaction->tenders()->get()->map(fn (TransactionTender $t) => ['method' => $t->method, 'payment_status' => $t->payment_status])->all()
+                )]);
+            } else {
+                $transaction->update([
+                    'payment_status' => $newStatus,
+                    'payment_reference' => $paymentId ?: $transaction->payment_reference,
+                ]);
+            }
 
             Log::info('Xendit Webhook: Transaction updated', [
                 'provider' => 'xendit',
@@ -212,5 +250,17 @@ class PaymentWebhookController extends Controller
             'EXPIRED', 'FAILED' => 'failed',
             default => 'pending',
         };
+    }
+
+    private function baseInvoice(string $providerId): string
+    {
+        foreach (TransactionTenderService::GATEWAY_METHODS as $method) {
+            $suffix = '-'.$method;
+            if (str_ends_with($providerId, $suffix)) {
+                return substr($providerId, 0, -strlen($suffix));
+            }
+        }
+
+        return $providerId;
     }
 }

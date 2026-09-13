@@ -25,7 +25,7 @@ Menyediakan alur kasir cepat untuk pencarian produk, pengelolaan cart, checkout,
 - hold transaction
 - resume held cart
 - clear held cart
-- checkout tunai, bank transfer, Midtrans, Xendit, pay later
+- checkout tunai, split payment (maksimal dua tender), bank transfer, Midtrans, Xendit, pay later
 - print invoice / receipt / shipping label
 - share invoice publik
 - add customer langsung dari POS
@@ -71,6 +71,8 @@ Operasi transaksional tertentu juga mewajibkan middleware `active_shift`.
 - `payment_settings`
 
 ## Batasan Saat Ini
+
+- split payment tidak tersedia saat offline; refund split pada versi ini dicatat sebagai refund tunai
 
 - operasi cart dan checkout bergantung pada shift aktif
 - payment gateway bergantung pada konfigurasi valid

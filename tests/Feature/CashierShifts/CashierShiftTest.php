@@ -8,7 +8,9 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\SalesReturn;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
 use App\Models\User;
+use App\Services\CashierShiftService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -217,6 +219,41 @@ class CashierShiftTest extends TestCase
             'non_cash_sales_total' => 50000,
             'cash_refund_total' => 10000,
         ]);
+    }
+
+    public function test_split_tenders_count_only_cash_tender_in_expected_cash(): void
+    {
+        $cashier = $this->createUserWithPermissions(['cashier-shifts-access']);
+        $shift = CashierShift::create([
+            'user_id' => $cashier->id,
+            'opened_by' => $cashier->id,
+            'opened_at' => now(),
+            'opening_cash' => 100000,
+            'expected_cash' => 100000,
+            'status' => CashierShift::STATUS_OPEN,
+        ]);
+        $transaction = Transaction::create([
+            'cashier_id' => $cashier->id,
+            'cashier_shift_id' => $shift->id,
+            'invoice' => 'TRX-SPLIT-SHIFT',
+            'cash' => 50000,
+            'change' => 0,
+            'discount' => 0,
+            'shipping_cost' => 0,
+            'grand_total' => 75000,
+            'payment_method' => 'split',
+            'payment_status' => 'paid',
+        ]);
+        $transaction->tenders()->createMany([
+            ['method' => TransactionTender::METHOD_CASH, 'amount' => 50000, 'cash_received' => 50000, 'payment_status' => 'paid'],
+            ['method' => TransactionTender::METHOD_BANK_TRANSFER, 'amount' => 25000, 'payment_status' => 'paid'],
+        ]);
+
+        $summary = app(CashierShiftService::class)->calculateSummary($shift);
+
+        $this->assertSame(50000, $summary['cash_sales_total']);
+        $this->assertSame(25000, $summary['non_cash_sales_total']);
+        $this->assertSame(150000, $summary['expected_cash']);
     }
 
     public function test_admin_with_force_close_permission_can_close_other_cashier_shift(): void

@@ -409,6 +409,12 @@ export default function SalesReturnForm({
                                             dapat memakai refund tunai.
                                         </p>
                                     )}
+                                    {transaction.payment_method === "split" && (
+                                        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                                            Transaksi split hanya dapat direfund
+                                            sebagai refund tunai pada versi ini.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>

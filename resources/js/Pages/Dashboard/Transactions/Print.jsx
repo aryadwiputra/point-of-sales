@@ -115,12 +115,21 @@ export default function Print({ transaction }) {
         bank_transfer: "Transfer Bank",
         midtrans: "Midtrans",
         xendit: "Xendit",
+        qris: "QRIS",
+        split: "Split Pembayaran",
         pay_later: "Piutang",
     };
     const paymentMethodKey = (
         transaction?.payment_method || "cash"
     ).toLowerCase();
     const paymentMethodLabel = paymentLabels[paymentMethodKey] ?? "Tunai";
+    const tenderLabels = {
+        cash: "Tunai",
+        bank_transfer: "Transfer Bank",
+        midtrans: "Midtrans",
+        xendit: "Xendit",
+        qris: "QRIS",
+    };
 
     const paymentStatuses = {
         paid: "Lunas",
@@ -580,6 +589,11 @@ export default function Print({ transaction }) {
                                             <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                                 {paymentMethodLabel}
                                             </span>
+                                            {transaction.tenders?.length > 0 && (
+                                                <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                    {transaction.tenders.length} tender
+                                                </span>
+                                            )}
                                             {transaction.order_type && (
                                                 <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                                     {{ in_store: "Di Tempat", takeaway: "Bawa Pulang", delivery: "Diantar" }[transaction.order_type] ?? transaction.order_type}
@@ -802,6 +816,16 @@ export default function Print({ transaction }) {
                                                 </span>
                                             </div>
                                         </>
+                                    )}
+                                    {transaction.tenders?.length > 0 && (
+                                        <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 dark:border-slate-700">
+                                            {transaction.tenders.map((tender) => (
+                                                <div key={tender.id} className="flex justify-between text-slate-600 dark:text-slate-400">
+                                                    <span>{tenderLabels[tender.method] ?? tender.method}</span>
+                                                    <span>{formatPrice(tender.amount)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>
