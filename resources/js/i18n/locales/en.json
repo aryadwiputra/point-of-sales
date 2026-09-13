@@ -116,6 +116,43 @@
             "pharmacy": "Pharmacy",
             "services": "Services"
         },
+        "categoryOptions": {
+            "food": {
+                "food": "Food",
+                "beverages": "Beverages",
+                "snacks": "Snacks",
+                "coffeeTea": "Coffee & Tea"
+            },
+            "retail": {
+                "general": "General",
+                "electronics": "Electronics",
+                "homeSupplies": "Home Supplies",
+                "beauty": "Beauty"
+            },
+            "grocery": {
+                "staples": "Staples",
+                "produce": "Produce",
+                "meatSeafood": "Meat & Seafood",
+                "snacks": "Snacks"
+            },
+            "fashion": {
+                "clothing": "Clothing",
+                "shoes": "Shoes",
+                "bags": "Bags",
+                "accessories": "Accessories"
+            },
+            "pharmacy": {
+                "otcMedicine": "Over-the-counter Medicine",
+                "prescriptionMedicine": "Prescription Medicine",
+                "vitamins": "Vitamins",
+                "medicalSupplies": "Medical Supplies"
+            },
+            "services": {
+                "services": "Services",
+                "products": "Products",
+                "packages": "Packages"
+            }
+        },
         "categories": {
             "hint": "Select the categories that fit, or add your own",
             "placeholder": "Add another category...",

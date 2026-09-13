@@ -102,7 +102,7 @@ export default function CustomerSelect({
 
     return (
         <>
-            <div ref={containerRef} className="relative">
+            <div ref={containerRef} className="relative w-full min-w-0">
                 {/* Label */}
                 {label && (
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -110,13 +110,13 @@ export default function CustomerSelect({
                     </label>
                 )}
 
-                {/* Select Button with History and Add */}
-                <div className="flex items-center gap-2">
+                {/* Customer selection stays full-width; actions flow below it. */}
+                <div className="space-y-2">
                     <button
                         type="button"
                         onClick={() => setIsOpen(!isOpen)}
                         className={`
-                            flex-1 h-12 px-4 rounded-xl text-left
+                            w-full min-w-0 min-h-12 h-auto px-4 py-2 rounded-xl text-left
                             flex items-center gap-3
                             border-2 transition-all duration-200
                             ${
@@ -148,7 +148,7 @@ export default function CustomerSelect({
                                 }
                             />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                             {selected ? (
                                 <>
                                     <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
@@ -184,42 +184,43 @@ export default function CustomerSelect({
                         />
                     </button>
 
-                    {/* History Button - Show when customer is selected */}
-                    {selected && (
-                        <CustomerHistoryButton
-                            customerId={selected.id}
-                            customerName={selected.name}
-                        />
-                    )}
+                    <div className="flex min-w-0 flex-wrap gap-2">
+                        {/* History Button - Show when customer is selected */}
+                        {selected && (
+                            <CustomerHistoryButton
+                                customerId={selected.id}
+                                customerName={selected.name}
+                                className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            />
+                        )}
 
-                    {selected && !selected.is_loyalty_member ? (
+                        {selected && !selected.is_loyalty_member ? (
+                            <button
+                                type="button"
+                                onClick={handleUpgradeMember}
+                                className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 text-primary-600 hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
+                                title="Upgrade pelanggan menjadi member"
+                            >
+                                <IconCrown size={16} className="shrink-0" />
+                                <span className="truncate text-sm font-semibold">
+                                    Upgrade member
+                                </span>
+                            </button>
+                        ) : null}
+
+                        {/* Add Customer Button */}
                         <button
                             type="button"
-                            onClick={handleUpgradeMember}
-                            className="h-12 px-3 rounded-xl border border-primary-200 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
-                            title="Upgrade pelanggan menjadi member"
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex h-10 min-w-10 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary-300 px-3 text-primary-500 transition-colors hover:bg-primary-50 dark:border-primary-700 dark:hover:bg-primary-950/30"
+                            title="Tambah pelanggan baru"
                         >
-                            <span className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold">
-                                <IconCrown size={16} />
-                                Upgrade
-                            </span>
-                            <span className="inline-flex sm:hidden">
-                                <IconCrown size={18} />
+                            <IconUserPlus size={18} className="shrink-0" />
+                            <span className="truncate text-sm font-semibold">
+                                Tambah pelanggan
                             </span>
                         </button>
-                    ) : null}
-
-                    {/* Add Customer Button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowAddModal(true)}
-                        className="h-12 w-12 rounded-xl border-2 border-dashed border-primary-300 dark:border-primary-700
-                            text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-950/30
-                            flex items-center justify-center transition-colors"
-                        title="Tambah pelanggan baru"
-                    >
-                        <IconUserPlus size={20} />
-                    </button>
+                    </div>
                 </div>
 
                 {/* Error Message */}
@@ -229,7 +230,7 @@ export default function CustomerSelect({
 
                 {/* Dropdown */}
                 {isOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl z-50 animate-slide-up overflow-hidden">
+                    <div className="absolute left-0 right-0 top-full z-50 mt-2 w-full max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl animate-slide-up dark:border-slate-700 dark:bg-slate-900">
                         {/* Search */}
                         <div className="p-3 border-b border-slate-100 dark:border-slate-800">
                             <div className="relative">

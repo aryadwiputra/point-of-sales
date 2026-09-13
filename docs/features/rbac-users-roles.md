@@ -34,7 +34,7 @@ Setiap modul memakai permission sendiri, contohnya:
 
 1. permission diseed di `PermissionSeeder`
 2. role disusun di `RoleSeeder`
-3. user default disusun di `UserSeeder`
+3. user admin dibuat melalui first-install setup wizard di `/setup`
 4. route memakai middleware `permission:*`
 5. frontend membaca map permission dari `HandleInertiaRequests`
 
@@ -42,7 +42,7 @@ Setiap modul memakai permission sendiri, contohnya:
 
 - user `super-admin` mendapat role `super-admin`
 - backend memperlakukan role `super-admin` sebagai bypass permission yang konsisten untuk `can`, `canAny`, dan middleware Spatie
-- seeder juga menyinkronkan permission ke user admin default
+- `UserSeeder` hanya digunakan untuk data demo/test, bukan oleh `DatabaseSeeder`
 - cache permission Spatie harus di-reset saat seeding agar permission baru terbaca konsisten
 - role lama `permission-access` dinormalisasi ke `permissions-access` saat seeding agar naming RBAC tidak ambigu
 

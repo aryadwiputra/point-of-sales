@@ -27,7 +27,14 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 - `resources/js/Pages/Public/` — public Inertia pages (customer portal)
 - `resources/js/Layouts/` — 4 layout: POSLayout, DashboardLayout, AuthenticatedLayout, GuestLayout
 - `database/migrations/` — ~55+ migration
-- `database/seeders/` — 8 seeder (executed in chain order)
+- `database/seeders/` — seeder inti dan seeder demo/coverage yang dijalankan secara eksplisit
+
+### Seeder
+
+`DatabaseSeeder` menjalankan `PermissionSeeder`, `RoleSeeder`, `PaymentSettingSeeder`,
+dan `DineInSettingsSeeder`, lalu memastikan warehouse utama `PUSAT` tersedia. Seeder
+`UserSeeder`, `SampleDataSeeder`, `OperationalCoreSeeder`, `FeatureCoverageSeeder`,
+dan `FeatureDemoSeeder` bersifat opt-in untuk demo atau pengujian.
 
 ## Alur Request Umum
 

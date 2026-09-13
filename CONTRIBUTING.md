@@ -22,12 +22,13 @@ Repo ini menggunakan **Git Flow** dengan branch sebagai berikut:
 git clone https://github.com/aryadwiputra/point-of-sales.git
 cd point-of-sales
 cp .env.example .env
-composer install && npm install
+composer install && PUPPETEER_SKIP_DOWNLOAD=true npm install
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
-npm run dev
-php artisan serve
+composer run dev
+# Setelah server berjalan, buka http://localhost:8000.
+# Pada instalasi pertama, aplikasi otomatis mengarahkan ke /setup.
 ```
 
 ### 2. Buat Branch Fitur

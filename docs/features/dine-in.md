@@ -9,16 +9,12 @@ Modul dine-in memungkinkan pelanggan memindai QR code di meja untuk melihat menu
 ```
 Pelanggan scan QR
   → Lihat menu & pilih item
-  → Pilih metode pembayaran (kasir / online)
+  → Pilih metode pembayaran (kasir)
   → Pesanan terkirim → status: submitted
 
 Staff lihat pesanan di dashboard
   → Terima (accept) → stok dipotong, lanjut ke kasir
   → Atau Tolak (reject) dengan alasan
-
-Jika bayar online:
-  → Pelanggan bayar via Midtrans/Xendit
-  → Webhook konfirmasi → status: completed
 
 Jika bayar di kasir:
   → Staff proses di halaman kasir seperti biasa
@@ -89,7 +85,7 @@ Dikontrol via `Setting` table:
 |-----|---------|-----------|
 | `dine_in_enabled` | true | Fitur dine-in aktif |
 | `dine_in_self_order_enabled` | true | Pelanggan bisa pesan sendiri |
-| `dine_in_pay_online_enabled` | true | Opsi bayar online tersedia |
+| `dine_in_pay_online_enabled` | true | Pengaturan legacy; pembayaran online belum tersedia dan endpoint hanya menerima `pay_at_counter` |
 
 ## Routes
 
@@ -149,7 +145,7 @@ Dikontrol via `Setting` table:
 - Pilih kategori & produk
 - Keranjang real-time
 - Catatan opsional per item
-- Dua opsi: Bayar di Kasir / Bayar Online
+- Opsi saat ini: Bayar di Kasir (`pay_at_counter`)
 
 ### Polling Status
 - Halaman status auto-refresh setiap 5 detik saat status = submitted
@@ -160,12 +156,10 @@ Dikontrol via `Setting` table:
 - Reject: dengan alasan opsional
 - Konfirmasi dari kasir via halaman POS seperti transaksi biasa
 
-## Pembayaran Online
+## Pembayaran
 
-Jika `payment_option = pay_online`:
-1. Frontend POST ke `/dine/{token}/order` dengan `payment_option: pay_online`
-2. Backend bisa membuat payment via PaymentGatewayManager (di-extend jika diperlukan)
-3. Webhook dari Midtrans/Xendit update `payment_status` dan `status`
+Saat ini endpoint `/dine/{token}/order` hanya menerima `payment_option: pay_at_counter`.
+`pay_online` belum terhubung ke payment gateway dan akan ditolak oleh validasi backend.
 
 ## Catatan Teknis
 

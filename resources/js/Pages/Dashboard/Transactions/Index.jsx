@@ -11,7 +11,6 @@ import toast from "react-hot-toast";
 import POSLayout from "@/Layouts/POSLayout";
 import ProductGrid from "@/Components/POS/ProductGrid";
 import CartPanel from "@/Components/POS/CartPanel";
-import PaymentPanel from "@/Components/POS/PaymentPanel";
 import CustomerSelect from "@/Components/POS/CustomerSelect";
 import NumpadModal from "@/Components/POS/NumpadModal";
 import HeldTransactions, {
@@ -41,6 +40,9 @@ const formatPrice = (value = 0) =>
         currency: "IDR",
         minimumFractionDigits: 0,
     });
+
+const roundUpToNearest = (value, step) =>
+    Math.ceil(value / step) * step;
 
 export default function Index({
     carts = [],
@@ -189,7 +191,20 @@ export default function Index({
         () => Number(pricingPreview?.summary?.grand_total ?? 0),
         [pricingPreview]
     );
+    const quickCashAmounts = useMemo(() => {
+        if (payable <= 0) return [];
+
+        return [...new Set([
+            payable,
+            roundUpToNearest(payable, 10000),
+            roundUpToNearest(payable, 50000),
+            roundUpToNearest(payable, 100000),
+        ])]
+            .filter((amount) => amount >= payable)
+            .slice(0, 4);
+    }, [payable]);
     const isCashPayment = !payLater && paymentMethod === "cash";
+    const isDelivery = orderType === "delivery";
     const cash = useMemo(
         () => (isCashPayment ? Math.max(0, Number(cashInput) || 0) : payable),
         [cashInput, isCashPayment, payable]
@@ -370,6 +385,14 @@ export default function Index({
     const handleNumpadConfirm = useCallback((value) => {
         setCashInput(String(value));
     }, []);
+
+    const handleOrderTypeChange = (value) => {
+        setOrderType(value);
+
+        if (value !== "delivery") {
+            setShippingInput("");
+        }
+    };
 
     // Handle hold transaction
     const [isHolding, setIsHolding] = useState(false);
@@ -809,7 +832,7 @@ export default function Index({
 
                 {/* Right Panel - Cart & Payment */}
                 <div
-                    className={`w-full lg:w-[420px] xl:w-[480px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 min-h-0 overflow-hidden ${
+                        className={`w-full min-w-0 lg:w-[420px] xl:w-[480px] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 min-h-0 overflow-hidden ${
                         mobileView !== "cart" ? "hidden lg:flex" : "flex"
                     }`}
                     style={{ height: "calc(100vh - 4rem)" }}
@@ -817,7 +840,7 @@ export default function Index({
                     {/* Customer Select - Fixed */}
                     <div
                         data-tour="pos-customer"
-                        className="p-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0"
+                        className="min-w-0 p-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0"
                     >
                         <CustomerSelect
                             customers={customers}
@@ -1064,6 +1087,113 @@ export default function Index({
                                 </div>
                             )}
 
+                            {/* Order details */}
+                            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                    Detail Pesanan
+                                </p>
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                        Tipe Pesanan
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { value: "in_store", label: "Di Tempat" },
+                                            { value: "takeaway", label: "Bawa Pulang" },
+                                            { value: "delivery", label: "Diantar" },
+                                        ].map((type) => (
+                                            <button
+                                                key={type.value}
+                                                type="button"
+                                                onClick={() => handleOrderTypeChange(type.value)}
+                                                className={`min-h-10 rounded-lg px-1 py-2 text-xs font-semibold transition-all ${
+                                                    orderType === type.value
+                                                        ? "bg-primary-500 text-white"
+                                                        : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                                }`}
+                                            >
+                                                {type.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {isDelivery && (
+                                    <div>
+                                        <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                            Ongkos Kirim
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                                                Rp
+                                            </span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={shippingInput}
+                                                onChange={(e) =>
+                                                    setShippingInput(e.target.value.replace(/[^\d]/g, ""))
+                                                }
+                                                placeholder="0"
+                                                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                            />
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-4 gap-2">
+                                            {[10000, 15000, 20000, 25000].map((amt) => (
+                                                <button
+                                                    key={amt}
+                                                    type="button"
+                                                    onClick={() => setShippingInput(String(amt))}
+                                                    className={`min-h-9 rounded-lg px-1 py-1.5 text-[11px] font-medium transition-all ${
+                                                        Number(shippingInput) === amt
+                                                            ? "bg-primary-500 text-white"
+                                                            : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                                    }`}
+                                                >
+                                                    {formatPrice(amt)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                        Diskon Manual (Rp)
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                                            Rp
+                                        </span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={discountInput}
+                                            onChange={(e) =>
+                                                setDiscountInput(e.target.value.replace(/[^\d]/g, ""))
+                                            }
+                                            placeholder="0"
+                                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                        Catatan
+                                    </label>
+                                    <textarea
+                                        value={orderNote}
+                                        onChange={(e) => setOrderNote(e.target.value)}
+                                        rows={2}
+                                        maxLength={1000}
+                                        placeholder="Catatan pesanan (opsional)"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Payment Method Selection */}
                             <div>
                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
@@ -1196,33 +1326,92 @@ export default function Index({
                                     </div>
                                 )}
 
-                            {/* Quick Amounts - Only for cash */}
-                            {paymentMethod === "cash" && (
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                        Nominal Cepat
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[10000, 20000, 50000, 100000].map(
-                                            (amt) => (
+                            {/* Cash payment stays next to its quick amount actions. */}
+                            {isCashPayment && (
+                                <div className="space-y-3 rounded-2xl border border-primary-100 bg-primary-50/50 p-3 dark:border-primary-900/50 dark:bg-primary-950/20">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                                Pembayaran Tunai
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                Total tagihan {formatPrice(payable)}
+                                            </p>
+                                        </div>
+                                        {cash < payable && payable > 0 && (
+                                            <span className="text-right text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                                Kurang {formatPrice(payable - cash)}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-2 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                                            Jumlah Bayar
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                                                Rp
+                                            </span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={cashInput}
+                                                onChange={(e) =>
+                                                    setCashInput(e.target.value.replace(/[^\d]/g, ""))
+                                                }
+                                                placeholder="0"
+                                                className="h-12 w-full rounded-xl border border-primary-200 bg-white pl-10 pr-4 text-lg font-semibold text-slate-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-primary-800 dark:bg-slate-900 dark:text-slate-200"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                                Nominal Cepat
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCashInput(String(payable))}
+                                                className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                                            >
+                                                Uang pas
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                            {quickCashAmounts.map((amount) => (
                                                 <button
-                                                    key={amt}
-                                                    onClick={() =>
-                                                        setCashInput(
-                                                            String(amt)
-                                                        )
-                                                    }
-                                                    className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
-                                                        Number(cashInput) ===
-                                                        amt
+                                                    key={amount}
+                                                    type="button"
+                                                    onClick={() => setCashInput(String(amount))}
+                                                    className={`min-h-10 rounded-lg px-1 py-2 text-xs font-semibold transition-all ${
+                                                        Number(cashInput) === amount
                                                             ? "bg-primary-500 text-white"
-                                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                                                            : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
                                                     }`}
                                                 >
-                                                    {formatPrice(amt)}
+                                                    {formatPrice(amount)}
                                                 </button>
-                                            )
-                                        )}
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={`flex items-center justify-between rounded-xl p-3 ${
+                                        cash >= payable && payable > 0
+                                            ? "bg-success-100/70 dark:bg-success-950/30"
+                                            : "bg-white/70 dark:bg-slate-900/50"
+                                    }`}>
+                                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                                            Kembalian
+                                        </span>
+                                        <span className={`text-lg font-bold ${
+                                            cash >= payable && payable > 0
+                                                ? "text-success-600 dark:text-success-400"
+                                                : "text-slate-400"
+                                        }`}>
+                                            {formatPrice(Math.max(cash - payable, 0))}
+                                        </span>
                                     </div>
                                 </div>
                             )}
@@ -1326,148 +1515,6 @@ export default function Index({
                                     </div>
                                 )}
 
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                    Diskon Manual (Rp)
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                                        Rp
-                                    </span>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={discountInput}
-                                        onChange={(e) =>
-                                            setDiscountInput(
-                                                e.target.value.replace(
-                                                    /[^\d]/g,
-                                                    ""
-                                                )
-                                            )
-                                        }
-                                        placeholder="0"
-                                        className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Order Type */}
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                    Tipe Pesanan
-                                </label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                        { value: "in_store", label: "Di Tempat" },
-                                        { value: "takeaway", label: "Bawa Pulang" },
-                                        { value: "delivery", label: "Diantar" },
-                                    ].map((type) => (
-                                        <button
-                                            key={type.value}
-                                            type="button"
-                                            onClick={() => setOrderType(type.value)}
-                                            className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
-                                                orderType === type.value
-                                                    ? "bg-primary-500 text-white"
-                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
-                                            }`}
-                                        >
-                                            {type.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Order Note */}
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                    Catatan
-                                </label>
-                                <textarea
-                                    value={orderNote}
-                                    onChange={(e) => setOrderNote(e.target.value)}
-                                    rows={2}
-                                    maxLength={1000}
-                                    placeholder="Catatan pesanan (opsional)"
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                                />
-                            </div>
-
-                            {/* Shipping Cost Input */}
-                            <div>
-                                <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                    Ongkos Kirim (Rp)
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                                        Rp
-                                    </span>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={shippingInput}
-                                        onChange={(e) =>
-                                            setShippingInput(
-                                                e.target.value.replace(
-                                                    /[^\d]/g,
-                                                    ""
-                                                )
-                                            )
-                                        }
-                                        placeholder="0"
-                                        className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                                    />
-                                </div>
-                                {/* Quick Shipping Amounts */}
-                                <div className="grid grid-cols-4 gap-2 mt-2">
-                                    {[10000, 15000, 20000, 25000].map((amt) => (
-                                        <button
-                                            key={amt}
-                                            type="button"
-                                            onClick={() =>
-                                                setShippingInput(String(amt))
-                                            }
-                                            className={`py-1.5 px-1 rounded-lg text-xs font-medium transition-all ${
-                                                Number(shippingInput) === amt
-                                                    ? "bg-primary-500 text-white"
-                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
-                                            }`}
-                                        >
-                                            {formatPrice(amt)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Cash Input - Only for cash */}
-                            {paymentMethod === "cash" && (
-                                <div>
-                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                                        Jumlah Bayar (Rp)
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                                            Rp
-                                        </span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={cashInput}
-                                            onChange={(e) =>
-                                                setCashInput(
-                                                    e.target.value.replace(
-                                                        /[^\d]/g,
-                                                        ""
-                                                    )
-                                                )
-                                            }
-                                            placeholder="0"
-                                            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-base font-semibold focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                                        />
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
 

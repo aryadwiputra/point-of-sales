@@ -16,22 +16,25 @@ use Inertia\Response;
 class SetupController extends Controller
 {
     public const BUSINESS_TYPES = [
-        'food' => ['Makanan', 'Minuman', 'Snack', 'Kopi & Teh'],
-        'retail' => ['Umum', 'Elektronik', 'Perlengkapan Rumah', 'Kecantikan'],
-        'grocery' => ['Sembako', 'Sayur & Buah', 'Daging & Seafood', 'Snack'],
-        'fashion' => ['Pakaian', 'Sepatu', 'Tas', 'Aksesoris'],
-        'pharmacy' => ['Obat Bebas', 'Obat Resep', 'Vitamin', 'Alat Kesehatan'],
-        'services' => ['Layanan', 'Produk', 'Paket'],
+        'food' => ['food', 'beverages', 'snacks', 'coffeeTea'],
+        'retail' => ['general', 'electronics', 'homeSupplies', 'beauty'],
+        'grocery' => ['staples', 'produce', 'meatSeafood', 'snacks'],
+        'fashion' => ['clothing', 'shoes', 'bags', 'accessories'],
+        'pharmacy' => ['otcMedicine', 'prescriptionMedicine', 'vitamins', 'medicalSupplies'],
+        'services' => ['services', 'products', 'packages'],
     ];
 
     public function index(): Response
     {
+        $primaryWarehouse = Warehouse::find(Setting::get('setup_warehouse_id'));
+
         return Inertia::render('Setup/Wizard', [
             'businessTypes' => array_map(
-                fn (string $key, array $labels) => ['key' => $key, 'label' => __('setup.'.$key), 'categories' => $labels],
+                fn (string $key, array $categories) => ['key' => $key, 'categories' => $categories],
                 array_keys(self::BUSINESS_TYPES),
                 self::BUSINESS_TYPES,
             ),
+            'primaryWarehouse' => $primaryWarehouse?->only(['id', 'code', 'name']),
         ]);
     }
 
@@ -49,7 +52,22 @@ class SetupController extends Controller
             'user_name' => 'required|string|max:255',
             'user_email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'warehouse_code' => 'required|string|max:20|unique:warehouses,code',
+            'warehouse_id' => 'nullable|integer|exists:warehouses,id',
+            'warehouse_code' => [
+                'required',
+                'string',
+                'max:20',
+                function ($attribute, $value, $fail) use ($request) {
+                    $warehouseId = $request->input('warehouse_id');
+                    $exists = DB::table('warehouses')
+                        ->where('code', $value)
+                        ->when($warehouseId, fn ($q) => $q->where('id', '!=', $warehouseId))
+                        ->exists();
+                    if ($exists) {
+                        $fail('Kode gudang sudah digunakan.');
+                    }
+                },
+            ],
             'warehouse_name' => 'required|string|max:255',
         ]);
 
@@ -61,13 +79,22 @@ class SetupController extends Controller
             ]);
             $user->assignRole('super-admin');
 
-            Warehouse::create([
-                'code' => $validated['warehouse_code'],
-                'name' => $validated['warehouse_name'],
-                'type' => 'main',
-                'is_active' => true,
-                'sort_order' => 0,
-            ]);
+            if (! empty($validated['warehouse_id'])) {
+                Warehouse::where('id', $validated['warehouse_id'])->update([
+                    'code' => $validated['warehouse_code'],
+                    'name' => $validated['warehouse_name'],
+                ]);
+                Setting::set('setup_warehouse_id', $validated['warehouse_id']);
+            } else {
+                $warehouse = Warehouse::create([
+                    'code' => $validated['warehouse_code'],
+                    'name' => $validated['warehouse_name'],
+                    'type' => 'main',
+                    'is_active' => true,
+                    'sort_order' => 0,
+                ]);
+                Setting::set('setup_warehouse_id', $warehouse->id);
+            }
 
             foreach (array_unique($validated['categories']) as $name) {
                 Category::create(['name' => $name]);

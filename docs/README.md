@@ -50,11 +50,9 @@ Dokumentasi ini ditujukan untuk developer yang ingin setup, memahami alur modul,
 - `docs/features/mobile-pos.md` — PWA, barcode scanner kamera 🆕
 - `docs/features/thermal-printer.md` — ESC/POS, WebUSB 🆕
 
-### Planning
-- `planning/feature-roadmap.md` — roadmap v2.1–v3.0
-- `planning/tier-1-implementation.md` — detail Tier 1
-- `planning/tier-2-implementation.md` — detail Tier 2
-- `planning/tier-3-implementation.md` — detail Tier 3
+### Release & Roadmap
+- `CHANGELOG.md` — riwayat rilis aplikasi
+- halaman publik `/roadmap` — rilis selesai dan arah pengembangan berikutnya
 
 ## Cara Membaca Dokumentasi
 
@@ -65,6 +63,6 @@ Dokumentasi ini ditujukan untuk developer yang ingin setup, memahami alur modul,
 
 ## Catatan
 
-- Dokumentasi mencakup seluruh fitur yang sudah ada di repo
-- Planning file tersimpan di folder `planning/`
+- Dokumentasi mencakup fitur yang sudah ada di repo dan menyebutkan batasan operasionalnya
+- Release identity mengikuti Git tag dan `APP_VERSION`
 - Setiap dokumen fitur mencakup tujuan, route, permission, alur user

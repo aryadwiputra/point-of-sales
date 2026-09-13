@@ -13,6 +13,7 @@ use App\Models\DiningTable;
 use App\Models\DiscountApprovalLog;
 use App\Models\LoyaltyPointHistory;
 use App\Models\PriceList;
+use App\Models\ProductWarehouse;
 use App\Models\PricingRule;
 use App\Models\PricingRuleBuyGetItem;
 use App\Models\Product;
@@ -156,10 +157,18 @@ class FeatureDemoSeeder extends Seeder
                 'is_active' => true,
                 'sort_order' => 0,
             ]);
+        }
 
-            foreach ($products as $product) {
-                $product->warehouses()->syncWithoutDetaching([$pusat->id => ['stock' => $product->stock]]);
-            }
+        // DatabaseSeeder creates PUSAT before demo products exist. Ensure the
+        // warehouse pivot is present even when PUSAT already exists.
+        foreach ($products as $product) {
+            ProductWarehouse::firstOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'warehouse_id' => $pusat->id,
+                ],
+                ['stock' => max(0, (int) $product->stock)]
+            );
         }
 
         $cabang = Warehouse::where('code', 'CABANG')->first();

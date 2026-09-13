@@ -14,6 +14,8 @@ Menangani master supplier dan pencatatan hutang supplier beserta pelunasannya.
 - pembayaran hutang supplier
 - status hutang
 - PDF payable
+- payable dari goods receiving pada purchase order
+- supplier return yang mengoreksi stok dan saldo payable
 
 ## Halaman dan Route
 
@@ -48,10 +50,11 @@ Menangani master supplier dan pencatatan hutang supplier beserta pelunasannya.
 - payable tidak hanya master data; status hutang menentukan visibilitas kewajiban operasional
 - dokumen PDF hutang tersedia untuk kebutuhan administrasi
 
-## Batasan Saat Ini
+## Integrasi Purchasing
 
-- belum terhubung ke purchase order formal
-- belum ada supplier return flow
+Purchase order dan goods receiving menjadi sumber kewajiban supplier. Goods receiving
+dapat membuat atau memperbarui payable dan membawa konteks gudang. Supplier return
+mengoreksi stok serta saldo kewajiban terkait sesuai alur operasionalnya.
 
 ## File Sentral
 

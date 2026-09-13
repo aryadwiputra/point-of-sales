@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Setting;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -27,21 +28,22 @@ class DatabaseSeeder extends Seeder
 
     private function seedDefaultWarehouse(): void
     {
-        if (Warehouse::where('code', 'PUSAT')->exists()) {
-            return;
+        $pusat = Warehouse::firstOrCreate(
+            ['code' => 'PUSAT'],
+            [
+                'name' => 'Gudang Pusat',
+                'type' => 'main',
+                'is_active' => true,
+                'sort_order' => 0,
+            ],
+        );
+
+        if (! Setting::get('setup_warehouse_id')) {
+            Setting::set('setup_warehouse_id', $pusat->id);
         }
 
-        $pusat = Warehouse::create([
-            'code' => 'PUSAT',
-            'name' => 'Gudang Pusat',
-            'type' => 'main',
-            'is_active' => true,
-            'sort_order' => 0,
-        ]);
-
-        // Migrate existing stock to pivot
         DB::statement("
-            INSERT INTO product_warehouse (product_id, warehouse_id, stock, created_at, updated_at)
+            INSERT IGNORE INTO product_warehouse (product_id, warehouse_id, stock, created_at, updated_at)
             SELECT id, {$pusat->id}, stock, NOW(), NOW() FROM products
         ");
     }

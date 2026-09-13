@@ -116,6 +116,43 @@
             "pharmacy": "Apotek",
             "services": "Jasa"
         },
+        "categoryOptions": {
+            "food": {
+                "food": "Makanan",
+                "beverages": "Minuman",
+                "snacks": "Snack",
+                "coffeeTea": "Kopi & Teh"
+            },
+            "retail": {
+                "general": "Umum",
+                "electronics": "Elektronik",
+                "homeSupplies": "Perlengkapan Rumah",
+                "beauty": "Kecantikan"
+            },
+            "grocery": {
+                "staples": "Sembako",
+                "produce": "Sayur & Buah",
+                "meatSeafood": "Daging & Seafood",
+                "snacks": "Snack"
+            },
+            "fashion": {
+                "clothing": "Pakaian",
+                "shoes": "Sepatu",
+                "bags": "Tas",
+                "accessories": "Aksesoris"
+            },
+            "pharmacy": {
+                "otcMedicine": "Obat Bebas",
+                "prescriptionMedicine": "Obat Resep",
+                "vitamins": "Vitamin",
+                "medicalSupplies": "Alat Kesehatan"
+            },
+            "services": {
+                "services": "Layanan",
+                "products": "Produk",
+                "packages": "Paket"
+            }
+        },
         "categories": {
             "hint": "Pilih kategori yang sesuai, atau tambahkan sendiri",
             "placeholder": "Tambah kategori lain...",

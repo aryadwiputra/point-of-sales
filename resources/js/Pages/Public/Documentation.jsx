@@ -4,6 +4,7 @@ import { IconBook2, IconArrowRight, IconBrandGithub } from "@tabler/icons-react"
 
 const GITHUB_URL = "https://github.com/aryadwiputra/point-of-sales";
 const DOCS_BASE = `${GITHUB_URL}/blob/main/docs`;
+const REPO_BASE = `${GITHUB_URL}/blob/main`;
 
 const categories = [
     {
@@ -12,7 +13,8 @@ const categories = [
             { file: "getting-started.md", title: "Getting Started", desc: "Panduan setup lengkap dari nol sampai bisa login & mengakses dashboard." },
             { file: "configuration.md", title: "Konfigurasi", desc: "Environment, payment gateway, pajak, printer thermal, dan WhatsApp." },
             { file: "architecture-overview.md", title: "Arsitektur", desc: "Struktur kode, service layer, middleware, dan Node service." },
-            { file: "feature-index.md", title: "Indeks Fitur", desc: "Daftar semua 44+ modul dan statusnya." },
+            { file: "feature-index.md", title: "Indeks Fitur", desc: "Daftar fitur, dokumentasi, dan status implementasinya." },
+            { file: "CHANGELOG.md", href: `${REPO_BASE}/CHANGELOG.md`, title: "Changelog", desc: "Riwayat rilis aplikasi sampai versi terbaru." },
         ],
     },
     {
@@ -22,7 +24,10 @@ const categories = [
             { file: "features/cashier-shifts.md", title: "Shift Kasir", desc: "Buka/tutup shift dan rekap kas per shift." },
             { file: "features/sales-returns.md", title: "Retur Penjualan", desc: "Proses retur dari transaksi yang sudah jadi." },
             { file: "features/mobile-pos.md", title: "Mobile POS (PWA)", desc: "Gunakan kasir dari HP — installable dan offline-ready." },
+            { file: "features/offline-mode.md", title: "Offline Mode", desc: "Batasan, antrean transaksi, dan sinkronisasi offline." },
             { file: "features/thermal-printer.md", title: "Printer Thermal", desc: "Cetak struk 58/80mm via WebUSB." },
+            { file: "features/dine-in.md", title: "Dine-in QR Menu", desc: "QR menu, self-order, floor plan, dan status pesanan." },
+            { file: "features/api-integration.md", title: "API & Integrasi", desc: "Auth, endpoint POS, master data, dan API documentation." },
         ],
     },
     {
@@ -60,6 +65,8 @@ const categories = [
             { file: "features/import-export.md", title: "Import/Export", desc: "Produk & customer via Excel." },
             { file: "features/reports-documents.md", title: "Reports & Documents", desc: "Laporan dan dokumen PDF." },
             { file: "features/whatsapp-gateway.md", title: "WhatsApp Gateway", desc: "Integrasi whatsapp-web.js." },
+            { file: "features/discount-approval.md", title: "Discount Approval", desc: "Approval diskon, permission, dan audit trail." },
+            { file: "features/app-versioning.md", title: "App Versioning", desc: "APP_VERSION, UI, dan kebijakan rilis." },
         ],
     },
 ];
@@ -99,7 +106,7 @@ export default function Documentation() {
                                 {cat.docs.map((doc) => (
                                     <a
                                         key={doc.file}
-                                        href={`${DOCS_BASE}/${doc.file}`}
+                                        href={doc.href || `${DOCS_BASE}/${doc.file}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="group p-5 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-md transition-all"

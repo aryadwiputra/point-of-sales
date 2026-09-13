@@ -29,15 +29,23 @@ Open-source POS system (200+ stars). Laravel 13 + Inertia 3.0 + React 19.
 - **Payment gateways**: Midtrans, Xendit (webhooks in `routes/api.php`)
 - **WhatsApp**: whatsapp-web.js via separate Node service (`whatsapp-service/`, port 3001)
 
+## CI / Deploy
+
+- **CI is build-only** — `.github/workflows/deploy.yml` validates composer + `npm run build` (PHP 8.4, Node 22). It does **NOT run tests**. Run `php artisan test` locally before every PR.
+- **Push to `main` auto-deploys to production** (`dikasir.web.id` via SSH). Never push directly to `main` — use the release process below.
+- Deploy VPS uses Node 24.15 + PHP 8.4 (`php8.4 artisan migrate --force`).
+- npm is the package manager of record (`package-lock.json` committed, `bun.lock` gitignored). CI/deploy run `npm ci`. Don't switch to bun/yarn lockfiles.
+
 ## Developer Commands
 
 ```bash
 # Initial setup
 cp .env.example .env
-composer install && npm install
+composer install && PUPPETEER_SKIP_DOWNLOAD=true npm install
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
+# After the server starts, open the root URL; first install automatically redirects to /setup.
 
 # Dev — runs server, queue, logs (pail), and vite in one command
 composer run dev     # equivalent to `php artisan dev` (Laravel 13 DevCommand)
@@ -68,12 +76,14 @@ php artisan seed:demo                    # regenerate full demo dataset (truncat
 vendor/bin/pint
 
 # Production build
-npm run build
+PUPPETEER_SKIP_DOWNLOAD=true npm run build   # CI/deploy skip Puppeteer's Chromium download
 ```
+
+Production must trigger `php artisan schedule:run` every minute for the scheduled CRM and reorder commands.
 
 ## Architecture
 
-- **Controllers**: `app/Http/Controllers/Apps/` — per-module web controllers (~34)
+- **Controllers**: `app/Http/Controllers/Apps/` — per-module web controllers (~35)
 - **API Controllers**: `app/Http/Controllers/Api/` — REST API (Sanctum token auth)
 - **Services**: `app/Services/` — ~22 services: AuditLog, BatchService, CashierShiftService, DineOrderService, GoodsReceivingService, LoyaltyService, PaymentGatewayManager, PricingService, PriceListService, PurchaseOrderService, ReorderService, StockMutationService, StockTransferService, UnitConversionService, WhatsAppService, etc.
 - **Layouts**: `POSLayout.jsx` (POS), `DashboardLayout.jsx` (admin), `AuthenticatedLayout.jsx` (profile), `GuestLayout.jsx` (auth), `PublicLayout.jsx` (public dine-in)
@@ -101,7 +111,7 @@ PermissionSeeder → RoleSeeder → PaymentSettingSeeder → DineInSettingsSeede
 
 After seeding, a default `PUSAT` warehouse is created and existing product stock is migrated to the `product_warehouse` pivot.
 
-**No default users.** Admin account, store profile, business type, categories, and main warehouse are created via the first-install setup wizard at `/setup` (gated by `setup.notinstalled` middleware checking `Setting::app_setup_completed`; redirects to login once done).
+**No default users.** Admin account, store profile, business type, categories, and main warehouse are created via the first-install setup wizard at `/setup`. Open the root URL after migration; it automatically redirects to `/setup` while `Setting::app_setup_completed` is false. The `setup.notinstalled` middleware redirects to login once setup is done.
 
 **Demo seeders are opt-in, not part of `DatabaseSeeder`:** `php artisan db:seed --class=SampleDataSeeder` (needs UserSeeder first: `--class=UserSeeder`), plus `OperationalCoreSeeder`, `FeatureCoverageSeeder`, `FeatureDemoSeeder` for full demo data.
 
@@ -137,6 +147,8 @@ After seeding, a default `PUSAT` warehouse is created and existing product stock
 - **Alerts/confirm**: `react-hot-toast` + `sweetalert2`
 - **Charts**: `chart.js`
 - **Routing**: Ziggy `route()` helper available
+- **Offline mode**: `resources/js/Utils/offlineDb.js` (IndexedDB via `idb`) queues transactions when offline, flushes on reconnect; idempotent via `client_uuid` — server price wins
+- **ESC/POS printing**: `resources/js/Utils/escpos.js` (WebUSB, Chromium-only; fallback `window.print()`)
 - **Tailwind tokens**: `primary` (indigo), `accent` (cyan), `success` (emerald), `warning` (amber), `danger` (rose)
 - **i18n**: Indonesian (`id.json`) and English (`en.json`) in `resources/js/i18n/locales`
 
@@ -146,6 +158,7 @@ After seeding, a default `PUSAT` warehouse is created and existing product stock
 - Architecture: `docs/architecture-overview.md`
 - Config: `docs/configuration.md`
 - Feature index: `docs/feature-index.md`
+- Manual QA checklist (QRIS, ESC/POS, offline sync): `docs/testing-manual.md`
 
 ## Test Conventions
 

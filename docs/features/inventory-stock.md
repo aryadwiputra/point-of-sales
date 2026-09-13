@@ -14,6 +14,10 @@ Menjaga akurasi stok melalui master produk, stock opname, dan histori mutasi sto
 - stock opname draft → finalized
 - stock mutation list
 - low stock notification
+- multi-warehouse stock melalui `product_warehouse`
+- batch/expiry tracking dan alokasi FEFO
+- composite products / kits
+- reorder point dan rekomendasi purchase order
 
 ## Halaman dan Route
 
@@ -52,8 +56,9 @@ Menjaga akurasi stok melalui master produk, stock opname, dan histori mutasi sto
 
 ## Batasan Saat Ini
 
-- belum multi warehouse
-- mutasi stok belum mencakup semua sumber operasional secara penuh
+- `products.stock` tetap dipelihara sebagai aggregate compatibility; stok operasional per gudang berada di `product_warehouse`
+- data historis tertentu dapat memiliki `warehouse_id` nullable
+- tidak semua sumber mutasi lama direpresentasikan dengan struktur pivot yang sama
 
 ## File Sentral
 

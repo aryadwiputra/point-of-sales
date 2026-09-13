@@ -36,11 +36,34 @@ class SetupWizardTest extends TestCase
         ];
     }
 
+    public function test_root_redirects_to_setup_before_install(): void
+    {
+        $this->get('/')->assertRedirect(route('setup.index'));
+    }
+
+    public function test_root_renders_welcome_after_install(): void
+    {
+        Setting::set('app_setup_completed', true);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Welcome'));
+    }
+
     public function test_setup_page_is_accessible_before_install(): void
     {
         $this->get(route('setup.index'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('Setup/Wizard'));
+            ->assertInertia(fn ($page) => $page
+                ->component('Setup/Wizard')
+                ->where('businessTypes.0', [
+                    'key' => 'food',
+                    'categories' => ['food', 'beverages', 'snacks', 'coffeeTea'],
+                ])
+                ->where('businessTypes.5', [
+                    'key' => 'services',
+                    'categories' => ['services', 'products', 'packages'],
+                ]));
     }
 
     public function test_setup_page_redirects_after_install(): void
@@ -88,5 +111,111 @@ class SetupWizardTest extends TestCase
 
         $this->post(route('setup.store'), $payload)
             ->assertSessionHasErrors(['business_type']);
+    }
+
+    public function test_index_returns_primary_warehouse_when_seeded(): void
+    {
+        $warehouse = Warehouse::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        Setting::set('setup_warehouse_id', $warehouse->id);
+
+        $this->get(route('setup.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('primaryWarehouse.id', $warehouse->id)
+                ->where('primaryWarehouse.code', 'PUSAT')
+                ->where('primaryWarehouse.name', 'Gudang Pusat'));
+    }
+
+    public function test_index_returns_null_primary_warehouse_when_not_seeded(): void
+    {
+        $this->get(route('setup.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('primaryWarehouse', null));
+    }
+
+    public function test_store_updates_existing_warehouse_when_warehouse_id_provided(): void
+    {
+        $warehouse = Warehouse::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $payload = $this->validPayload();
+        $payload['warehouse_id'] = $warehouse->id;
+        $payload['warehouse_code'] = 'PUSAT';
+        $payload['warehouse_name'] = 'Gudang Utama';
+
+        $response = $this->post(route('setup.store'), $payload);
+        $response->assertRedirect(route('login'));
+
+        $warehouse->refresh();
+        $this->assertSame('Gudang Utama', $warehouse->name);
+        $this->assertSame('PUSAT', $warehouse->code);
+        $this->assertSame($warehouse->id, (int) Setting::get('setup_warehouse_id'));
+    }
+
+    public function test_store_rejects_duplicate_warehouse_code_when_updating(): void
+    {
+        $warehouse1 = Warehouse::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Satu',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $warehouse2 = Warehouse::create([
+            'code' => 'CABANG',
+            'name' => 'Cabang',
+            'type' => 'branch',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        $payload = $this->validPayload();
+        $payload['warehouse_id'] = $warehouse2->id;
+        $payload['warehouse_code'] = 'PUSAT';
+
+        $this->post(route('setup.store'), $payload)
+            ->assertSessionHasErrors(['warehouse_code']);
+    }
+
+    public function test_store_allows_renaming_same_warehouse_code(): void
+    {
+        $warehouse = Warehouse::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Lama',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $payload = $this->validPayload();
+        $payload['warehouse_id'] = $warehouse->id;
+        $payload['warehouse_code'] = 'PUSAT';
+        $payload['warehouse_name'] = 'Gudang Baru';
+
+        $this->post(route('setup.store'), $payload)->assertRedirect(route('login'));
+
+        $warehouse->refresh();
+        $this->assertSame('Gudang Baru', $warehouse->name);
+    }
+
+    public function test_setup_warehouse_id_is_set_after_successful_setup(): void
+    {
+        $response = $this->post(route('setup.store'), $this->validPayload());
+        $response->assertRedirect(route('login'));
+
+        $warehouse = Warehouse::where('code', 'PUSAT')->first();
+        $this->assertSame($warehouse->id, (int) Setting::get('setup_warehouse_id'));
     }
 }

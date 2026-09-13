@@ -91,24 +91,24 @@ Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inven
 git clone https://github.com/aryadwiputra/point-of-sales.git
 cd point-of-sales
 cp .env.example .env
-composer install && npm install
+composer install && PUPPETEER_SKIP_DOWNLOAD=true npm install
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
 
-# Dev servers — jalankan semua di terminal terpisah
-npm run dev          # Vite HMR
-php artisan serve    # Laravel
+# Dev — server, queue, logs, dan Vite
+composer run dev
+
+# Setelah server berjalan, buka http://localhost:8000.
+# Pada instalasi pertama, aplikasi otomatis mengarahkan ke /setup.
 
 # WhatsApp Gateway (opsional) — untuk kirim WA otomatis
 cd whatsapp-service
 npm install && npm start
 ```
 
-## Default Login
-
-- Admin: `arya@gmail.com` / `password`
-- Kasir: `cashier@gmail.com` / `password`
+Tidak ada akun default. Setelah `migrate --seed`, buka root aplikasi (`http://localhost:8000`); pada instalasi pertama aplikasi otomatis mengarahkan ke `/setup` untuk membuat akun admin dan profil toko.
+Seeder demo bersifat opt-in: `UserSeeder` lalu `SampleDataSeeder`.
 
 ## Dokumentasi Detail
 
@@ -172,7 +172,7 @@ Base URL: `https://dikasir.web.id/api/v1` (dev: `http://localhost:8000/api/v1`)
 3. **Gambar produk tidak tampil** — jalankan `php artisan storage:link`
 4. **Route error 500** — jalankan `php artisan migrate` untuk modul baru
 5. **Test gagal karena PPN** — pastikan `tax_rate=0` di test Product::create
-6. **Vite tidak jalan** — pastikan `npm run dev` berjalan, jangan hanya `php artisan serve`
+6. **Vite tidak jalan** — pastikan `composer run dev` berjalan; command tersebut juga menjalankan Vite
 7. **WhatsApp QR tidak muncul** — pastikan `whatsapp-service/` sudah jalan (`npm start`)
 8. **WhatsApp terputus** — klik "Hubungkan Ulang" di Settings > WhatsApp, scan ulang QR
 

@@ -50,11 +50,16 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\UserController;
+use App\Models\Setting;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    if (! Setting::getBool('app_setup_completed', false)) {
+        return redirect()->route('setup.index');
+    }
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => config('security.auth.public_registration'),

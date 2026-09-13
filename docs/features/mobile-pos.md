@@ -21,7 +21,8 @@ Akses POS dari tablet/handphone dengan barcode scanner via kamera, install ke ho
 - Theme-color meta tag
 - Install prompt ke home screen (Android Chrome)
 - Support offline (cache-first untuk master data)
-- Offline checkout: transaksi diantrekan di IndexedDB (`pending_transactions`) lalu tersinkron otomatis saat koneksi kembali (`Utils/offlineDb.js`, endpoint `POST /api/v1/pos/transactions/sync`)
+- Offline checkout: transaksi yang sudah disiapkan diantrekan di IndexedDB (`pending_transactions`) lalu tersinkron otomatis saat koneksi kembali (`Utils/offlineDb.js`, endpoint `POST /api/v1/pos/transactions/sync`)
+- Penambahan produk baru ke cart saat offline tetap terbatas karena cart utama berbasis server
 
 ### Fullscreen Mode
 - Tombol fullscreen di header POS

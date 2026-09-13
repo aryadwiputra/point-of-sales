@@ -7,7 +7,7 @@
 | POS / Checkout | `docs/features/pos-transactions.md` | ✅ |
 | Sales Return | `docs/features/sales-returns.md` | ✅ |
 | Customer Portal (self-service) | `docs/features/customer-portal.md` | ✅ |
-| Offline Mode | — | ✅ (queue + auto-sync balik) |
+| Offline Mode | `docs/features/offline-mode.md` | ✅ (queue + auto-sync dengan batasan cart) |
 
 ## Inventory & Warehouse
 
@@ -17,9 +17,9 @@
 | Stock Opname | `docs/features/inventory-stock.md` | ✅ |
 | Stock Mutation | `docs/features/inventory-stock.md` | ✅ |
 | Multi-Warehouse & Stock Transfer | `docs/features/multi-warehouse.md` | ✅ |
-| Batch / Expiry Tracking | — | ✅ |
-| Composite Products (Kits) | — | ✅ |
-| Reorder Point | — | ✅ |
+| Batch / Expiry Tracking | `docs/features/inventory-stock.md` | ✅ |
+| Composite Products (Kits) | `docs/features/inventory-stock.md` | ✅ |
+| Reorder Point | `docs/features/inventory-stock.md` | ✅ |
 | Unit Conversion (Multi-Satuan) | `docs/features/unit-conversion.md` | ✅ |
 
 ## Purchasing & Finance
@@ -40,8 +40,8 @@
 | Pricing Rules | `docs/features/promotions-loyalty.md` | ✅ |
 | Customer Vouchers | `docs/features/promotions-loyalty.md` | ✅ |
 | Loyalty (tiers, points) | `docs/features/promotions-loyalty.md` | ✅ |
-| Multi-Price List | — | ✅ |
-| Discount Approval | — | ✅ |
+| Multi-Price List | `docs/features/promotions-loyalty.md` | ✅ |
+| Discount Approval | `docs/features/discount-approval.md` | ✅ |
 
 ## CRM
 
@@ -82,21 +82,16 @@
 | Import/Export CSV+Excel | `docs/features/import-export.md` | ✅ |
 | Mobile POS / PWA | `docs/features/mobile-pos.md` | ✅ |
 | Thermal Printer | `docs/features/thermal-printer.md` | ✅ (ESC/POS WebUSB + auto-print) |
-| Offline Mode | — | ✅ (queue + auto-sync balik) |
+| Offline Mode | `docs/features/offline-mode.md` | ✅ (queue + auto-sync dengan batasan cart) |
 | **WhatsApp Gateway** | `docs/features/whatsapp-gateway.md` | ✅ |
 
 ## App Versioning
 
 | Modul | File | Status |
 |-------|------|--------|
-| Versioning (APP_VERSION) | — | ✅ |
+| Versioning (APP_VERSION) | `docs/features/app-versioning.md` | ✅ |
 
-## Planning & Roadmap
+## Release & Roadmap
 
-- `planning/feature-roadmap.md` — ringkasan roadmap v2.1–v3.0
-- `planning/tier-1-implementation.md` — detail eksekusi Tier 1
-- `planning/tier-2-implementation.md` — detail eksekusi Tier 2
-- `planning/tier-3-implementation.md` — detail eksekusi Tier 3
-- `planning/multi-warehouse.md` — detail multi-warehouse
-- `planning/improvement-planning.md` — roadmap awal (legacy)
-- `planning/security-improvement-roadmap.md` — roadmap keamanan
+- `CHANGELOG.md` — riwayat rilis sampai `v2.10.4`
+- `/roadmap` — timeline rilis dan arah pengembangan publik

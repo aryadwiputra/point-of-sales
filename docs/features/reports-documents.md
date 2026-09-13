@@ -10,6 +10,7 @@ Menyediakan visibilitas operasional melalui laporan dan dokumen siap cetak / sha
 
 - laporan penjualan
 - laporan profit
+- Advanced Sales Insights
 - invoice transaksi publik dan internal
 - receipt thermal 58mm / 80mm
 - shipping label
@@ -20,6 +21,7 @@ Menyediakan visibilitas operasional melalui laporan dan dokumen siap cetak / sha
 
 - `dashboard/reports/sales`
 - `dashboard/reports/profits`
+- `dashboard/reports/insights`
 - `pdf.transactions.invoice`
 - `pdf.transactions.receipt`
 - `pdf.transactions.shipping`
@@ -30,6 +32,7 @@ Menyediakan visibilitas operasional melalui laporan dan dokumen siap cetak / sha
 
 - `reports-access`
 - `profits-access`
+- `reports-insights-access`
 - akses dokumen mengikuti modul asal seperti `transactions-access`, `receivables-access`, dan `payables-access`
 
 ## Alur User
@@ -48,6 +51,12 @@ Menyediakan visibilitas operasional melalui laporan dan dokumen siap cetak / sha
 - `payables`
 - `settings` untuk identitas toko
 
+## Advanced Sales Insights
+
+Dashboard insights menyediakan metrik operasional seperti penjualan per jam,
+performa kasir, repeat customer, dan ringkasan tren yang membantu pemilik mengambil
+keputusan berbasis data.
+
 ## Efek Bisnis Penting
 
 - laporan sales dan profit bergantung pada kualitas data transaksi
@@ -55,8 +64,8 @@ Menyediakan visibilitas operasional melalui laporan dan dokumen siap cetak / sha
 
 ## Batasan Saat Ini
 
-- laporan lebih fokus pada kebutuhan operasional dasar
-- tidak semua analitik lanjutan owner tersedia
+- cakupan metrik mengikuti data transaksi, customer, dan shift yang tersedia
+- analitik tidak menggantikan laporan akuntansi atau forecasting penuh
 
 ## File Sentral
 

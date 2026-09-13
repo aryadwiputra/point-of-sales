@@ -55,7 +55,7 @@ const releases = [
     },
     {
         version: "v2.3.1",
-        tag: "Rilis saat ini",
+        tag: "Maintenance",
         date: "Agu 2026",
         items: [
             "Rilis pemeliharaan & penyempurnaan",
@@ -64,13 +64,89 @@ const releases = [
             "Perbaikan portal customer & invoice PDF",
         ],
     },
+    {
+        version: "v2.4.0",
+        tag: "Dine-in QR",
+        date: "Sep 2026",
+        items: [
+            "QR menu dan self-order pelanggan",
+            "Floor plan area dan meja",
+            "Status pesanan publik dan alur accept/reject staff",
+        ],
+    },
+    {
+        version: "v2.5.0",
+        tag: "Onboarding",
+        date: "Sep 2026",
+        items: [
+            "First-install setup wizard",
+            "Unified local development command",
+        ],
+    },
+    {
+        version: "v2.6.0",
+        tag: "Guided Tour",
+        date: "Sep 2026",
+        items: ["Guided tour untuk onboarding pengguna baru"],
+    },
+    {
+        version: "v2.7.0",
+        tag: "Setup Checklist",
+        date: "Sep 2026",
+        items: ["Tour replay dan checklist setup aplikasi"],
+    },
+    {
+        version: "v2.8.0",
+        tag: "Offline & QRIS",
+        date: "Sep 2026",
+        items: ["Offline transaction sync dan dynamic QRIS"],
+    },
+    {
+        version: "v2.9.0",
+        tag: "Cashier Operations",
+        date: "Sep 2026",
+        items: ["Cash movement shift, laporan X/Z, dan order types"],
+    },
+    {
+        version: "v2.10.0",
+        tag: "Printing",
+        date: "Sep 2026",
+        items: ["Auto-print dan ESC/POS WebUSB"],
+    },
+    {
+        version: "v2.10.1",
+        tag: "Maintenance",
+        date: "Sep 2026",
+        items: ["Perbaikan walk-in checkout dan dokumentasi"],
+    },
+    {
+        version: "v2.10.2",
+        tag: "Maintenance",
+        date: "Sep 2026",
+        items: ["Perbaikan tour dan replay behavior"],
+    },
+    {
+        version: "v2.10.3",
+        tag: "Maintenance",
+        date: "Sep 2026",
+        items: ["Stabilisasi setup wizard dan first-run flow"],
+    },
+    {
+        version: "v2.10.4",
+        tag: "Rilis saat ini",
+        date: "Sep 2026",
+        items: [
+            "Reuse warehouse seeded pada setup wizard",
+            "Perbaikan submission form setup wizard",
+        ],
+    },
 ];
 
 const directions = [
     {
         icon: IconSparkles,
         title: "Pengalaman mobile yang lebih dalam",
-        desc: "Kasir handheld yang lebih matang: mode offline penuh, antrean sinkronisasi yang lebih cerdas, dan UI sentuh yang dioptimalkan.",
+        desc: "Penyempurnaan offline: conflict handling, retry queue, observability, dan dukungan master data yang lebih luas.",
     },
     {
         icon: IconBulb,
@@ -80,7 +156,7 @@ const directions = [
     {
         icon: IconRocket,
         title: "Ekosistem pengembang",
-        desc: "Dokumentasi API, tema & plugin, dan tooling yang memudahkan kontribusi.",
+        desc: "Memperluas dokumentasi API yang sudah tersedia, tema/plugin, dan tooling yang memudahkan kontribusi.",
     },
 ];
 

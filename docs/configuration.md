@@ -15,7 +15,10 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 | `XENDIT_PUBLIC_KEY` | Public key Xendit |
 | `XENDIT_CALLBACK_TOKEN` | Callback token verifikasi webhook Xendit |
 | `AUTH_PUBLIC_REGISTRATION` | Aktifkan registrasi publik (`true`/`false`, default: `false`) |
-| `WA_SERVICE_URL` | Alamat Node.js WhatsApp service (default: `http://localhost:3001`) |
+ | `WA_SERVICE_URL` | Alamat Node.js WhatsApp service (default: `http://localhost:3001`) |
+
+ Versi runtime yang ditampilkan aplikasi berasal dari `APP_VERSION`. Nilainya harus disamakan
+ dengan Git tag rilis, misalnya `v2.10.4`.
 
 ## APP_URL
 
@@ -87,6 +90,8 @@ Konfigurasi di `dashboard/settings/whatsapp`:
 - **Koneksi** — scan QR untuk menghubungkan (session tersimpan otomatis)
 
 Detail setup: `docs/features/whatsapp-gateway.md`
+
+ Campaign dan reminder terjadwal membutuhkan Laravel scheduler dan queue worker aktif.
 
 ## Multi-Warehouse
 

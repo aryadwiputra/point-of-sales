@@ -14,6 +14,8 @@ Mencatat piutang pelanggan yang berasal dari transaksi `pay_later` dan menyediak
 - pembayaran parsial
 - status `unpaid`, `partial`, `paid`, `overdue`
 - PDF receivable
+- reminder jatuh tempo dan overdue melalui automation CRM
+- pengiriman langsung melalui WhatsApp jika service aktif dan device terhubung
 
 ## Halaman dan Route
 
@@ -47,10 +49,14 @@ Mencatat piutang pelanggan yang berasal dari transaksi `pay_later` dan menyediak
 - pembayaran receivable ikut memengaruhi `payment_status` transaksi terkait
 - sales return dapat mengoreksi total receivable jika retur berasal dari transaksi piutang
 
-## Batasan Saat Ini
+## Reminder dan Delivery
 
-- belum ada reminder otomatis eksternal
-- belum ada approval flow pembayaran
+Reminder dapat dibuat untuk jatuh tempo, overdue, dan repeat order. Command scheduler
+menghasilkan pekerjaan reminder secara berkala. Delivery dapat menggunakan WhatsApp
+Gateway jika `wa_enabled=true` dan device sudah terhubung; jika tidak, campaign dapat
+ditangani melalui link WhatsApp atau follow-up manual.
+
+Belum ada approval flow terpisah untuk pencatatan pembayaran receivable.
 
 ## File Sentral
 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Head, useForm } from "@inertiajs/react";
+import { useEffect, useState } from "react";
+import { Head, useForm, usePage } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
 import {
     IconShoppingCart,
@@ -16,12 +16,34 @@ import {
 
 const STEPS = ["store", "businessType", "categories", "account"];
 
-export default function Wizard({ businessTypes }) {
-    const { t } = useTranslation();
+export default function Wizard({ businessTypes, primaryWarehouse }) {
+    const { t, i18n } = useTranslation();
+    const { props } = usePage();
     const [step, setStep] = useState(0);
 
-    const { data, setData, post, processing, errors, setError, clearErrors } =
-        useForm({
+    useEffect(() => {
+        const locale = props.locale?.current;
+        if (locale && locale !== i18n.language) {
+            i18n.changeLanguage(locale);
+        }
+    }, [i18n, props.locale?.current]);
+
+    const changeLanguage = (locale) => {
+        i18n.changeLanguage(locale);
+        document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
+        window.localStorage.setItem("i18nextLng", locale);
+    };
+
+    const {
+        data,
+        setData,
+        post,
+        transform,
+        processing,
+        errors,
+        setError,
+        clearErrors,
+    } = useForm({
             store_name: "",
             store_address: "",
             store_phone: "",
@@ -31,10 +53,14 @@ export default function Wizard({ businessTypes }) {
             user_name: "",
             user_email: "",
             password: "",
-            warehouse_code: "PUSAT",
-            warehouse_name: "Gudang Utama",
+            warehouse_id: primaryWarehouse?.id ?? "",
+            warehouse_code: primaryWarehouse?.code ?? "",
+            warehouse_name: primaryWarehouse?.name ?? "",
         });
     const [customCategory, setCustomCategory] = useState("");
+
+    const categoryValue = (category) =>
+        `__setup:${data.business_type}:${category}`;
 
     const toggleCategory = (name) => {
         setData(
@@ -71,14 +97,28 @@ export default function Wizard({ businessTypes }) {
         return true;
     };
 
-    const next = () => {
-        if (validateStep()) setStep(step + 1);
+    const next = (event) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        if (validateStep()) setStep((currentStep) => currentStep + 1);
     };
 
-    const submit = (e) => {
-        e.preventDefault();
+    const submit = () => {
         if (!validateStep()) return;
-        post(route("setup.store"));
+
+        transform((formData) => ({
+                ...formData,
+                categories: formData.categories.map((category) => {
+                    const prefix = `__setup:${formData.business_type}:`;
+
+                    return category.startsWith(prefix)
+                        ? t(
+                              `setup.categoryOptions.${formData.business_type}.${category.slice(prefix.length)}`,
+                          )
+                        : category;
+                }),
+            }));
+        post(route("setup.store"), { forceFormData: true });
     };
 
     const selectedType = businessTypes?.find(
@@ -108,6 +148,23 @@ export default function Wizard({ businessTypes }) {
                         <span className="text-2xl font-bold text-slate-900 dark:text-white">
                             {t("auth.login.appName")}
                         </span>
+                    </div>
+
+                    <div className="flex justify-center gap-1 mb-4">
+                        {["id", "en"].map((locale) => (
+                            <button
+                                key={locale}
+                                type="button"
+                                onClick={() => changeLanguage(locale)}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                                    i18n.language.startsWith(locale)
+                                        ? "bg-primary-100 text-primary-700 dark:bg-primary-950/50 dark:text-primary-300"
+                                        : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                }`}
+                            >
+                                {locale === "id" ? "Indonesia" : "English"}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
@@ -173,7 +230,7 @@ export default function Wizard({ businessTypes }) {
                             {t("setup.subtitle")}
                         </p>
 
-                        <form onSubmit={submit} className="space-y-5">
+                        <div className="space-y-5">
                             {/* Step 1: Store profile */}
                             {step === 0 && (
                                 <>
@@ -276,12 +333,14 @@ export default function Wizard({ businessTypes }) {
                                                 }`}
                                             >
                                                 <span className="font-medium text-slate-900 dark:text-white">
-                                                    {type.label}
+                                                    {t(`setup.businessType.${type.key}`)}
                                                 </span>
                                                 <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                    {type.categories.join(
-                                                        ", ",
-                                                    )}
+                                                    {type.categories
+                                                        .map((category) => t(
+                                                            `setup.categoryOptions.${type.key}.${category}`,
+                                                        ))
+                                                        .join(", ")}
                                                 </span>
                                             </button>
                                         ))}
@@ -301,33 +360,47 @@ export default function Wizard({ businessTypes }) {
                                         {t("setup.categories.hint")}
                                     </p>
                                     <div className="flex flex-wrap gap-2">
-                                        {(
-                                            selectedType?.categories ?? []
-                                        ).map((name) => (
-                                            <CategoryChip
-                                                key={name}
-                                                name={name}
-                                                active={data.categories.includes(
-                                                    name,
-                                                )}
-                                                onClick={() =>
-                                                    toggleCategory(name)
-                                                }
-                                            />
-                                        ))}
+                                        {(selectedType?.categories ?? []).map(
+                                            (category) => {
+                                                const name = t(
+                                                    `setup.categoryOptions.${selectedType.key}.${category}`,
+                                                );
+                                                const value = categoryValue(
+                                                    category,
+                                                );
+
+                                                return (
+                                                    <CategoryChip
+                                                        key={category}
+                                                        name={name}
+                                                        active={data.categories.includes(
+                                                            value,
+                                                        )}
+                                                        onClick={() =>
+                                                            toggleCategory(value)
+                                                        }
+                                                    />
+                                                );
+                                            },
+                                        )}
                                     </div>
                                     {data.categories.filter(
                                         (c) =>
-                                            !selectedType?.categories.includes(
-                                                c,
+                                            !selectedType?.categories.some(
+                                                (category) =>
+                                                    categoryValue(category) ===
+                                                    c,
                                             ),
                                     ).length > 0 && (
                                         <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                                             {data.categories
                                                 .filter(
                                                     (c) =>
-                                                        !selectedType?.categories.includes(
-                                                            c,
+                                                        !selectedType?.categories.some(
+                                                            (category) =>
+                                                                categoryValue(
+                                                                    category,
+                                                                ) === c,
                                                         ),
                                                 )
                                                 .map((name) => (
@@ -354,6 +427,7 @@ export default function Wizard({ businessTypes }) {
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter") {
                                                     e.preventDefault();
+                                                    e.stopPropagation();
                                                     addCustomCategory();
                                                 }
                                             }}
@@ -500,7 +574,9 @@ export default function Wizard({ businessTypes }) {
                             <div className="flex items-center justify-between pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setStep(step - 1)}
+                                     onClick={() =>
+                                         setStep((currentStep) => currentStep - 1)
+                                     }
                                     disabled={step === 0}
                                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800"
                                 >
@@ -519,7 +595,8 @@ export default function Wizard({ businessTypes }) {
                                     </button>
                                 ) : (
                                     <button
-                                        type="submit"
+                                        type="button"
+                                        onClick={submit}
                                         disabled={processing}
                                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 disabled:opacity-60"
                                     >
@@ -533,7 +610,7 @@ export default function Wizard({ businessTypes }) {
                                     </button>
                                 )}
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>

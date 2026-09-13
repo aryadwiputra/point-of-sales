@@ -11,6 +11,8 @@ import {
     IconCreditCard,
     IconCheck,
     IconArrowRight,
+    IconQrcode,
+    IconApi,
 } from "@tabler/icons-react";
 
 const GITHUB_URL = "https://github.com/aryadwiputra/point-of-sales";
@@ -30,7 +32,7 @@ const modules = [
             "Promo engine: diskon, qty break, bundle, buy-x-get-y",
             "Persetujuan diskon (approval workflow)",
             "Cetak struk thermal 58/80mm (WebUSB)",
-            "Offline mode — transaksi tetap jalan tanpa internet",
+            "Offline checkout — transaksi yang sudah disiapkan diantrikan dan disinkronkan saat online",
         ],
     },
     {
@@ -133,6 +135,33 @@ const modules = [
             "Multi-bahasa: Indonesia & English",
         ],
     },
+    {
+        icon: IconQrcode,
+        title: "Dine-in QR & Self-Order",
+        desc: "Pelanggan dapat membuka menu dari QR meja, membuat pesanan, dan memantau statusnya.",
+        screenshot: "/screenshots/01-dashboard.png",
+        features: [
+            "Area dan floor plan meja",
+            "QR code unik per meja",
+            "Menu publik dan keranjang pelanggan",
+            "Status order dengan polling",
+            "Staff dapat menerima atau menolak pesanan",
+            "Pembayaran saat ini melalui kasir",
+        ],
+    },
+    {
+        icon: IconApi,
+        title: "API & Integrasi",
+        desc: "Endpoint terautentikasi untuk integrasi aplikasi, perangkat, dan sinkronisasi POS.",
+        screenshot: "/screenshots/01-dashboard.png",
+        features: [
+            "Auth token berbasis Sanctum",
+            "Master data produk, customer, kategori, gudang, dan supplier",
+            "Cart, shift, checkout, transaksi, dan offline sync",
+            "Proteksi ability sesuai permission pengguna",
+            "Dokumentasi API tersedia melalui Scramble",
+        ],
+    },
 ];
 
 export default function Features() {
@@ -147,8 +176,8 @@ export default function Features() {
                         Fitur Lengkap untuk Bisnis Nyata
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
-                        44+ modul terintegrasi dalam 8 area — dari kasir harian sampai analitik
-                        lanjutan, semua gratis dan open source.
+                        Fitur terintegrasi dari kasir harian sampai analitik lanjutan, gratis
+                        digunakan dan open source di bawah lisensi MIT.
                     </p>
                     <div className="mt-8 flex flex-wrap justify-center gap-3">
                         {modules.map((m) => (

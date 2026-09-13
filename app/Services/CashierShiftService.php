@@ -176,8 +176,14 @@ class CashierShiftService
             $cashDifference = $actualCash - $summary['expected_cash'];
 
             $lockedShift->update([
-                ...$summary,
                 'actual_cash' => $actualCash,
+                'expected_cash' => $summary['expected_cash'],
+                'cash_sales_total' => $summary['cash_sales_total'],
+                'non_cash_sales_total' => $summary['non_cash_sales_total'],
+                'cash_refund_total' => $summary['cash_refund_total'],
+                'non_cash_refund_total' => $summary['non_cash_refund_total'],
+                'transactions_count' => $summary['transactions_count'],
+                'sales_returns_count' => $summary['sales_returns_count'],
                 'cash_difference' => $cashDifference,
                 'closed_at' => now(),
                 'closed_by' => $actor->id,

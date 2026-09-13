@@ -16,6 +16,8 @@ import {
     IconArrowRight,
     IconDeviceMobile,
     IconTerminal2,
+    IconQrcode,
+    IconApi,
 } from "@tabler/icons-react";
 
 const GITHUB_URL = "https://github.com/aryadwiputra/point-of-sales";
@@ -25,7 +27,7 @@ const GALLERY_URL = `${GITHUB_URL}/blob/main/docs/screenshots.md`;
 const stats = [
     { value: "200+", label: "GitHub Stars" },
     { value: "44+", label: "Fitur Lengkap" },
-    { value: "MIT", label: "100% Gratis" },
+    { value: "MIT", label: "Open Source" },
     { value: "8", label: "Modul Terintegrasi" },
 ];
 
@@ -68,7 +70,7 @@ const features = [
     {
         icon: IconBrandWhatsapp,
         title: "WhatsApp Gateway",
-        desc: "Kirim struk, reminder piutang, dan promo otomatis ke pelanggan via WhatsApp (whatsapp-web.js).",
+        desc: "Kirim struk, reminder piutang, dan promo via WhatsApp jika service Node dan perangkat sudah terhubung.",
     },
     {
         icon: IconShieldLock,
@@ -78,7 +80,17 @@ const features = [
     {
         icon: IconCloudOff,
         title: "Offline Mode",
-        desc: "Tetap bisa jualan saat internet mati — transaksi masuk antrean dan tersinkron otomatis saat online.",
+        desc: "Checkout yang sudah disiapkan dapat masuk antrean offline dan tersinkron saat koneksi kembali.",
+    },
+    {
+        icon: IconQrcode,
+        title: "Dine-in QR Menu",
+        desc: "Pelanggan scan QR meja, melihat menu, membuat pesanan, dan memantau status sampai diproses staff.",
+    },
+    {
+        icon: IconApi,
+        title: "API & Integrasi",
+        desc: "API terautentikasi untuk master data, POS, checkout, shift, transaksi, dan sinkronisasi offline.",
     },
 ];
 
@@ -102,7 +114,7 @@ const screenshots = [
 const faqs = [
     {
         q: "Apakah Dikasir benar-benar gratis?",
-        a: "Ya. Dikasir dirilis di bawah lisensi MIT — bebas digunakan, dimodifikasi, dan didistribusikan, termasuk untuk kepentingan komersial. Tidak ada biaya lisensi atau langganan.",
+        a: "Ya. Dikasir dirilis di bawah lisensi MIT, sehingga bebas digunakan, dimodifikasi, dan didistribusikan. Hosting, hardware, biaya payment gateway, dan layanan pihak ketiga tetap menjadi tanggung jawab pengguna.",
     },
     {
         q: "Bisakah dipakai untuk bisnis multi-cabang?",
@@ -110,11 +122,11 @@ const faqs = [
     },
     {
         q: "Bagaimana kalau internet di toko mati?",
-        a: "Dikasir punya offline mode: transaksi tetap bisa diproses dan masuk antrean lokal, lalu tersinkron otomatis saat koneksi kembali.",
+        a: "Checkout yang sudah disiapkan dapat masuk antrean lokal dan tersinkron otomatis saat koneksi kembali. Menambahkan produk baru ke cart saat offline masih memiliki keterbatasan karena cart berbasis server.",
     },
     {
         q: "Apa saja yang dibutuhkan untuk instalasi?",
-        a: "PHP 8.3+, MySQL, Composer, dan Node.js 20+. Semua panduan lengkap ada di dokumentasi getting-started.",
+        a: "PHP 8.3+, MySQL/MariaDB, Composer, Node.js 18+, dan npm. Untuk WhatsApp Gateway, siapkan Chrome/Chromium dan service Node terpisah. Semua panduan ada di dokumentasi getting-started.",
     },
     {
         q: "Bagaimana cara berkontribusi?",
@@ -124,15 +136,17 @@ const faqs = [
 
 const quickStart = `git clone https://github.com/aryadwiputra/point-of-sales
 cd point-of-sales
-composer install && npm install
+composer install
+PUPPETEER_SKIP_DOWNLOAD=true npm install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
 
-# Jalankan dev server (2 terminal)
-npm run dev
-php artisan serve`;
+# Jalankan server, queue, logs, dan Vite
+composer run dev
+
+# Buka http://localhost:8000 dan selesaikan wizard /setup`;
 
 export default function Welcome() {
     return (
@@ -348,8 +362,8 @@ export default function Welcome() {
                             Instalasi dalam Hitungan Menit
                         </h2>
                         <p className="mt-4 text-slate-600 dark:text-slate-400">
-                            Clone, install, dan kasir Anda langsung jalan. Data contoh sudah
-                            termasuk.
+                             Clone, install, lalu buka wizard setup untuk membuat akun admin,
+                             profil toko, kategori, dan gudang utama.
                         </p>
                     </div>
 
@@ -385,38 +399,14 @@ export default function Welcome() {
                             Ingin Coba Langsung?
                         </h2>
                         <p className="text-slate-600 dark:text-slate-400 mb-6">
-                            Demo berisi data contoh lengkap — produk, transaksi, dan laporan.
-                            Gunakan akun demo berikut:
+                             Untuk mencoba aplikasi, jalankan instalasi lokal dan selesaikan
+                             wizard setup. Seeder utama tidak membuat akun demo atau sample data.
                         </p>
-                        <div className="grid sm:grid-cols-2 gap-4 mb-8 text-left">
-                            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                                <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wide">
-                                    Admin
-                                </div>
-                                <div className="font-mono text-sm text-slate-700 dark:text-slate-300">
-                                    arya@gmail.com
-                                </div>
-                                <div className="font-mono text-sm text-slate-500 dark:text-slate-400">
-                                    password
-                                </div>
-                            </div>
-                            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                                <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wide">
-                                    Kasir
-                                </div>
-                                <div className="font-mono text-sm text-slate-700 dark:text-slate-300">
-                                    cashier@gmail.com
-                                </div>
-                                <div className="font-mono text-sm text-slate-500 dark:text-slate-400">
-                                    password
-                                </div>
-                            </div>
-                        </div>
                         <Link
-                            href="/login"
+                            href="/setup"
                             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-2xl hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all"
                         >
-                            Buka Demo
+                            Mulai Setup
                             <IconArrowRight size={18} />
                         </Link>
                     </div>
@@ -462,8 +452,8 @@ export default function Welcome() {
                             Siap Kelola Bisnis dengan Dikasir?
                         </h2>
                         <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
-                            Gratis selamanya, open source, dan data sepenuhnya milik Anda.
-                            Mulai dengan satu klik di GitHub.
+                             Gratis digunakan dan dimodifikasi di bawah lisensi MIT, dengan data
+                             tetap berada di infrastruktur Anda.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <a

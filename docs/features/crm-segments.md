@@ -19,6 +19,7 @@ Segmentasi pelanggan, campaign automation, dan reminder untuk meningkatkan engag
 - Process campaign: generate log per customer
 - Campaign types: reminder, promo, follow-up
 - Share invoice via WhatsApp link
+- Direct WhatsApp delivery jika WhatsApp Gateway aktif dan device terhubung
 - Cancel campaign jika diperlukan
 
 ### Reminders
@@ -61,5 +62,6 @@ Segmentasi pelanggan, campaign automation, dan reminder untuk meningkatkan engag
 1. Buat segment (manual/auto)
 2. Buat campaign → pilih audiens filter
 3. Process campaign → system generate log per customer
-4. Manual: mark sent/skip per log
-5. Customer menerima notifikasi (via WhatsApp link atau manual follow-up)
+4. Pilih delivery: direct WhatsApp, link `wa.me`, atau manual follow-up
+5. Process campaign mengirim langsung jika service tersedia; jika tidak, log dapat ditangani manual
+6. Mark sent/skip per log sesuai hasil delivery
