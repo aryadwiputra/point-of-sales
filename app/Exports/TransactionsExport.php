@@ -20,7 +20,7 @@ class TransactionsExport implements FromCollection, ShouldAutoSize, WithHeadings
 
     public function collection()
     {
-        return Transaction::with(['customer:id,name', 'cashier:id,name'])
+        return Transaction::with(['customer:id,name', 'cashier:id,name', 'tenders:id,transaction_id,method,amount'])
             ->when($this->request->start_date, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
             ->when($this->request->end_date, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))
             ->when($this->request->warehouse_id, fn ($q, $id) => $q->where('warehouse_id', $id))
@@ -40,7 +40,9 @@ class TransactionsExport implements FromCollection, ShouldAutoSize, WithHeadings
             $transaction->created_at->format('Y-m-d H:i:s'),
             $transaction->cashier?->name ?? '',
             $transaction->customer?->name ?? 'Umum',
-            $transaction->payment_method ?? '',
+            $transaction->payment_method === 'split'
+                ? 'Split: '.$transaction->tenders->map(fn ($tender) => $tender->method.' '.$tender->amount)->join(', ')
+                : ($transaction->payment_method ?? ''),
             $transaction->payment_status ?? '',
             (int) ($transaction->grand_total - $transaction->discount + ($transaction->shipping_cost ?? 0) - ($transaction->tax_total ?? 0)),
             (int) ($transaction->discount ?? 0),
