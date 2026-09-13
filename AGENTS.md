@@ -62,6 +62,7 @@ php artisan crm:sync-segments             # refresh auto segment memberships (da
 php artisan crm:generate-reminders       # queue campaign reminder messages (daily 01:15)
 php artisan scramble:cache               # warm Scramble OpenAPI cache
 php artisan scramble:clear               # invalidate Scramble OpenAPI cache
+php artisan seed:demo                    # regenerate full demo dataset (truncates 19 tables; --force skips confirm)
 
 # Formatting
 vendor/bin/pint

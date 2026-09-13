@@ -34,6 +34,8 @@ class UserSeeder extends Seeder
         }
 
         $admin->syncPermissions($permissions);
+        // Demo accounts skip email verification (dashboard is guarded by 'verified' middleware).
+        $admin->markEmailAsVerified();
 
         $cashier = User::updateOrCreate(
             ['email' => 'cashier@gmail.com'],
@@ -44,6 +46,7 @@ class UserSeeder extends Seeder
         );
 
         $cashierRole = Role::where('name', 'cashier')->first();
+        $cashier->markEmailAsVerified();
 
         if ($cashierRole) {
             $cashier->syncRoles([$cashierRole->name]);
