@@ -40,6 +40,7 @@ class TransactionResource extends JsonResource
             'payment_reference' => $this->payment_reference,
             'payment_url' => $this->payment_url,
             'qr_string' => $this->qr_string,
+            'tenders' => $this->whenLoaded('tenders', fn () => TransactionTenderResource::collection($this->tenders)),
             'discount_approval_status' => $this->discount_approval_status,
             'created_at' => optional($this->created_at)->toISOString(),
             'details' => $this->whenLoaded('details', fn () => $this->details->map(fn ($d) => [

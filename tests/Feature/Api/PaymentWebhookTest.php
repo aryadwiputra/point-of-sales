@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\PaymentSetting;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
@@ -137,6 +138,37 @@ class PaymentWebhookTest extends TestCase
                 && ! array_key_exists('token', $context)
                 && ($context['verification_result'] ?? null) === 'invalid';
         });
+    }
+
+    public function test_midtrans_webhook_updates_only_matching_split_tender(): void
+    {
+        PaymentSetting::create([
+            'default_gateway' => 'midtrans',
+            'midtrans_enabled' => true,
+            'midtrans_server_key' => 'server-key',
+            'midtrans_client_key' => 'client-key',
+        ]);
+
+        $transaction = $this->createPendingTransaction('split');
+        $transaction->tenders()->createMany([
+            ['method' => TransactionTender::METHOD_CASH, 'amount' => 50000, 'cash_received' => 50000, 'payment_status' => 'paid'],
+            ['method' => TransactionTender::METHOD_QRIS, 'amount' => 50000, 'payment_status' => 'pending'],
+        ]);
+        $orderId = $transaction->invoice.'-qris';
+        $payload = [
+            'order_id' => $orderId,
+            'status_code' => '200',
+            'gross_amount' => '50000',
+            'transaction_status' => 'settlement',
+            'transaction_id' => 'split-midtrans-001',
+        ];
+        $payload['signature_key'] = hash('sha512', $orderId.'20050000server-key');
+
+        $this->postJson(route('webhooks.midtrans'), $payload)->assertOk();
+
+        $this->assertSame('paid', $transaction->fresh()->payment_status);
+        $this->assertSame('paid', $transaction->tenders()->where('method', 'qris')->value('payment_status'));
+        $this->assertSame('split-midtrans-001', $transaction->tenders()->where('method', 'qris')->value('payment_reference'));
     }
 
     private function createPendingTransaction(string $paymentMethod): Transaction

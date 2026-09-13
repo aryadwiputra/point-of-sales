@@ -8,17 +8,17 @@ use Illuminate\Support\Facades\Http;
 
 class XenditGateway
 {
-    public function createInvoice(Transaction $transaction, array $config): array
+    public function createInvoice(Transaction $transaction, array $config, ?int $amount = null, ?string $externalId = null): array
     {
-        return $this->createInvoiceRequest($transaction, $config);
+        return $this->createInvoiceRequest($transaction, $config, null, $amount, $externalId);
     }
 
     /**
      * Dynamic QRIS invoice — QRIS-only channel; returns qr_string.
      */
-    public function createQrisInvoice(Transaction $transaction, array $config): array
+    public function createQrisInvoice(Transaction $transaction, array $config, ?int $amount = null, ?string $externalId = null): array
     {
-        $result = $this->createInvoiceRequest($transaction, $config, ['QRIS']);
+        $result = $this->createInvoiceRequest($transaction, $config, ['QRIS'], $amount, $externalId);
 
         return [
             ...$result,
@@ -26,7 +26,7 @@ class XenditGateway
         ];
     }
 
-    private function createInvoiceRequest(Transaction $transaction, array $config, ?array $channels = null): array
+    private function createInvoiceRequest(Transaction $transaction, array $config, ?array $channels = null, ?int $amount = null, ?string $externalId = null): array
     {
         if (! ($config['enabled'] ?? false)) {
             throw new PaymentGatewayException('Xendit tidak aktif atau belum dikonfigurasi.');
@@ -35,8 +35,8 @@ class XenditGateway
         $customer = $transaction->customer;
 
         $payload = [
-            'external_id' => $transaction->invoice,
-            'amount' => (int) $transaction->grand_total,
+            'external_id' => $externalId ?? $transaction->invoice,
+            'amount' => $amount ?? (int) $transaction->grand_total,
             'description' => 'Pembayaran transaksi #'.$transaction->invoice,
             'customer' => [
                 'given_names' => optional($customer)->name ?? 'Customer',

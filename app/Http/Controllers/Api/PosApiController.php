@@ -17,12 +17,14 @@ use App\Models\Product;
 use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
 use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
+use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +42,7 @@ class PosApiController extends Controller
         private readonly LoyaltyService $loyaltyService,
         private readonly UnitConversionService $unitConversionService,
         private readonly PriceListService $priceListService,
+        private readonly TransactionTenderService $tenderService,
     ) {}
 
     /**
@@ -524,11 +527,19 @@ class PosApiController extends Controller
             'customer_npwp' => ['nullable', 'string', 'max:50'],
             'order_type' => ['nullable', 'in:in_store,takeaway,delivery'],
             'note' => ['nullable', 'string', 'max:1000'],
+            'tenders' => ['nullable', 'array', 'max:2'],
+            'tenders.*.method' => ['required', 'string'],
+            'tenders.*.amount' => ['required', 'integer', 'min:1'],
+            'tenders.*.cash_received' => ['nullable', 'integer', 'min:0'],
+            'tenders.*.bank_account_id' => ['nullable', 'integer', 'exists:bank_accounts,id'],
         ]);
 
-        $isPayLater = $validated['payment_method'] === 'pay_later';
-        $paymentGateway = ! $isPayLater && $validated['payment_method'] !== 'cash'
-            ? $validated['payment_method']
+        $paymentMethod = $validated['payment_method'] ?? 'cash';
+        $isPayLater = $paymentMethod === 'pay_later';
+        $tenderInput = $validated['tenders'] ?? [];
+        $useTenders = ! $isPayLater && $tenderInput !== [];
+        $paymentGateway = ! $isPayLater && $paymentMethod !== 'cash'
+            ? $paymentMethod
             : null;
 
         if ($isPayLater && ! $request->filled('due_date')) {
@@ -548,7 +559,7 @@ class PosApiController extends Controller
         }
 
         $invoice = 'TRX-'.Str::upper(Str::random(10));
-        $isCashPayment = ! $paymentGateway && ! $isPayLater;
+        $isCashPayment = ! $paymentGateway && ! $isPayLater && ! $useTenders;
         $cashAmount = $isCashPayment ? max(0, (int) $validated['cash'] ?? 0) : 0;
         $customer = isset($validated['customer_id']) ? Customer::find($validated['customer_id']) : null;
         $voucher = isset($validated['customer_voucher_id']) ? CustomerVoucher::find($validated['customer_voucher_id']) : null;
@@ -559,7 +570,8 @@ class PosApiController extends Controller
         try {
             $transaction = DB::transaction(function () use (
                 $request, $invoice, $cashAmount, $paymentGateway, $isCashPayment, $isPayLater,
-                $manualDiscount, $shippingCost, $requestedRedeemPoints, $customer, $voucher, $validated
+                $manualDiscount, $shippingCost, $requestedRedeemPoints, $customer, $voucher, $validated,
+                $useTenders, $tenderInput
             ) {
                 $activeShift = $this->cashierShiftService->requireActiveShiftForUser(
                     $request->user()->id,
@@ -596,14 +608,20 @@ class PosApiController extends Controller
                     ]);
                 }
 
+                // ponytail: legacy single-method path kept — split tenders only activate when payload has tenders[]
+                $tenders = $useTenders ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false) : [];
+                $tenderCash = collect($tenders)->where('method', TransactionTender::METHOD_CASH)->sum('cash_received');
+                $tenderChange = collect($tenders)->sum('change');
+                $tenderBankAccountId = collect($tenders)->firstWhere('bank_account_id', '!==', null)['bank_account_id'] ?? null;
+
                 $transaction = Transaction::create([
                     'cashier_id' => $request->user()->id,
                     'cashier_shift_id' => $activeShift->id,
                     'warehouse_id' => $activeShift->warehouse_id,
                     'customer_id' => $validated['customer_id'] ?? null,
                     'invoice' => $invoice,
-                    'cash' => $cashAmount,
-                    'change' => $changeAmount,
+                    'cash' => $useTenders ? $tenderCash : $cashAmount,
+                    'change' => $useTenders ? $tenderChange : $changeAmount,
                     'discount' => $appliedManualDiscount,
                     'loyalty_points_redeemed' => (int) data_get($checkoutPreview, 'summary.applied_redeem_points', 0),
                     'loyalty_discount_total' => $loyaltyDiscount,
@@ -612,9 +630,15 @@ class PosApiController extends Controller
                     'customer_voucher_name' => data_get($checkoutPreview, 'voucher.name'),
                     'shipping_cost' => $shippingCost,
                     'grand_total' => $grandTotal,
-                    'payment_method' => $isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash'),
-                    'payment_status' => $isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending'),
-                    'bank_account_id' => $paymentGateway === 'bank_transfer' ? ($validated['bank_account_id'] ?? null) : null,
+                    'payment_method' => $useTenders
+                        ? (count($tenders) > 1 ? 'split' : $tenders[0]['method'])
+                        : ($isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash')),
+                    'payment_status' => $useTenders
+                        ? $this->tenderService->aggregateStatus($tenders)
+                        : ($isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending')),
+                    'bank_account_id' => $useTenders
+                        ? $tenderBankAccountId
+                        : ($paymentGateway === 'bank_transfer' ? ($validated['bank_account_id'] ?? null) : null),
                     'order_type' => $validated['order_type'] ?? null,
                     'note' => isset($validated['note']) ? trim($validated['note']) ?: null : null,
                     'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
@@ -622,6 +646,10 @@ class PosApiController extends Controller
                     'customer_npwp' => $validated['customer_npwp'] ?? null,
                     'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
                 ]);
+
+                if ($useTenders) {
+                    $transaction->tenders()->createMany($tenders);
+                }
 
                 foreach ($carts as $cart) {
                     $pricingItem = $pricingItems->firstWhere('cart_id', $cart->id);
@@ -741,14 +769,38 @@ class PosApiController extends Controller
             ]);
 
             return $this->ok(
-                new TransactionResource($transaction->load('details.product', 'customer', 'cashier')),
+                new TransactionResource($transaction->load('details.product', 'customer', 'cashier', 'tenders')),
                 'Transaksi menunggu approval supervisor.',
                 202
             );
         }
 
         // Payment gateway
-        if ($paymentGateway) {
+        if ($useTenders) {
+            $gatewayTenders = $transaction->tenders()
+                ->whereIn('method', [TransactionTender::METHOD_MIDTRANS, TransactionTender::METHOD_XENDIT, TransactionTender::METHOD_QRIS])
+                ->where('payment_status', TransactionTender::STATUS_PENDING)
+                ->get();
+
+            try {
+                $paymentSetting ??= PaymentSetting::first();
+                foreach ($gatewayTenders as $tender) {
+                    $paymentResponse = $paymentGatewayManager->createTenderPayment($transaction, $tender, $paymentSetting);
+                    $tender->update([
+                        'payment_reference' => $paymentResponse['reference'] ?? null,
+                        'payment_url' => $paymentResponse['payment_url'] ?? null,
+                        'qr_string' => $paymentResponse['qr_string'] ?? null,
+                    ]);
+                }
+
+                if ($gatewayTenders->count() === 1) {
+                    $transaction->update($gatewayTenders->first()->only(['payment_reference', 'payment_url', 'qr_string']));
+                }
+            } catch (\Throwable $e) {
+                // Gateway failure — transaction still valid, just no payment URL
+                $transaction->update(['payment_status' => 'pending']);
+            }
+        } elseif ($paymentGateway) {
             try {
                 $paymentResponse = $paymentGateway === 'qris'
                     ? $paymentGatewayManager->createQrisPayment($transaction, $paymentSetting)
@@ -768,7 +820,7 @@ class PosApiController extends Controller
             }
         }
 
-        $resource = new TransactionResource($transaction->load('details.product', 'customer', 'cashier', 'warehouse'));
+        $resource = new TransactionResource($transaction->load('details.product', 'customer', 'cashier', 'warehouse', 'tenders'));
 
         if ($paymentGateway === 'qris') {
             $data = $resource->toArray(request());
@@ -949,7 +1001,7 @@ class PosApiController extends Controller
     public function transactions(Request $request): JsonResponse
     {
         $query = Transaction::query()
-            ->with(['cashier:id,name', 'warehouse:id,code,name', 'customer:id,name'])
+            ->with(['cashier:id,name', 'warehouse:id,code,name', 'customer:id,name', 'tenders'])
             ->withSum('details as total_items', 'qty')
             ->orderByDesc('created_at');
 
@@ -977,7 +1029,7 @@ class PosApiController extends Controller
             return $this->forbidden('Bukan transaksi Anda.');
         }
 
-        $transaction->load('details.product', 'customer', 'cashier', 'warehouse', 'receivable', 'bankAccount');
+        $transaction->load('details.product', 'customer', 'cashier', 'warehouse', 'receivable', 'bankAccount', 'tenders');
 
         return $this->ok(new TransactionResource($transaction));
     }

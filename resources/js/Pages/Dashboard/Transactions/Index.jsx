@@ -92,6 +92,9 @@ export default function Index({
     const [numpadOpen, setNumpadOpen] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [selectedBankAccount, setSelectedBankAccount] = useState(null);
+    const [splitMode, setSplitMode] = useState(false);
+    const emptyTender = { method: "", amount: "", cash_received: "", bank_account_id: null };
+    const [splitTenders, setSplitTenders] = useState([{ ...emptyTender }, { ...emptyTender }]);
     const [selectedVoucherId, setSelectedVoucherId] = useState("");
     const [openingCashInput, setOpeningCashInput] = useState("");
     const [shiftNotesInput, setShiftNotesInput] = useState("");
@@ -203,7 +206,7 @@ export default function Index({
             .filter((amount) => amount >= payable)
             .slice(0, 4);
     }, [payable]);
-    const isCashPayment = !payLater && paymentMethod === "cash";
+    const isCashPayment = !payLater && !splitMode && paymentMethod === "cash";
     const isDelivery = orderType === "delivery";
     const cash = useMemo(
         () => (isCashPayment ? Math.max(0, Number(cashInput) || 0) : payable),
@@ -321,6 +324,27 @@ export default function Index({
             setCashInput(String(payable));
         }
     }, [isCashPayment, payable]);
+
+    // Split payment helpers
+    const activeSplitTenders = useMemo(
+        () => splitTenders.filter((t) => t.method && Number(t.amount) > 0),
+        [splitTenders]
+    );
+    const splitTotal = useMemo(
+        () => activeSplitTenders.reduce((sum, t) => sum + Number(t.amount || 0), 0),
+        [activeSplitTenders]
+    );
+    const splitRemaining = payable - splitTotal;
+    const updateSplitTender = (index, patch) =>
+        setSplitTenders((prev) =>
+            prev.map((tender, i) =>
+                i === index ? { ...tender, ...patch } : tender
+            )
+        );
+    const resetSplitTenders = () => {
+        setSplitMode(false);
+        setSplitTenders([{ ...emptyTender }, { ...emptyTender }]);
+    };
 
     const handleOpenShift = () => {
         router.post(route("cashier-shifts.store"), {
@@ -590,12 +614,55 @@ export default function Index({
 
         // Validate bank transfer requires bank selection
         const isBankTransfer = paymentMethod === "bank_transfer";
-        if (isBankTransfer && !selectedBankAccount) {
+        if (!splitMode && isBankTransfer && !selectedBankAccount) {
             toast.error("Pilih rekening bank tujuan");
             return;
         }
 
+        // Split payment validation
+        if (splitMode) {
+            if (payLater) {
+                toast.error("Pembayaran split tidak berlaku untuk nota barang");
+                return;
+            }
+            if (activeSplitTenders.length < 2) {
+                toast.error("Split pembayaran memerlukan 2 metode");
+                return;
+            }
+            if (splitRemaining !== 0) {
+                toast.error(
+                    splitRemaining > 0
+                        ? `Kurang ${formatPrice(splitRemaining)} untuk melengkapi pembayaran`
+                        : `Kelebihan ${formatPrice(-splitRemaining)} dari total`
+                );
+                return;
+            }
+            const bankTender = activeSplitTenders.find(
+                (t) => t.method === "bank_transfer"
+            );
+            if (bankTender && !bankTender.bank_account_id) {
+                toast.error("Pilih rekening bank tujuan untuk tender transfer");
+                return;
+            }
+            const cashTender = activeSplitTenders.find(
+                (t) => t.method === "cash"
+            );
+            if (
+                cashTender &&
+                Number(cashTender.cash_received || 0) < Number(cashTender.amount)
+            ) {
+                toast.error("Uang tunai split kurang dari nominal tender");
+                return;
+            }
+        }
+
         setIsSubmitting(true);
+
+        if (!navigator.onLine && splitMode) {
+            toast.error("Split pembayaran tidak tersedia saat offline");
+            setIsSubmitting(false);
+            return;
+        }
 
         if (!navigator.onLine) {
             const payload = {
@@ -640,7 +707,28 @@ export default function Index({
                 grand_total: payable,
                 cash: isCashPayment ? cash : payable,
                 change: isCashPayment ? Math.max(cash - payable, 0) : 0,
-                payment_gateway: payLater ? null : isCashPayment ? null : paymentMethod,
+                // ponytail: tenders[] only when split active — legacy single-method path otherwise
+                tenders: splitMode
+                    ? activeSplitTenders.map((tender) => ({
+                          method: tender.method,
+                          amount: Number(tender.amount),
+                          cash_received:
+                              tender.method === "cash"
+                                  ? Number(tender.cash_received || tender.amount)
+                                  : null,
+                          bank_account_id:
+                              tender.method === "bank_transfer"
+                                  ? tender.bank_account_id
+                                  : null,
+                      }))
+                    : null,
+                payment_gateway: splitMode
+                    ? null
+                    : payLater
+                      ? null
+                      : isCashPayment
+                        ? null
+                        : paymentMethod,
                 bank_account_id: isBankTransfer
                     ? selectedBankAccount?.id
                     : null,
@@ -657,6 +745,7 @@ export default function Index({
                     setShippingInput("");
                     setSelectedCustomer(null);
                     setSelectedBankAccount(null);
+                    resetSplitTenders();
                     setSelectedVoucherId("");
                     setPaymentMethod(defaultPaymentGateway ?? "cash");
                     setPayLater(false);
@@ -1249,7 +1338,164 @@ export default function Index({
                                         </button>
                                     ))}
                                 </div>
+                                {!payLater && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (splitMode) {
+                                                resetSplitTenders();
+                                            } else {
+                                                setSplitMode(true);
+                                                setSplitTenders([
+                                                    { ...emptyTender, method: "cash" },
+                                                    { ...emptyTender },
+                                                ]);
+                                            }
+                                        }}
+                                        className={`mt-2 w-full rounded-xl border-2 border-dashed p-2 text-xs font-semibold transition-colors ${
+                                            splitMode
+                                                ? "border-primary-400 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-950/30 dark:text-primary-300"
+                                                : "border-slate-300 text-slate-500 hover:border-primary-300 hover:text-primary-600 dark:border-slate-700 dark:text-slate-400"
+                                        }`}
+                                    >
+                                        {splitMode
+                                            ? "Batalkan Split Pembayaran"
+                                            : "Split Pembayaran (2 metode)"}
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Split tender rows */}
+                            {splitMode && !payLater && (
+                                <div className="space-y-3 rounded-2xl border border-primary-100 bg-primary-50/50 p-3 dark:border-primary-900/50 dark:bg-primary-950/20">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                            Split Pembayaran
+                                        </p>
+                                        <span
+                                            className={`text-xs font-semibold ${
+                                                splitRemaining === 0
+                                                    ? "text-success-600 dark:text-success-400"
+                                                    : "text-amber-600 dark:text-amber-400"
+                                            }`}
+                                        >
+                                            {splitRemaining === 0
+                                                ? "Lengkap"
+                                                : `Sisa ${formatPrice(splitRemaining)}`}
+                                        </span>
+                                    </div>
+                                    {splitTenders.map((tender, index) => (
+                                        <div
+                                            key={index}
+                                            className="space-y-2 rounded-xl bg-white p-3 dark:bg-slate-900"
+                                        >
+                                            <select
+                                                value={tender.method}
+                                                onChange={(e) =>
+                                                    updateSplitTender(index, {
+                                                        method: e.target.value,
+                                                        bank_account_id: null,
+                                                    })
+                                                }
+                                                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                            >
+                                                <option value="">
+                                                    Pilih metode...
+                                                </option>
+                                                {paymentOptions.map((option) => (
+                                                    <option
+                                                        key={option.value}
+                                                        value={option.value}
+                                                    >
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {tender.method && (
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                                                        Rp
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={tender.amount}
+                                                        onChange={(e) =>
+                                                            updateSplitTender(
+                                                                index,
+                                                                {
+                                                                    amount:
+                                                                        e.target.value.replace(
+                                                                            /[^\d]/g,
+                                                                            ""
+                                                                        ) || "",
+                                                                }
+                                                            )
+                                                        }
+                                                        placeholder="Nominal"
+                                                        className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                                    />
+                                                </div>
+                                            )}
+                                            {tender.method === "cash" && (
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={tender.cash_received}
+                                                    onChange={(e) =>
+                                                        updateSplitTender(index, {
+                                                            cash_received:
+                                                                e.target.value.replace(
+                                                                    /[^\d]/g,
+                                                                    ""
+                                                                ) || "",
+                                                        })
+                                                    }
+                                                    placeholder="Uang diterima (opsional)"
+                                                    className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                                />
+                                            )}
+                                            {tender.method === "bank_transfer" &&
+                                                bankAccounts.length > 0 && (
+                                                    <select
+                                                        value={
+                                                            tender.bank_account_id ?? ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateSplitTender(index, {
+                                                                bank_account_id:
+                                                                    Number(
+                                                                        e.target.value
+                                                                    ) || null,
+                                                            })
+                                                        }
+                                                        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                                    >
+                                                        <option value="">
+                                                            Pilih rekening...
+                                                        </option>
+                                                        {bankAccounts.map(
+                                                            (bank) => (
+                                                                <option
+                                                                    key={bank.id}
+                                                                    value={bank.id}
+                                                                >
+                                                                    {
+                                                                        bank.bank_name
+                                                                    }{" "}
+                                                                    -{" "}
+                                                                    {
+                                                                        bank.account_number
+                                                                    }
+                                                                </option>
+                                                            )
+                                                        )}
+                                                    </select>
+                                                )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Bank Selector - Only for bank_transfer */}
                             {paymentMethod === "bank_transfer" &&

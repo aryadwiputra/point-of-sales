@@ -59,8 +59,11 @@ export default function ThermalReceipt({
 
     const paymentLabels = {
         cash: "TUNAI",
+        bank_transfer: "TRANSFER BANK",
         midtrans: "MIDTRANS",
         xendit: "XENDIT",
+        qris: "QRIS",
+        split: "SPLIT PEMBAYARAN",
     };
     const paymentMethod =
         paymentLabels[transaction?.payment_method?.toLowerCase()] || "TUNAI";
@@ -218,15 +221,26 @@ export default function ThermalReceipt({
 
             {/* Payment Info */}
             <div className="my-1">
-                <div className="flex justify-between">
-                    <span>Bayar ({paymentMethod})</span>
-                    <span>{formatPrice(cash)}</span>
-                </div>
-                {change > 0 && (
-                    <div className="flex justify-between font-bold">
-                        <span>Kembali</span>
-                        <span>{formatPrice(change)}</span>
-                    </div>
+                {transaction?.tenders?.length > 0 ? (
+                    transaction.tenders.map((tender) => (
+                        <div key={tender.id} className="flex justify-between">
+                            <span>{paymentLabels[tender.method] || tender.method}</span>
+                            <span>{formatPrice(tender.amount)}</span>
+                        </div>
+                    ))
+                ) : (
+                    <>
+                        <div className="flex justify-between">
+                            <span>Bayar ({paymentMethod})</span>
+                            <span>{formatPrice(cash)}</span>
+                        </div>
+                        {change > 0 && (
+                            <div className="flex justify-between font-bold">
+                                <span>Kembali</span>
+                                <span>{formatPrice(change)}</span>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -413,14 +427,25 @@ export function ThermalReceipt58mm({
                 <span>TOTAL</span>
                 <span>{formatPrice(transaction?.grand_total)}</span>
             </div>
-            <div className="flex justify-between">
-                <span>Bayar</span>
-                <span>{formatPrice(transaction?.cash)}</span>
-            </div>
-            <div className="flex justify-between">
-                <span>Kembali</span>
-                <span>{formatPrice(transaction?.change)}</span>
-            </div>
+            {transaction?.tenders?.length > 0 ? (
+                transaction.tenders.map((tender) => (
+                    <div key={tender.id} className="flex justify-between">
+                        <span>{paymentLabels[tender.method] || tender.method}</span>
+                        <span>{formatPrice(tender.amount)}</span>
+                    </div>
+                ))
+            ) : (
+                <>
+                    <div className="flex justify-between">
+                        <span>Bayar</span>
+                        <span>{formatPrice(transaction?.cash)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Kembali</span>
+                        <span>{formatPrice(transaction?.change)}</span>
+                    </div>
+                </>
+            )}
             <pre>{line}</pre>
             <p className="text-center">Terima kasih!</p>
             <SimpleBarcode value={transaction?.invoice} />

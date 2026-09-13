@@ -16,6 +16,7 @@ use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\BatchService;
@@ -24,6 +25,7 @@ use App\Services\LoyaltyService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
+use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +45,8 @@ class TransactionController extends Controller
         private readonly PricingService $pricingService,
         private readonly LoyaltyService $loyaltyService,
         private readonly PriceListService $priceListService,
-        private readonly BatchService $batchService
+        private readonly BatchService $batchService,
+        private readonly TransactionTenderService $tenderService
     ) {}
 
     /**
@@ -624,7 +627,10 @@ class TransactionController extends Controller
         }
 
         $invoice = 'TRX-'.Str::upper(Str::random(10));
-        $isCashPayment = empty($paymentGateway) && ! $isPayLater;
+        $tenderInput = is_array($request->input('tenders')) ? $request->input('tenders') : [];
+        $useTenders = ! $isPayLater && $tenderInput !== [];
+        // ponytail: legacy single-method path kept — split tenders only activate when payload has tenders[]
+        $isCashPayment = empty($paymentGateway) && ! $isPayLater && ! $useTenders;
         $manualDiscount = max(0, (int) $request->input('discount', 0));
         $shippingCost = max(0, (int) $request->input('shipping_cost', 0));
         $requestedRedeemPoints = max(0, (int) $request->input('redeem_points', 0));
@@ -643,6 +649,8 @@ class TransactionController extends Controller
             $paymentGateway,
             $isCashPayment,
             $isPayLater,
+            $useTenders,
+            $tenderInput,
             $manualDiscount,
             $shippingCost,
             $requestedRedeemPoints,
@@ -686,14 +694,29 @@ class TransactionController extends Controller
                 ]);
             }
 
+            $tenders = $useTenders
+                ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false)
+                : [];
+            $tenderCash = (int) collect($tenders)->where('method', TransactionTender::METHOD_CASH)->sum('cash_received');
+            $tenderChange = (int) collect($tenders)->sum('change');
+            $paymentMethod = $useTenders
+                ? (count($tenders) > 1 ? 'split' : $tenders[0]['method'])
+                : ($isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash'));
+            $paymentStatus = $useTenders
+                ? $this->tenderService->aggregateStatus($tenders)
+                : ($isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending'));
+            $tenderBankAccountId = $useTenders
+                ? (collect($tenders)->firstWhere('bank_account_id', '!==', null)['bank_account_id'] ?? null)
+                : ($paymentGateway === 'bank_transfer' ? $request->bank_account_id : null);
+
             $transaction = Transaction::create([
                 'cashier_id' => auth()->user()->id,
                 'cashier_shift_id' => $activeShift->id,
                 'warehouse_id' => $activeShift->warehouse_id,
                 'customer_id' => $request->customer_id,
                 'invoice' => $invoice,
-                'cash' => $cashAmount,
-                'change' => $changeAmount,
+                'cash' => $useTenders ? $tenderCash : $cashAmount,
+                'change' => $useTenders ? $tenderChange : $changeAmount,
                 'discount' => $appliedManualDiscount,
                 'loyalty_points_redeemed' => (int) data_get($checkoutPreview, 'summary.applied_redeem_points', 0),
                 'loyalty_discount_total' => $loyaltyDiscount,
@@ -702,9 +725,9 @@ class TransactionController extends Controller
                 'customer_voucher_name' => data_get($checkoutPreview, 'voucher.name'),
                 'shipping_cost' => $shippingCost,
                 'grand_total' => $grandTotal,
-                'payment_method' => $isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash'),
-                'payment_status' => $isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending'),
-                'bank_account_id' => $paymentGateway === 'bank_transfer' ? $request->bank_account_id : null,
+                'payment_method' => $paymentMethod,
+                'payment_status' => $paymentStatus,
+                'bank_account_id' => $tenderBankAccountId,
                 'order_type' => $orderType,
                 'note' => $note,
                 'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
@@ -712,6 +735,10 @@ class TransactionController extends Controller
                 'customer_npwp' => $request->customer_npwp,
                 'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
             ]);
+
+            if ($useTenders) {
+                $transaction->tenders()->createMany($tenders);
+            }
 
             foreach ($carts as $cart) {
                 $pricingItem = $pricingItems->firstWhere('cart_id', $cart->id);
@@ -868,7 +895,33 @@ class TransactionController extends Controller
                 ->with('info', 'Transaksi menunggu approval supervisor.');
         }
 
-        if ($paymentGateway) {
+        if ($useTenders) {
+            $gatewayTenders = $transaction->tenders()
+                ->whereIn('method', [TransactionTender::METHOD_MIDTRANS, TransactionTender::METHOD_XENDIT, TransactionTender::METHOD_QRIS])
+                ->where('payment_status', TransactionTender::STATUS_PENDING)
+                ->get();
+
+            try {
+                foreach ($gatewayTenders as $tender) {
+                    $response = $paymentGatewayManager->createTenderPayment($transaction, $tender, $paymentSetting ?? PaymentSetting::first());
+
+                    $tender->update([
+                        'payment_reference' => $response['reference'] ?? null,
+                        'payment_url' => $response['payment_url'] ?? null,
+                        'qr_string' => $response['qr_string'] ?? null,
+                    ]);
+                }
+
+                // Surface single-tender gateway data on the parent row for the receipt/print flow.
+                if ($gatewayTenders->count() === 1) {
+                    $transaction->update($gatewayTenders->first()->only(['payment_reference', 'payment_url', 'qr_string']));
+                }
+            } catch (PaymentGatewayException $exception) {
+                return redirect()
+                    ->route('transactions.print', $transaction->invoice)
+                    ->with('error', $exception->getMessage());
+            }
+        } elseif ($paymentGateway) {
             try {
                 $paymentResponse = $paymentGateway === 'qris'
                     ? $paymentGatewayManager->createQrisPayment($transaction, $paymentSetting)
@@ -892,7 +945,7 @@ class TransactionController extends Controller
     public function print($invoice)
     {
         // get transaction
-        $transaction = Transaction::with('details.product', 'details.pricingRule', 'cashier', 'customer', 'receivable', 'bankAccount')
+        $transaction = Transaction::with('details.product', 'details.pricingRule', 'cashier', 'customer', 'receivable', 'bankAccount', 'tenders')
             ->where('invoice', $invoice)
             ->firstOrFail();
 

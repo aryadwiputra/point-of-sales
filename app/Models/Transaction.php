@@ -139,6 +139,11 @@ class Transaction extends Model
         return $this->hasMany(SalesReturn::class);
     }
 
+    public function tenders()
+    {
+        return $this->hasMany(TransactionTender::class);
+    }
+
     public function usedCustomerVoucher()
     {
         return $this->hasOne(CustomerVoucher::class, 'used_transaction_id');
