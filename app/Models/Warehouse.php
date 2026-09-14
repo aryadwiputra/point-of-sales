@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Warehouse extends Model
@@ -34,6 +35,11 @@ class Warehouse extends Model
             ->withPivot('stock')
             ->using(ProductWarehouse::class)
             ->withTimestamps();
+    }
+
+    public function outlet(): BelongsTo
+    {
+        return $this->belongsTo(Outlet::class);
     }
 
     public function scopeActive($query)

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Outlet;
 use App\Models\Setting;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
@@ -38,13 +39,37 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        $outlet = Outlet::firstOrCreate(
+            ['code' => 'PUSAT'],
+            [
+                'name' => $pusat->name,
+                'is_active' => true,
+                'is_sales_enabled' => true,
+                'address' => $pusat->address,
+                'phone' => $pusat->phone,
+            ],
+        );
+
+        if (! $pusat->outlet_id) {
+            $pusat->update(['outlet_id' => $outlet->id]);
+        }
+
         if (! Setting::get('setup_warehouse_id')) {
             Setting::set('setup_warehouse_id', $pusat->id);
         }
 
-        DB::statement("
-            INSERT IGNORE INTO product_warehouse (product_id, warehouse_id, stock, created_at, updated_at)
-            SELECT id, {$pusat->id}, stock, NOW(), NOW() FROM products
-        ");
+        $products = DB::table('products')->select('id', 'stock')->get()
+            ->map(fn ($product) => [
+                'product_id' => $product->id,
+                'warehouse_id' => $pusat->id,
+                'stock' => $product->stock,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])
+            ->all();
+
+        if ($products) {
+            DB::table('product_warehouse')->insertOrIgnore($products);
+        }
     }
 }
