@@ -46,4 +46,17 @@ class OutletAccessService
 
         return $query->get(['id', 'code', 'name']);
     }
+
+    public function defaultOutlet(User $user): ?Outlet
+    {
+        if ($user->isSuperAdmin()) {
+            return Outlet::active()->orderBy('code')->first();
+        }
+
+        return $user->outlets()
+            ->where('outlets.is_active', true)
+            ->orderByDesc('user_outlets.is_default')
+            ->orderBy('outlets.code')
+            ->first();
+    }
 }

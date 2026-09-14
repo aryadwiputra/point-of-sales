@@ -11,9 +11,10 @@ class ThermalPrintService
 {
     public function generateReceiptText(Transaction $transaction, string $paperSize = '80mm'): string
     {
-        $storeName = Setting::get('store_name', 'Toko Anda');
-        $storeAddress = Setting::get('store_address', '');
-        $storePhone = Setting::get('store_phone', '');
+        $outlet = $transaction->warehouse?->outlet;
+        $storeName = Setting::getForOutlet('store_name', $outlet, 'Toko Anda');
+        $storeAddress = Setting::getForOutlet('store_address', $outlet, '');
+        $storePhone = Setting::getForOutlet('store_phone', $outlet, '');
         $maxWidth = $paperSize === '58mm' ? 32 : 48;
 
         $lines = [];
@@ -109,8 +110,9 @@ class ThermalPrintService
 
     public function generateShiftReportText(CashierShift $shift, string $paperSize = '80mm', string $reportType = 'X'): string
     {
-        $storeName = Setting::get('store_name', 'Toko Anda');
-        $storeAddress = Setting::get('store_address', '');
+        $outlet = $shift->warehouse?->outlet;
+        $storeName = Setting::getForOutlet('store_name', $outlet, 'Toko Anda');
+        $storeAddress = Setting::getForOutlet('store_address', $outlet, '');
         $maxWidth = $paperSize === '58mm' ? 32 : 48;
         $isX = $reportType === 'X';
 

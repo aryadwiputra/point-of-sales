@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\AuditLogService;
 use App\Services\LoyaltyService;
+use App\Services\OutletAccessService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +17,8 @@ class SettingController extends Controller
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly LoyaltyService $loyaltyService,
-        private readonly WhatsAppService $whatsAppService
+        private readonly WhatsAppService $whatsAppService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     /**
@@ -56,14 +58,15 @@ class SettingController extends Controller
      */
     public function storeProfile()
     {
+        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
         $settings = [
-            'store_name' => Setting::get('store_name', ''),
-            'store_logo' => Setting::get('store_logo', ''),
-            'store_address' => Setting::get('store_address', ''),
-            'store_phone' => Setting::get('store_phone', ''),
-            'store_email' => Setting::get('store_email', ''),
-            'store_website' => Setting::get('store_website', ''),
-            'store_city' => Setting::get('store_city', ''),
+            'store_name' => Setting::getForOutlet('store_name', $outlet, ''),
+            'store_logo' => Setting::getForOutlet('store_logo', $outlet, ''),
+            'store_address' => Setting::getForOutlet('store_address', $outlet, ''),
+            'store_phone' => Setting::getForOutlet('store_phone', $outlet, ''),
+            'store_email' => Setting::getForOutlet('store_email', $outlet, ''),
+            'store_website' => Setting::getForOutlet('store_website', $outlet, ''),
+            'store_city' => Setting::getForOutlet('store_city', $outlet, ''),
             'store_npwp' => Setting::get('store_npwp', ''),
             'store_nib' => Setting::get('store_nib', ''),
             'tax_default_rate' => Setting::get('tax_default_rate', '11.00'),
@@ -79,6 +82,7 @@ class SettingController extends Controller
      */
     public function updateStoreProfile(Request $request)
     {
+        $outlet = $this->outletAccessService->defaultOutlet($request->user());
         $request->validate([
             'store_name' => 'required|string|max:255',
             'store_address' => 'required|string|max:500',
@@ -93,16 +97,16 @@ class SettingController extends Controller
         ]);
 
         $before = [
-            'store_name' => Setting::get('store_name', ''),
-            'store_address' => Setting::get('store_address', ''),
-            'store_phone' => Setting::get('store_phone', ''),
-            'store_email' => Setting::get('store_email', ''),
-            'store_website' => Setting::get('store_website', ''),
-            'store_city' => Setting::get('store_city', ''),
+            'store_name' => Setting::getForOutlet('store_name', $outlet, ''),
+            'store_address' => Setting::getForOutlet('store_address', $outlet, ''),
+            'store_phone' => Setting::getForOutlet('store_phone', $outlet, ''),
+            'store_email' => Setting::getForOutlet('store_email', $outlet, ''),
+            'store_website' => Setting::getForOutlet('store_website', $outlet, ''),
+            'store_city' => Setting::getForOutlet('store_city', $outlet, ''),
             'store_logo_changed' => false,
         ];
 
-        $logoPath = Setting::get('store_logo');
+        $logoPath = Setting::getForOutlet('store_logo', $outlet);
         $logoChanged = false;
 
         if ($request->file('store_logo')) {
@@ -113,13 +117,13 @@ class SettingController extends Controller
             $logoChanged = true;
         }
 
-        Setting::set('store_name', $request->store_name, 'Nama toko');
-        Setting::set('store_address', $request->store_address, 'Alamat toko');
-        Setting::set('store_phone', $request->store_phone, 'Telepon toko');
-        Setting::set('store_email', $request->store_email, 'Email toko');
-        Setting::set('store_website', $request->store_website, 'Website toko');
-        Setting::set('store_city', $request->store_city, 'Kota/Kabupaten toko');
-        Setting::set('store_logo', $logoPath, 'Logo toko');
+        Setting::setForOutlet('store_name', $request->store_name, $outlet, 'Nama toko');
+        Setting::setForOutlet('store_address', $request->store_address, $outlet, 'Alamat toko');
+        Setting::setForOutlet('store_phone', $request->store_phone, $outlet, 'Telepon toko');
+        Setting::setForOutlet('store_email', $request->store_email, $outlet, 'Email toko');
+        Setting::setForOutlet('store_website', $request->store_website, $outlet, 'Website toko');
+        Setting::setForOutlet('store_city', $request->store_city, $outlet, 'Kota/Kabupaten toko');
+        Setting::setForOutlet('store_logo', $logoPath, $outlet, 'Logo toko');
         Setting::set('store_npwp', $request->store_npwp, 'NPWP Toko');
         Setting::set('store_nib', $request->store_nib, 'NIB Toko');
         Setting::set('tax_default_rate', $request->tax_default_rate, 'Default tarif PPN (%)');
@@ -148,23 +152,26 @@ class SettingController extends Controller
 
     public function printer()
     {
+        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+
         return Inertia::render('Dashboard/Settings/Printer', [
             'settings' => [
-                'printer_auto_print' => Setting::getBool('printer_auto_print', false),
-                'printer_paper_size' => Setting::get('printer_paper_size', '80mm'),
+                'printer_auto_print' => Setting::getBoolForOutlet('printer_auto_print', $outlet, false),
+                'printer_paper_size' => Setting::getForOutlet('printer_paper_size', $outlet, '80mm'),
             ],
         ]);
     }
 
     public function updatePrinter(Request $request)
     {
+        $outlet = $this->outletAccessService->defaultOutlet($request->user());
         $validated = $request->validate([
             'printer_auto_print' => ['boolean'],
             'printer_paper_size' => ['required', 'in:80mm,58mm'],
         ]);
 
-        Setting::set('printer_auto_print', $validated['printer_auto_print'] ? '1' : '0', 'Auto-print receipt setelah transaksi');
-        Setting::set('printer_paper_size', $validated['printer_paper_size'], 'Ukuran kertas printer thermal');
+        Setting::setForOutlet('printer_auto_print', $validated['printer_auto_print'] ? '1' : '0', $outlet, 'Auto-print receipt setelah transaksi');
+        Setting::setForOutlet('printer_paper_size', $validated['printer_paper_size'], $outlet, 'Ukuran kertas printer thermal');
 
         return back()->with('success', 'Pengaturan printer disimpan.');
     }

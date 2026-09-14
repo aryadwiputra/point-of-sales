@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
         $receivableAgingSummary = null;
         $pendingApprovalCount = 0;
         $pendingDineOrdersCount = 0;
+        $activeShift = null;
 
         if ($request->user()) {
             $userId = $request->user()->id;
@@ -157,7 +158,7 @@ class HandleInertiaRequests extends Middleware
                 });
 
             $activeShift = CashierShift::query()
-                ->with('user:id,name', 'warehouse:id,code,name')
+                ->with('user:id,name', 'warehouse:id,code,name,outlet_id', 'warehouse.outlet')
                 ->open()
                 ->where('user_id', $userId)
                 ->latest('opened_at')
@@ -186,26 +187,30 @@ class HandleInertiaRequests extends Middleware
             'website' => '',
             'city' => '',
         ];
+        $outlet = $activeShift?->warehouse?->outlet;
+        if (! $outlet && $request->user()) {
+            $outlet = app(OutletAccessService::class)->defaultOutlet($request->user());
+        }
 
         if (Schema::hasTable('settings')) {
-            $logo = Setting::get('store_logo');
+            $logo = Setting::getForOutlet('store_logo', $outlet);
             if ($logo && ! str_starts_with($logo, 'http') && ! str_starts_with($logo, '/storage')) {
                 $logo = asset('storage/'.ltrim($logo, '/'));
             }
 
             $storeProfile = [
-                'name' => Setting::get('store_name', 'Toko Anda'),
+                'name' => Setting::getForOutlet('store_name', $outlet, 'Toko Anda'),
                 'logo' => $logo,
-                'address' => Setting::get('store_address', ''),
-                'phone' => Setting::get('store_phone', ''),
-                'email' => Setting::get('store_email', ''),
-                'website' => Setting::get('store_website', ''),
-                'city' => Setting::get('store_city', ''),
+                'address' => Setting::getForOutlet('store_address', $outlet, ''),
+                'phone' => Setting::getForOutlet('store_phone', $outlet, ''),
+                'email' => Setting::getForOutlet('store_email', $outlet, ''),
+                'website' => Setting::getForOutlet('store_website', $outlet, ''),
+                'city' => Setting::getForOutlet('store_city', $outlet, ''),
             ];
 
             $printerSettings = [
-                'autoPrint' => Setting::getBool('printer_auto_print', false),
-                'paperSize' => Setting::get('printer_paper_size', '80mm'),
+                'autoPrint' => Setting::getBoolForOutlet('printer_auto_print', $outlet, false),
+                'paperSize' => Setting::getForOutlet('printer_paper_size', $outlet, '80mm'),
             ];
         } else {
             $printerSettings = [
