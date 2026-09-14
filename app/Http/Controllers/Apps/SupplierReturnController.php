@@ -118,7 +118,7 @@ class SupplierReturnController extends Controller
             return back()->with('error', 'Hanya retur dengan status draft yang bisa diselesaikan.');
         }
 
-        $this->supplierReturnService->complete($supplierReturn);
+        $this->supplierReturnService->complete($supplierReturn, $request->user()->id);
 
         return redirect()
             ->route('supplier-returns.show', $supplierReturn)

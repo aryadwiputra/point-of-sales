@@ -6,6 +6,8 @@ use App\Models\ProductWarehouse;
 use App\Models\StockMutation;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
+use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class StockTransferService
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function generateDocumentNumber(): string
@@ -31,6 +34,9 @@ class StockTransferService
 
     public function createDraft(array $data, array $items, int $userId): StockTransfer
     {
+        $this->ensureWarehouseAccess($userId, $data['source_warehouse_id']);
+        $this->ensureWarehouseAccess($userId, $data['destination_warehouse_id']);
+
         if ($data['source_warehouse_id'] === $data['destination_warehouse_id']) {
             throw ValidationException::withMessages([
                 'destination_warehouse_id' => 'Gudang asal dan tujuan harus berbeda.',
@@ -84,6 +90,7 @@ class StockTransferService
         DB::transaction(function () use ($transfer, $userId) {
             // ponytail: lock the transfer row and re-check status inside the transaction (prevents double-send / send-after-cancel races)
             $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+            $this->ensureWarehouseAccess($userId, $transfer->source_warehouse_id);
 
             if (! $transfer->isDraft()) {
                 throw ValidationException::withMessages([
@@ -149,6 +156,7 @@ class StockTransferService
         DB::transaction(function () use ($transfer, $userId) {
             // ponytail: lock the transfer row and re-check status inside the transaction (prevents double-receive)
             $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+            $this->ensureWarehouseAccess($userId, $transfer->destination_warehouse_id);
 
             if (! $transfer->isInTransit()) {
                 throw ValidationException::withMessages([
@@ -205,9 +213,10 @@ class StockTransferService
 
     public function cancel(StockTransfer $transfer, int $userId): void
     {
-        DB::transaction(function () use ($transfer) {
+        DB::transaction(function () use ($transfer, $userId) {
             // ponytail: lock the transfer row and re-check status inside the transaction (prevents cancel-after-complete races)
             $transfer = StockTransfer::whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+            $this->ensureWarehouseAccess($userId, $transfer->source_warehouse_id);
 
             if (! in_array($transfer->status, ['draft', 'in_transit'])) {
                 throw ValidationException::withMessages([
@@ -247,5 +256,13 @@ class StockTransferService
                 meta: ['stock_transfer_id' => $transfer->id],
             );
         });
+    }
+
+    private function ensureWarehouseAccess(int $userId, int $warehouseId): void
+    {
+        $user = User::findOrFail($userId);
+        $warehouse = Warehouse::findOrFail($warehouseId);
+
+        abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
     }
 }

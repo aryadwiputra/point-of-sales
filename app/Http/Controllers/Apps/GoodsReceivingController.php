@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\GoodsReceiving;
 use App\Models\PurchaseOrder;
+use App\Models\Warehouse;
 use App\Services\GoodsReceivingService;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class GoodsReceivingController extends Controller
 {
     public function __construct(
-        private readonly GoodsReceivingService $goodsReceivingService
+        private readonly GoodsReceivingService $goodsReceivingService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -22,11 +25,12 @@ class GoodsReceivingController extends Controller
             'purchase_order_id' => $request->input('purchase_order_id'),
         ];
 
+        $warehouseIds = app(OutletAccessService::class)->warehousesFor($request->user())->pluck('id');
         $query = GoodsReceiving::with([
             'purchaseOrder:id,document_number,status',
             'supplier:id,name',
             'receiver:id,name',
-        ])->orderByDesc('received_at');
+        ])->whereIn('warehouse_id', $warehouseIds)->orderByDesc('received_at');
 
         $query->when($filters['search'], fn ($q, $s) => $q->where('document_number', 'like', "%{$s}%"))
             ->when($filters['purchase_order_id'], fn ($q, $id) => $q->where('purchase_order_id', $id));
@@ -73,6 +77,11 @@ class GoodsReceivingController extends Controller
         ]);
 
         $order = PurchaseOrder::with('items')->findOrFail($data['purchase_order_id']);
+
+        if ($order->warehouse_id) {
+            $warehouse = Warehouse::findOrFail($order->warehouse_id);
+            abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 403);
+        }
 
         if (! in_array($order->status, ['ordered', 'partial_received'])) {
             return back()->with('error', 'Hanya PO berstatus ordered/partial yang dapat diterima.');

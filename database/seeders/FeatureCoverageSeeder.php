@@ -488,7 +488,7 @@ class FeatureCoverageSeeder extends Seeder
             ],
             $admin->id,
         );
-        $supplierReturnService->complete($completedReturn);
+        $supplierReturnService->complete($completedReturn, $admin->id);
 
         $completedReturn->update([
             'returned_at' => now()->subHours(6),

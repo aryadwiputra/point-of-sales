@@ -8,6 +8,8 @@ use App\Models\Payable;
 use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,7 +19,8 @@ class GoodsReceivingService
 {
     public function __construct(
         private readonly StockMutationService $stockMutationService,
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function generateDocumentNumber(): string
@@ -39,6 +42,9 @@ class GoodsReceivingService
             return DB::transaction(function () use ($order, $items, $notes, $userId) {
                 // ponytail: lock the order + its items so concurrent receipts cannot double-consume the same PO item
                 $order = PurchaseOrder::with('items')->whereKey($order->id)->lockForUpdate()->firstOrFail();
+                $user = User::findOrFail($userId);
+                $warehouse = $order->warehouse_id ? Warehouse::findOrFail($order->warehouse_id) : null;
+                abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
 
                 if (! in_array($order->status, ['ordered', 'partial_received'])) {
                     throw ValidationException::withMessages([

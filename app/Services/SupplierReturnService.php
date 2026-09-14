@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\GoodsReceiving;
 use App\Models\ProductWarehouse;
 use App\Models\SupplierReturn;
 use App\Models\SupplierReturnItem;
+use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -12,7 +15,8 @@ class SupplierReturnService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
-        private readonly StockMutationService $stockMutationService
+        private readonly StockMutationService $stockMutationService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function generateDocumentNumber(): string
@@ -29,6 +33,15 @@ class SupplierReturnService
 
     public function createReturn(array $data, array $items, int $userId): SupplierReturn
     {
+        $warehouseId = $data['warehouse_id'] ?? null;
+        if (! $warehouseId && ! empty($data['goods_receiving_id'])) {
+            $warehouseId = GoodsReceiving::whereKey($data['goods_receiving_id'])->value('warehouse_id');
+            $data['warehouse_id'] = $warehouseId;
+        }
+        if ($warehouseId) {
+            $this->ensureWarehouseAccess($userId, $warehouseId);
+        }
+
         return DB::transaction(function () use ($data, $items, $userId) {
             $return = SupplierReturn::create([
                 'supplier_id' => $data['supplier_id'] ?? null,
@@ -71,9 +84,13 @@ class SupplierReturnService
         });
     }
 
-    public function complete(SupplierReturn $return): void
+    public function complete(SupplierReturn $return, int $userId): void
     {
-        DB::transaction(function () use ($return) {
+        DB::transaction(function () use ($return, $userId) {
+            if ($return->warehouse_id) {
+                $this->ensureWarehouseAccess($userId, $return->warehouse_id);
+            }
+
             $return->load('items');
 
             foreach ($return->items as $item) {
@@ -127,6 +144,14 @@ class SupplierReturnService
                 meta: ['supplier_return_id' => $return->id],
             );
         });
+    }
+
+    private function ensureWarehouseAccess(int $userId, int $warehouseId): void
+    {
+        $user = User::findOrFail($userId);
+        $warehouse = Warehouse::findOrFail($warehouseId);
+
+        abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
     }
 
     public function cancel(SupplierReturn $return): void

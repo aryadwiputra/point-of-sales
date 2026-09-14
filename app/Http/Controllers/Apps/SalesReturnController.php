@@ -12,8 +12,10 @@ use App\Models\SalesReturn;
 use App\Models\SalesReturnItem;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\CashierShiftService;
+use App\Services\OutletAccessService;
 use App\Services\StockMutationService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,7 +34,8 @@ class SalesReturnController extends Controller
     public function __construct(
         private readonly StockMutationService $stockMutationService,
         private readonly CashierShiftService $cashierShiftService,
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response
@@ -349,7 +352,7 @@ class SalesReturnController extends Controller
 
     private function resolveAccessibleTransaction(Request $request, int $transactionId): Transaction
     {
-        return Transaction::query()
+        $transaction = Transaction::query()
             ->with([
                 'cashier:id,name',
                 'customer:id,name',
@@ -359,11 +362,18 @@ class SalesReturnController extends Controller
             ])
             ->when(! $request->user()->isSuperAdmin(), fn (Builder $query) => $query->where('cashier_id', $request->user()->id))
             ->findOrFail($transactionId);
+
+        $warehouse = $transaction->warehouse_id
+            ? Warehouse::find($transaction->warehouse_id)
+            : null;
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
+
+        return $transaction;
     }
 
     private function resolveAccessibleSalesReturn(Request $request, int $salesReturnId): SalesReturn
     {
-        return SalesReturn::query()
+        $salesReturn = SalesReturn::query()
             ->with([
                 'customer:id,name',
                 'cashier:id,name',
@@ -379,6 +389,13 @@ class SalesReturnController extends Controller
                 $query->whereHas('transaction', fn (Builder $builder) => $builder->where('cashier_id', $request->user()->id));
             })
             ->findOrFail($salesReturnId);
+
+        $warehouse = $salesReturn->transaction?->warehouse_id
+            ? Warehouse::find($salesReturn->transaction->warehouse_id)
+            : null;
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
+
+        return $salesReturn;
     }
 
     private function transformTransactionForEditor(Transaction $transaction, ?SalesReturn $salesReturn = null): array

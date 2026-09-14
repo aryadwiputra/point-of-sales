@@ -13,6 +13,7 @@ use App\Models\StockOpname;
 use App\Models\StockOpnameItem;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
+use App\Services\OutletAccessService;
 use App\Services\StockMutationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,8 @@ class StockOpnameController extends Controller
 {
     public function __construct(
         private readonly StockMutationService $stockMutationService,
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response
@@ -60,13 +62,13 @@ class StockOpnameController extends Controller
         return Inertia::render('Dashboard/StockOpnames/Index', [
             'stockOpnames' => $stockOpnames,
             'filters' => $filters,
-            'warehouses' => Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']),
+            'warehouses' => $this->outletAccessService->warehousesFor($request->user()),
         ]);
     }
 
     public function create(): Response
     {
-        $warehouses = Warehouse::active()->orderBy('sort_order')->orderBy('code')->get(['id', 'code', 'name']);
+        $warehouses = $this->outletAccessService->warehousesFor(request()->user());
 
         return Inertia::render('Dashboard/StockOpnames/Create', [
             'warehouses' => $warehouses,
@@ -75,6 +77,8 @@ class StockOpnameController extends Controller
 
     public function store(StoreStockOpnameRequest $request): RedirectResponse
     {
+        $this->ensureWarehouseAccess($request->user(), $request->validated('warehouse_id'));
+
         $stockOpname = StockOpname::create([
             'code' => $this->generateCode(),
             'warehouse_id' => $request->validated('warehouse_id'),
@@ -88,6 +92,7 @@ class StockOpnameController extends Controller
 
     public function show(Request $request, StockOpname $stockOpname): Response
     {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
         $stockOpname->load([
             'creator:id,name',
             'finalizer:id,name',
@@ -136,6 +141,7 @@ class StockOpnameController extends Controller
 
     public function update(UpdateStockOpnameRequest $request, StockOpname $stockOpname): RedirectResponse
     {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
         $this->ensureDraft($stockOpname);
 
         $stockOpname->update($request->validated());
@@ -174,6 +180,7 @@ class StockOpnameController extends Controller
         StockOpname $stockOpname,
         StockOpnameItem $item
     ): RedirectResponse {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
         $this->ensureDraft($stockOpname);
         $this->ensureItemBelongsToOpname($stockOpname, $item);
 
@@ -206,6 +213,7 @@ class StockOpnameController extends Controller
 
     public function finalize(Request $request, StockOpname $stockOpname): RedirectResponse
     {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
         $this->ensureDraft($stockOpname);
 
         $stockOpname->load('items.product');
@@ -305,6 +313,12 @@ class StockOpnameController extends Controller
                 'stock_opname' => 'Sesi stock opname yang sudah final tidak dapat diubah.',
             ]);
         }
+    }
+
+    private function ensureWarehouseAccess($user, ?int $warehouseId): void
+    {
+        $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : null;
+        abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
     }
 
     private function ensureItemBelongsToOpname(StockOpname $stockOpname, StockOpnameItem $item): void

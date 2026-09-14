@@ -4,13 +4,16 @@ namespace App\Services;
 
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PurchaseOrderService
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function generateDocumentNumber(): string
@@ -27,6 +30,13 @@ class PurchaseOrderService
 
     public function createOrder(array $data, array $items, int $userId): PurchaseOrder
     {
+        $warehouseId = $data['warehouse_id'] ?? null;
+        if ($warehouseId) {
+            $user = User::findOrFail($userId);
+            $warehouse = Warehouse::findOrFail($warehouseId);
+            abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
+        }
+
         return DB::transaction(function () use ($data, $items, $userId) {
             $order = PurchaseOrder::create([
                 'supplier_id' => $data['supplier_id'] ?? null,

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
-use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use App\Services\PurchaseOrderService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +14,8 @@ use Inertia\Inertia;
 class PurchaseOrderController extends Controller
 {
     public function __construct(
-        private readonly PurchaseOrderService $purchaseOrderService
+        private readonly PurchaseOrderService $purchaseOrderService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -25,11 +26,14 @@ class PurchaseOrderController extends Controller
             'search' => $request->input('search'),
         ];
 
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
         $query = PurchaseOrder::with([
             'supplier:id,name',
             'items',
             'creator:id,name',
-        ])->withCount('items as items_count')
+        ])->where(function ($query) use ($warehouseIds) {
+            $query->whereIn('warehouse_id', $warehouseIds)->orWhereNull('warehouse_id');
+        })->withCount('items as items_count')
             ->orderByDesc('created_at');
 
         $query->when($filters['status'], fn ($q, $s) => $q->where('status', $s))
@@ -50,7 +54,7 @@ class PurchaseOrderController extends Controller
     {
         $suppliers = Supplier::orderBy('name')->get(['id', 'name']);
         $products = Product::orderBy('title')->get(['id', 'title', 'sku', 'buy_price', 'stock']);
-        $warehouses = Warehouse::active()->orderBy('sort_order')->orderBy('code')->get(['id', 'code', 'name']);
+        $warehouses = $this->outletAccessService->warehousesFor(request()->user());
 
         return Inertia::render('Dashboard/PurchaseOrders/Create', [
             'suppliers' => $suppliers,
