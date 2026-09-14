@@ -33,6 +33,9 @@ class UserRequest extends FormRequest
             'avatar' => ['nullable', 'image', 'max:2048'],
             'selectedRoles' => ['required', 'array', 'min:1'],
             'selectedRoles.*' => ['string'],
+            'outlet_ids' => ['nullable', 'array'],
+            'outlet_ids.*' => ['integer', 'exists:outlets,id'],
+            'default_outlet_id' => ['nullable', 'integer', 'exists:outlets,id'],
         ];
     }
 }

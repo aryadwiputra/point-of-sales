@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 
 export default function Edit() {
-    const { roles, user } = usePage().props;
+    const { roles, user, outlets = [] } = usePage().props;
 
     const { data, setData, post, errors, processing } = useForm({
         name: user.name,
@@ -23,6 +23,8 @@ export default function Edit() {
         selectedRoles: user.roles.map((role) => role.name),
         avatar: null,
         _method: "PUT",
+        outlet_ids: user.outlets?.map((outlet) => outlet.id) ?? [],
+        default_outlet_id: user.outlets?.find((outlet) => outlet.pivot?.is_default)?.id ?? null,
     });
 
     const [avatarPreview, setAvatarPreview] = useState(user.avatar || null);
@@ -157,6 +159,22 @@ export default function Edit() {
                                 errors={errors.password_confirmation}
                             />
                         </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                        <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Outlet yang Diizinkan</h3>
+                        <div className="space-y-3">
+                            {outlets.map((outlet) => (
+                                <label key={outlet.id} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                                    <input type="checkbox" checked={data.outlet_ids.includes(outlet.id)} onChange={(event) => setData("outlet_ids", event.target.checked ? [...data.outlet_ids, outlet.id] : data.outlet_ids.filter((id) => id !== outlet.id))} />
+                                    {outlet.name} ({outlet.code})
+                                </label>
+                            ))}
+                        </div>
+                        <select className="mt-4 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm dark:border-slate-700 dark:bg-slate-800" value={data.default_outlet_id ?? ""} onChange={(event) => setData("default_outlet_id", event.target.value ? Number(event.target.value) : null)}>
+                            <option value="">Outlet default (opsional)</option>
+                            {outlets.map((outlet) => <option key={outlet.id} value={outlet.id}>{outlet.name}</option>)}
+                        </select>
                     </div>
 
                     {/* Roles */}

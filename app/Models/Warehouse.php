@@ -12,6 +12,7 @@ class Warehouse extends Model
     use HasFactory;
 
     protected $fillable = [
+        'outlet_id',
         'code',
         'name',
         'type',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UserRequest;
+use App\Models\Outlet;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
@@ -50,6 +51,7 @@ class UserController extends Controller
         // render view
         return Inertia::render('Dashboard/Users/Create', [
             'roles' => $roles,
+            'outlets' => Outlet::active()->orderBy('name')->get(['id', 'code', 'name']),
         ]);
     }
 
@@ -74,6 +76,7 @@ class UserController extends Controller
 
         // assign role to user
         $user->assignRole($request->selectedRoles);
+        $user->outlets()->sync($this->outletAssignments($request));
 
         $this->auditLogService->log(
             event: 'user.created',
@@ -103,12 +106,13 @@ class UserController extends Controller
             ->get();
 
         // load relationship
-        $user->load(['roles' => fn ($query) => $query->select('id', 'name'), 'roles.permissions' => fn ($query) => $query->select('id', 'name')]);
+        $user->load(['roles' => fn ($query) => $query->select('id', 'name'), 'roles.permissions' => fn ($query) => $query->select('id', 'name'), 'outlets']);
 
         // render view
         return Inertia::render('Dashboard/Users/Edit', [
             'roles' => $roles,
             'user' => $user,
+            'outlets' => Outlet::active()->orderBy('name')->get(['id', 'code', 'name']),
         ]);
     }
 
@@ -148,6 +152,7 @@ class UserController extends Controller
 
         // assign role to user
         $user->syncRoles($request->selectedRoles);
+        $user->outlets()->sync($this->outletAssignments($request));
 
         $afterRoles = $this->auditLogService->roleNames($request->selectedRoles);
         $after = $this->userPayload($user->fresh(), $afterRoles, $avatarChanged);
@@ -208,5 +213,13 @@ class UserController extends Controller
             'avatar_changed' => $avatarChanged,
             'roles' => array_values($roles),
         ];
+    }
+
+    private function outletAssignments(UserRequest $request): array
+    {
+        $ids = collect($request->input('outlet_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $default = (int) $request->input('default_outlet_id');
+
+        return $ids->mapWithKeys(fn ($id) => [$id => ['is_default' => $id === $default]])->all();
     }
 }

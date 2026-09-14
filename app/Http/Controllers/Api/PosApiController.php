@@ -21,6 +21,7 @@ use App\Models\TransactionTender;
 use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
+use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
@@ -43,6 +44,7 @@ class PosApiController extends Controller
         private readonly UnitConversionService $unitConversionService,
         private readonly PriceListService $priceListService,
         private readonly TransactionTenderService $tenderService,
+        private readonly OutletAccessService $outletAccessService,
     ) {}
 
     /**
@@ -74,6 +76,13 @@ class PosApiController extends Controller
         if (! $warehouseId) {
             $warehouse = Warehouse::active()->orderBy('code')->first();
             $warehouseId = $warehouse?->id;
+        }
+
+        if (! $this->outletAccessService->canUseWarehouse(
+            $request->user(),
+            $warehouseId ? Warehouse::find($warehouseId) : null
+        )) {
+            return $this->forbidden('Outlet tidak dapat digunakan oleh pengguna ini.');
         }
 
         try {
