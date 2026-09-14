@@ -58,7 +58,9 @@ class TransactionController extends Controller
     {
         $userId = auth()->user()->id;
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($userId);
+        $activeShift?->load('warehouse.outlet');
         $warehouseId = $activeShift?->warehouse_id;
+        $outlet = $activeShift?->warehouse?->outlet;
 
         // Get active cart items (not held)
         $carts = Cart::with('product')
@@ -134,7 +136,7 @@ class TransactionController extends Controller
             ->orderBy('name')
             ->get();
 
-        $paymentSetting = PaymentSetting::first();
+        $paymentSetting = PaymentSetting::forOutlet($outlet);
 
         $carts_total = 0;
         foreach ($carts as $cart) {
@@ -150,7 +152,7 @@ class TransactionController extends Controller
         }
 
         // Get active bank accounts for bank transfer
-        $bankAccounts = BankAccount::active()->ordered()->get();
+        $bankAccounts = BankAccount::active()->forOutlet($outlet)->ordered()->get();
 
         return Inertia::render('Dashboard/Transactions/Index', [
             'carts' => $carts,
@@ -160,7 +162,7 @@ class TransactionController extends Controller
             'products' => $products,
             'categories' => $categories,
             'initialPricingPreview' => $initialPricingPreview,
-            'paymentGateways' => $paymentSetting?->enabledGateways() ?? [],
+            'paymentGateways' => $paymentSetting?->enabledGateways($outlet) ?? [],
             'defaultPaymentGateway' => $defaultGateway,
             'bankAccounts' => $bankAccounts,
             'shiftSummary' => $this->cashierShiftService->summarizeForDisplay($activeShift),
@@ -593,6 +595,9 @@ class TransactionController extends Controller
             $paymentGateway = strtolower($paymentGateway);
         }
         $paymentSetting = null;
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
+        $activeShift?->load('warehouse.outlet');
+        $outlet = $activeShift?->warehouse?->outlet;
         $orderType = in_array($request->input('order_type'), ['in_store', 'takeaway', 'delivery'])
             ? $request->input('order_type')
             : null;
@@ -612,7 +617,7 @@ class TransactionController extends Controller
         }
 
         if ($paymentGateway) {
-            $paymentSetting = PaymentSetting::first();
+            $paymentSetting = PaymentSetting::forOutlet($outlet);
 
             $gatewayReady = $paymentSetting && ($paymentGateway === 'qris'
                 ? $paymentSetting->isGatewayReady(PaymentSetting::GATEWAY_MIDTRANS)
@@ -657,7 +662,8 @@ class TransactionController extends Controller
             $customer,
             $voucher,
             $orderType,
-            $note
+            $note,
+            $outlet
         ) {
             $activeShift = $this->cashierShiftService->requireActiveShiftForUser(
                 auth()->user()->id,
@@ -695,7 +701,7 @@ class TransactionController extends Controller
             }
 
             $tenders = $useTenders
-                ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false)
+                ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false, outlet: $outlet)
                 : [];
             $tenderCash = (int) collect($tenders)->where('method', TransactionTender::METHOD_CASH)->sum('cash_received');
             $tenderChange = (int) collect($tenders)->sum('change');
@@ -903,7 +909,7 @@ class TransactionController extends Controller
 
             try {
                 foreach ($gatewayTenders as $tender) {
-                    $response = $paymentGatewayManager->createTenderPayment($transaction, $tender, $paymentSetting ?? PaymentSetting::first());
+                    $response = $paymentGatewayManager->createTenderPayment($transaction, $tender, $paymentSetting ?? PaymentSetting::forOutlet($outlet));
 
                     $tender->update([
                         'payment_reference' => $response['reference'] ?? null,

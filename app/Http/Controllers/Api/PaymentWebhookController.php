@@ -19,14 +19,15 @@ class PaymentWebhookController extends Controller
     public function midtrans(Request $request)
     {
         try {
-            $paymentSetting = PaymentSetting::first();
+            $orderId = $request->input('order_id');
+            $transaction = Transaction::where('invoice', $this->baseInvoice($orderId))->with('warehouse.outlet')->first();
+            $paymentSetting = PaymentSetting::forOutlet($transaction?->warehouse?->outlet);
 
             if (! $paymentSetting || ! $paymentSetting->midtrans_enabled) {
                 return response()->json(['status' => 'error', 'message' => 'Midtrans not configured'], 400);
             }
 
             // Get notification data
-            $orderId = $request->input('order_id');
             $statusCode = $request->input('status_code');
             $grossAmount = $request->input('gross_amount');
             $serverKey = $paymentSetting->resolvedSecret('midtrans_server_key');
@@ -48,7 +49,7 @@ class PaymentWebhookController extends Controller
 
             // Split gateway tenders use invoice-method as the provider order id.
             $invoice = $this->baseInvoice($orderId);
-            $transaction = Transaction::where('invoice', $invoice)->first();
+            $transaction ??= Transaction::where('invoice', $invoice)->with('warehouse.outlet')->first();
 
             if (! $transaction) {
                 Log::warning('Midtrans Webhook: Transaction not found', [
@@ -119,7 +120,9 @@ class PaymentWebhookController extends Controller
     public function xendit(Request $request)
     {
         try {
-            $paymentSetting = PaymentSetting::first();
+            $externalId = $request->input('external_id');
+            $transaction = Transaction::where('invoice', $this->baseInvoice($externalId))->with('warehouse.outlet')->first();
+            $paymentSetting = PaymentSetting::forOutlet($transaction?->warehouse?->outlet);
 
             if (! $paymentSetting || ! $paymentSetting->xendit_enabled) {
                 return response()->json(['status' => 'error', 'message' => 'Xendit not configured'], 400);
@@ -150,7 +153,6 @@ class PaymentWebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Invalid callback token'], 403);
             }
 
-            $externalId = $request->input('external_id'); // This is our invoice number
             $status = $request->input('status');
             $paymentId = $request->input('id');
 
@@ -160,7 +162,7 @@ class PaymentWebhookController extends Controller
 
             // Split gateway tenders use invoice-method as the provider external id.
             $invoice = $this->baseInvoice($externalId);
-            $transaction = Transaction::where('invoice', $invoice)->first();
+            $transaction ??= Transaction::where('invoice', $invoice)->with('warehouse.outlet')->first();
 
             if (! $transaction) {
                 Log::warning('Xendit Webhook: Transaction not found', [

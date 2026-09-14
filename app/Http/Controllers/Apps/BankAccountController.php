@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Services\AuditLogService;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -12,7 +13,8 @@ use Inertia\Inertia;
 class BankAccountController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     /**
@@ -20,7 +22,8 @@ class BankAccountController extends Controller
      */
     public function index()
     {
-        $bankAccounts = BankAccount::ordered()->get();
+        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+        $bankAccounts = BankAccount::forOutlet($outlet)->ordered()->get();
 
         return Inertia::render('Dashboard/Settings/BankAccounts', [
             'bankAccounts' => $bankAccounts,
@@ -34,6 +37,7 @@ class BankAccountController extends Controller
     {
         return Inertia::render('Dashboard/Settings/BankAccountForm', [
             'bankAccount' => null,
+            'outlet' => $this->outletAccessService->defaultOutlet(request()->user()),
         ]);
     }
 
@@ -42,6 +46,8 @@ class BankAccountController extends Controller
      */
     public function edit(BankAccount $bankAccount)
     {
+        $this->ensureVisible($bankAccount);
+
         return Inertia::render('Dashboard/Settings/BankAccountForm', [
             'bankAccount' => $bankAccount,
         ]);
@@ -69,7 +75,9 @@ class BankAccountController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['sort_order'] = BankAccount::max('sort_order') + 1;
+        $outlet = $this->outletAccessService->defaultOutlet($request->user());
+        $validated['outlet_id'] = $outlet?->id;
+        $validated['sort_order'] = BankAccount::forOutlet($outlet)->max('sort_order') + 1;
 
         $bankAccount = BankAccount::create($validated);
 
@@ -91,6 +99,7 @@ class BankAccountController extends Controller
      */
     public function update(Request $request, BankAccount $bankAccount)
     {
+        $this->ensureVisible($bankAccount);
         $before = $this->bankAccountPayload($bankAccount);
 
         if (! $request->hasFile('logo')) {
@@ -135,6 +144,7 @@ class BankAccountController extends Controller
      */
     public function destroy(BankAccount $bankAccount)
     {
+        $this->ensureVisible($bankAccount);
         $before = $this->bankAccountPayload($bankAccount);
 
         // Check if used in transactions
@@ -169,6 +179,7 @@ class BankAccountController extends Controller
      */
     public function toggleActive(BankAccount $bankAccount)
     {
+        $this->ensureVisible($bankAccount);
         $before = $this->bankAccountPayload($bankAccount);
 
         $bankAccount->update([
@@ -196,12 +207,13 @@ class BankAccountController extends Controller
      */
     public function updateOrder(Request $request)
     {
+        $outlet = $this->outletAccessService->defaultOutlet($request->user());
         $validated = $request->validate([
             'order' => 'required|array',
             'order.*' => 'integer|exists:bank_accounts,id',
         ]);
 
-        $beforeOrder = BankAccount::ordered()
+        $beforeOrder = BankAccount::forOutlet($outlet)->ordered()
             ->get(['id', 'bank_name', 'sort_order'])
             ->map(fn (BankAccount $account) => [
                 'id' => $account->id,
@@ -211,10 +223,10 @@ class BankAccountController extends Controller
             ->all();
 
         foreach ($validated['order'] as $index => $id) {
-            BankAccount::where('id', $id)->update(['sort_order' => $index]);
+            BankAccount::forOutlet($outlet)->where('id', $id)->update(['sort_order' => $index]);
         }
 
-        $afterOrder = BankAccount::ordered()
+        $afterOrder = BankAccount::forOutlet($outlet)->ordered()
             ->get(['id', 'bank_name', 'sort_order'])
             ->map(fn (BankAccount $account) => [
                 'id' => $account->id,
@@ -244,5 +256,15 @@ class BankAccountController extends Controller
             'is_active' => (bool) $bankAccount->is_active,
             'sort_order' => (int) $bankAccount->sort_order,
         ];
+    }
+
+    private function ensureVisible(BankAccount $bankAccount): void
+    {
+        abort_unless(
+            BankAccount::forOutlet($this->outletAccessService->defaultOutlet(request()->user()))
+                ->whereKey($bankAccount->id)
+                ->exists(),
+            404
+        );
     }
 }

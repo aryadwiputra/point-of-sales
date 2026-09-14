@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,7 @@ class BankAccount extends Model
 
     protected $fillable = [
         'bank_name',
+        'outlet_id',
         'account_number',
         'account_name',
         'logo',
@@ -20,6 +22,7 @@ class BankAccount extends Model
     ];
 
     protected $casts = [
+        'outlet_id' => 'integer',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
@@ -34,6 +37,13 @@ class BankAccount extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeForOutlet(Builder $query, ?Outlet $outlet): Builder
+    {
+        return $query->when($outlet, fn (Builder $query) => $query->where(function (Builder $query) use ($outlet) {
+            $query->whereNull('outlet_id')->orWhere('outlet_id', $outlet->id);
+        }));
     }
 
     /**

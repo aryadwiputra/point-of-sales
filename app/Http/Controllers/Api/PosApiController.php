@@ -550,13 +550,16 @@ class PosApiController extends Controller
         $paymentGateway = ! $isPayLater && $paymentMethod !== 'cash'
             ? $paymentMethod
             : null;
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
+        $activeShift?->load('warehouse.outlet');
+        $outlet = $activeShift?->warehouse?->outlet;
 
         if ($isPayLater && ! $request->filled('due_date')) {
             return $this->error('Tanggal jatuh tempo wajib diisi untuk nota barang.', 422);
         }
 
         if ($paymentGateway) {
-            $paymentSetting = PaymentSetting::first();
+            $paymentSetting = PaymentSetting::forOutlet($outlet);
             $gatewayReady = $paymentSetting && ($paymentGateway === 'qris'
                 ? $paymentSetting->isGatewayReady(PaymentSetting::GATEWAY_MIDTRANS)
                     || $paymentSetting->isGatewayReady(PaymentSetting::GATEWAY_XENDIT)
@@ -580,7 +583,7 @@ class PosApiController extends Controller
             $transaction = DB::transaction(function () use (
                 $request, $invoice, $cashAmount, $paymentGateway, $isCashPayment, $isPayLater,
                 $manualDiscount, $shippingCost, $requestedRedeemPoints, $customer, $voucher, $validated,
-                $useTenders, $tenderInput
+                $useTenders, $tenderInput, $outlet
             ) {
                 $activeShift = $this->cashierShiftService->requireActiveShiftForUser(
                     $request->user()->id,
@@ -618,7 +621,7 @@ class PosApiController extends Controller
                 }
 
                 // ponytail: legacy single-method path kept — split tenders only activate when payload has tenders[]
-                $tenders = $useTenders ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false) : [];
+                $tenders = $useTenders ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false, outlet: $outlet) : [];
                 $tenderCash = collect($tenders)->where('method', TransactionTender::METHOD_CASH)->sum('cash_received');
                 $tenderChange = collect($tenders)->sum('change');
                 $tenderBankAccountId = collect($tenders)->firstWhere('bank_account_id', '!==', null)['bank_account_id'] ?? null;
@@ -792,7 +795,7 @@ class PosApiController extends Controller
                 ->get();
 
             try {
-                $paymentSetting ??= PaymentSetting::first();
+                $paymentSetting ??= PaymentSetting::forOutlet($outlet);
                 foreach ($gatewayTenders as $tender) {
                     $paymentResponse = $paymentGatewayManager->createTenderPayment($transaction, $tender, $paymentSetting);
                     $tender->update([

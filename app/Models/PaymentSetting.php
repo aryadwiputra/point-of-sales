@@ -23,6 +23,7 @@ class PaymentSetting extends Model
 
     protected $fillable = [
         'default_gateway',
+        'outlet_id',
         'bank_transfer_enabled',
         'midtrans_enabled',
         'midtrans_server_key',
@@ -36,6 +37,7 @@ class PaymentSetting extends Model
     ];
 
     protected $casts = [
+        'outlet_id' => 'integer',
         'bank_transfer_enabled' => 'boolean',
         'midtrans_enabled' => 'boolean',
         'midtrans_production' => 'boolean',
@@ -46,12 +48,47 @@ class PaymentSetting extends Model
         'xendit_callback_token' => 'encrypted',
     ];
 
-    public function enabledGateways(): array
+    public static function forOutlet(?Outlet $outlet): ?self
+    {
+        if ($outlet) {
+            $scoped = static::where('outlet_id', $outlet->id)->first();
+            if ($scoped) {
+                return $scoped;
+            }
+        }
+
+        return static::whereNull('outlet_id')->first();
+    }
+
+    public static function forOutletOrCreate(?Outlet $outlet): self
+    {
+        if (! $outlet) {
+            return static::firstOrCreate([], ['default_gateway' => 'cash']);
+        }
+
+        $scoped = static::where('outlet_id', $outlet->id)->first();
+        if ($scoped) {
+            return $scoped;
+        }
+
+        $setting = static::whereNull('outlet_id')->first();
+        if ($setting) {
+            $scoped = $setting->replicate();
+            $scoped->outlet_id = $outlet->id;
+            $scoped->save();
+
+            return $scoped;
+        }
+
+        return static::create(['default_gateway' => 'cash', 'outlet_id' => $outlet->id]);
+    }
+
+    public function enabledGateways(?Outlet $outlet = null): array
     {
         $gateways = [];
 
         // Bank Transfer
-        if ($this->isBankTransferReady()) {
+        if ($this->isBankTransferReady($outlet)) {
             $gateways[] = [
                 'value' => self::GATEWAY_BANK_TRANSFER,
                 'label' => 'Transfer Bank',
@@ -81,9 +118,9 @@ class PaymentSetting extends Model
     /**
      * Check if bank transfer is ready (enabled and has active bank accounts)
      */
-    public function isBankTransferReady(): bool
+    public function isBankTransferReady(?Outlet $outlet = null): bool
     {
-        return $this->bank_transfer_enabled && BankAccount::active()->exists();
+        return $this->bank_transfer_enabled && BankAccount::active()->forOutlet($outlet)->exists();
     }
 
     public function isGatewayReady(string $gateway): bool

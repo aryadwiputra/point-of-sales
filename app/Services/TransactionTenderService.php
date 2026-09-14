@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BankAccount;
+use App\Models\Outlet;
 use App\Models\PaymentSetting;
 use App\Models\TransactionTender;
 use Illuminate\Validation\ValidationException;
@@ -29,7 +30,7 @@ class TransactionTenderService
      * @param  array<int, array<string, mixed>>  $input
      * @param  array<int, array<string, mixed>>  $normalized
      */
-    public function normalize(array $input, int $grandTotal, bool $allowEmpty = true): array
+    public function normalize(array $input, int $grandTotal, bool $allowEmpty = true, ?Outlet $outlet = null): array
     {
         if (empty($input)) {
             if ($allowEmpty) {
@@ -103,7 +104,7 @@ class TransactionTenderService
                 $bankAccountId = $tender['bank_account_id'] ?? null;
 
                 $account = $bankAccountId
-                    ? BankAccount::where('id', $bankAccountId)->active()->first()
+                    ? BankAccount::where('id', $bankAccountId)->active()->forOutlet($outlet)->first()
                     : null;
 
                 if (! $account) {
@@ -151,10 +152,10 @@ class TransactionTenderService
         foreach ($normalized as $tender) {
             if (in_array($tender['method'], self::GATEWAY_METHODS, true)) {
                 $gateway = $tender['method'] === TransactionTender::METHOD_QRIS
-                    ? $this->resolveQrisGateway()
+                     ? $this->resolveQrisGateway($outlet)
                     : $tender['method'];
 
-                if (! $gateway || ! $this->setting()->isGatewayReady($gateway)) {
+                if (! $gateway || ! $this->setting($outlet)->isGatewayReady($gateway)) {
                     throw ValidationException::withMessages([
                         'tenders' => 'Gateway pembayaran belum dikonfigurasi.',
                     ]);
@@ -191,21 +192,21 @@ class TransactionTenderService
         return 'paid';
     }
 
-    public function resolveQrisGateway(): ?string
+    public function resolveQrisGateway(?Outlet $outlet = null): ?string
     {
-        if ($this->setting()->isGatewayReady(PaymentSetting::GATEWAY_MIDTRANS)) {
+        if ($this->setting($outlet)->isGatewayReady(PaymentSetting::GATEWAY_MIDTRANS)) {
             return PaymentSetting::GATEWAY_MIDTRANS;
         }
 
-        if ($this->setting()->isGatewayReady(PaymentSetting::GATEWAY_XENDIT)) {
+        if ($this->setting($outlet)->isGatewayReady(PaymentSetting::GATEWAY_XENDIT)) {
             return PaymentSetting::GATEWAY_XENDIT;
         }
 
         return null;
     }
 
-    private function setting(): PaymentSetting
+    private function setting(?Outlet $outlet = null): PaymentSetting
     {
-        return PaymentSetting::first() ?? $this->paymentSetting;
+        return PaymentSetting::forOutlet($outlet) ?? $this->paymentSetting;
     }
 }
