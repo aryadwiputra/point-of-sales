@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\CashierShift;
 use App\Models\DineOrder;
+use App\Models\Outlet;
 use App\Models\Payable;
 use App\Models\Product;
 use App\Models\ProductBatch;
@@ -11,10 +12,12 @@ use App\Models\Receivable;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Services\CashierShiftService;
+use App\Services\OutletAccessService;
 use App\Services\PayableAgingService;
 use App\Services\ReceivableService;
 use App\Support\ProductionSecurityBaseline;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
@@ -52,8 +55,27 @@ class HandleInertiaRequests extends Middleware
                 $pendingDineOrdersCount = DineOrder::pending()->count();
             }
 
-            $lowStockNotifications = Product::where('min_stock', '>', 0)
-                ->whereColumn('stock', '<=', 'min_stock')
+            $warehouseIds = app(OutletAccessService::class)->warehousesFor($request->user())->pluck('id');
+            $includeLegacy = Outlet::active()->count() <= 1;
+            $lowStockNotifications = Product::query()
+                ->leftJoinSub(
+                    DB::table('product_warehouse')
+                        ->select('product_id', DB::raw('SUM(stock) as warehouse_stock'))
+                        ->whereIn('warehouse_id', $warehouseIds)
+                        ->groupBy('product_id'),
+                    'warehouse_totals',
+                    fn ($join) => $join->on('warehouse_totals.product_id', '=', 'products.id')
+                )
+                ->where('min_stock', '>', 0)
+                ->where(function ($query) use ($includeLegacy) {
+                    $query->whereColumn('warehouse_totals.warehouse_stock', '<=', 'min_stock');
+                    if ($includeLegacy) {
+                        $query->orWhere(function ($legacy) {
+                            $legacy->whereNull('warehouse_totals.warehouse_stock')
+                                ->whereColumn('stock', '<=', 'min_stock');
+                        });
+                    }
+                })
                 ->whereNotExists(function ($query) use ($userId) {
                     $query->selectRaw('1')
                         ->from('product_notification_reads as pr')
@@ -63,12 +85,12 @@ class HandleInertiaRequests extends Middleware
                 })
                 ->orderByDesc('updated_at')
                 ->limit(10)
-                ->get(['id', 'title', 'stock', 'updated_at'])
+                ->get(['products.id', 'title', DB::raw('COALESCE(warehouse_totals.warehouse_stock, products.stock) as warehouse_stock'), 'updated_at'])
                 ->map(function ($product) {
                     return [
                         'id' => $product->id,
                         'title' => $product->title,
-                        'stock' => (int) $product->stock,
+                        'stock' => (int) $product->warehouse_stock,
                         'time' => optional($product->updated_at)->diffForHumans(),
                     ];
                 });

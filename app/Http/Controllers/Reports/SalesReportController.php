@@ -8,7 +8,7 @@ use App\Models\Profit;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\User;
-use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -17,15 +17,16 @@ class SalesReportController extends Controller
     /**
      * Display the sales report.
      */
-    public function index(Request $request)
+    public function index(Request $request, OutletAccessService $outletAccessService)
     {
+        $warehouseIds = $outletAccessService->warehousesFor($request->user())->pluck('id');
         $filters = [
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
             'invoice' => $request->input('invoice'),
             'cashier_id' => $request->input('cashier_id'),
             'customer_id' => $request->input('customer_id'),
-            'warehouse_id' => $request->input('warehouse_id'),
+            'warehouse_id' => $warehouseIds->contains((int) $request->input('warehouse_id')) ? $request->input('warehouse_id') : null,
         ];
 
         $baseListQuery = $this->applyFilters(
@@ -33,14 +34,15 @@ class SalesReportController extends Controller
                 ->with(['cashier:id,name', 'customer:id,name', 'warehouse:id,code,name'])
                 ->withSum('details as total_items', 'qty')
                 ->withSum('profits as total_profit', 'total'),
-            $filters
+            $filters,
+            $warehouseIds
         )->orderByDesc('created_at');
 
         $transactions = (clone $baseListQuery)
             ->paginate(10)
             ->withQueryString();
 
-        $aggregateQuery = $this->applyFilters(Transaction::query(), $filters);
+        $aggregateQuery = $this->applyFilters(Transaction::query(), $filters, $warehouseIds);
 
         $totals = (clone $aggregateQuery)
             ->selectRaw('
@@ -77,16 +79,16 @@ class SalesReportController extends Controller
             'filters' => $filters,
             'cashiers' => User::select('id', 'name')->orderBy('name')->get(),
             'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
-            'warehouses' => Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']),
+            'warehouses' => $outletAccessService->warehousesFor($request->user()),
         ]);
     }
 
     /**
      * Apply table filters.
      */
-    protected function applyFilters($query, array $filters)
+    protected function applyFilters($query, array $filters, $warehouseIds = null)
     {
-        return $query
+        return $query->when($warehouseIds !== null, fn ($q) => $q->whereIn('warehouse_id', $warehouseIds))
             ->when($filters['invoice'] ?? null, fn ($q, $invoice) => $q->where('invoice', 'like', '%'.$invoice.'%'))
             ->when($filters['cashier_id'] ?? null, fn ($q, $cashier) => $q->where('cashier_id', $cashier))
             ->when($filters['customer_id'] ?? null, fn ($q, $customer) => $q->where('customer_id', $customer))
