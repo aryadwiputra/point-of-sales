@@ -3,15 +3,23 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\Outlet;
 use App\Models\PriceList;
 use App\Models\Product;
 
 class PriceListService
 {
     // ponytail: N+1 per product; eager-load items via priceList->items when pricing whole carts
-    public function getApplicablePriceList(?Customer $customer): ?PriceList
+    public function getApplicablePriceList(?Customer $customer, ?Outlet $outlet = null): ?PriceList
     {
-        $lists = PriceList::active()->orderBy('priority', 'desc')->get();
+        $lists = PriceList::active()
+            ->where(function ($query) use ($outlet) {
+                $query->whereNull('outlet_id');
+                if ($outlet) {
+                    $query->orWhere('outlet_id', $outlet->id);
+                }
+            })
+            ->orderByDesc('outlet_id')->orderByDesc('priority')->get();
 
         foreach ($lists as $list) {
             if ($list->customer_scope === 'all') {
@@ -41,7 +49,7 @@ class PriceListService
         return $priceList->items()->where('product_id', $productId)->value('price');
     }
 
-    public function getBasePrice(Product $product, ?Customer $customer): int
+    public function getBasePrice(Product $product, ?Customer $customer, ?Outlet $outlet = null): int
     {
         if ($product->is_composite) {
             return (int) $product->components->sum(
@@ -49,7 +57,7 @@ class PriceListService
             );
         }
 
-        $priceList = $this->getApplicablePriceList($customer);
+        $priceList = $this->getApplicablePriceList($customer, $outlet);
         if (! $priceList) {
             return (int) $product->sell_price;
         }

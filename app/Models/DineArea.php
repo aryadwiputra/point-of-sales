@@ -12,6 +12,7 @@ class DineArea extends Model
 
     protected $fillable = [
         'name',
+        'outlet_id',
         'sort_order',
         'is_active',
     ];
@@ -21,12 +22,18 @@ class DineArea extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'outlet_id' => 'integer',
         ];
     }
 
     public function tables(): HasMany
     {
         return $this->hasMany(DiningTable::class, 'dine_area_id');
+    }
+
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class);
     }
 
     public function scopeActive($query)

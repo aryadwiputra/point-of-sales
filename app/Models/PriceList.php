@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class PriceList extends Model
 {
-    protected $fillable = ['name', 'slug', 'customer_scope', 'customer_segment_id', 'is_active', 'priority', 'notes'];
+    protected $fillable = ['name', 'slug', 'outlet_id', 'customer_scope', 'customer_segment_id', 'is_active', 'priority', 'notes'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'priority' => 'integer'];
+        return ['outlet_id' => 'integer', 'is_active' => 'boolean', 'priority' => 'integer'];
     }
 
     public function items()

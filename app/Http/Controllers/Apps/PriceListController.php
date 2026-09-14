@@ -5,15 +5,21 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\PriceList;
 use App\Models\Product;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class PriceListController extends Controller
 {
+    public function __construct(private readonly OutletAccessService $outletAccess) {}
+
     public function index()
     {
-        $priceLists = PriceList::withCount('items')->orderBy('priority')->get();
+        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+        $priceLists = PriceList::withCount('items')
+            ->whereNull('outlet_id')->when($outlet, fn ($query) => $query->orWhere('outlet_id', $outlet->id))
+            ->orderBy('priority')->get();
 
         return Inertia::render('Dashboard/Settings/PriceLists', [
             'priceLists' => $priceLists,
@@ -22,6 +28,7 @@ class PriceListController extends Controller
 
     public function show(PriceList $priceList)
     {
+        abort_unless($this->canUseList($priceList), 404);
         $priceList->load('items.product:id,title,sku,sell_price');
 
         $products = Product::orderBy('title')->get(['id', 'title', 'sku', 'sell_price']);
@@ -44,6 +51,7 @@ class PriceListController extends Controller
         ]);
 
         $validated['is_active'] = true;
+        $validated['outlet_id'] = $this->outletAccess->defaultOutlet($request->user())?->id;
 
         PriceList::create($validated);
 
@@ -52,6 +60,7 @@ class PriceListController extends Controller
 
     public function update(Request $request, PriceList $priceList)
     {
+        abort_unless($this->canUseList($priceList), 404);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'slug' => ['required', 'string', 'max:100', Rule::unique('price_lists', 'slug')->ignore($priceList->id)],
@@ -69,6 +78,7 @@ class PriceListController extends Controller
 
     public function destroy(PriceList $priceList)
     {
+        abort_unless($this->canUseList($priceList), 404);
         $priceList->delete();
 
         return back()->with('success', 'Price list dihapus.');
@@ -76,6 +86,7 @@ class PriceListController extends Controller
 
     public function updateItem(Request $request, PriceList $priceList)
     {
+        abort_unless($this->canUseList($priceList), 404);
         $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'price' => ['required', 'numeric', 'min:0'],
@@ -91,8 +102,16 @@ class PriceListController extends Controller
 
     public function destroyItem(PriceList $priceList, $productId)
     {
+        abort_unless($this->canUseList($priceList), 404);
         $priceList->items()->where('product_id', $productId)->delete();
 
         return back()->with('success', 'Item dihapus dari price list.');
+    }
+
+    private function canUseList(PriceList $priceList): bool
+    {
+        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+
+        return $priceList->outlet_id === null || ($outlet && (int) $priceList->outlet_id === (int) $outlet->id);
     }
 }

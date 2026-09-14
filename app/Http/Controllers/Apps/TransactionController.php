@@ -70,7 +70,7 @@ class TransactionController extends Controller
             ->get();
 
         $initialPricingPreview = $this->loyaltyService->previewCheckout(
-            $this->pricingService->previewCart($carts, null)
+            $this->pricingService->previewCart($carts, null, null, $outlet)
         );
 
         // Get held carts grouped by hold_id
@@ -219,6 +219,8 @@ class TransactionController extends Controller
         $voucher = isset($validated['customer_voucher_id'])
             ? CustomerVoucher::find($validated['customer_voucher_id'])
             : null;
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
+        $activeShift?->loadMissing('warehouse.outlet');
 
         $carts = Cart::with('product.category')
             ->where('cashier_id', $request->user()->id)
@@ -226,7 +228,7 @@ class TransactionController extends Controller
             ->latest()
             ->get();
 
-        $pricingPreview = $this->pricingService->previewCart($carts, $customer);
+        $pricingPreview = $this->pricingService->previewCart($carts, $customer, null, $activeShift?->warehouse?->outlet);
 
         return response()->json([
             'success' => true,
@@ -679,7 +681,7 @@ class TransactionController extends Controller
                 abort(422, 'Keranjang kosong.');
             }
 
-            $pricingPreview = $this->pricingService->previewCart($carts, $customer);
+            $pricingPreview = $this->pricingService->previewCart($carts, $customer, null, $outlet);
             $checkoutPreview = $this->loyaltyService->previewCheckout($pricingPreview, $customer, [
                 'manual_discount' => $manualDiscount,
                 'shipping_cost' => $shippingCost,

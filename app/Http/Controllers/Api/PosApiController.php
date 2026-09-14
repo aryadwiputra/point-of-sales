@@ -230,7 +230,9 @@ class PosApiController extends Controller
             ? Customer::find($request->integer('customer_id'))
             : null;
 
-        $preview = $this->pricingService->previewCart($carts, $customer);
+        $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
+        $activeShift?->loadMissing('warehouse.outlet');
+        $preview = $this->pricingService->previewCart($carts, $customer, null, $activeShift?->warehouse?->outlet);
         $checkout = $this->loyaltyService->previewCheckout($preview, $customer, [
             'manual_discount' => (int) $request->integer('discount', 0),
             'shipping_cost' => (int) $request->integer('shipping_cost', 0),
@@ -599,7 +601,7 @@ class PosApiController extends Controller
                     throw new \RuntimeException('Keranjang kosong.');
                 }
 
-                $pricingPreview = $this->pricingService->previewCart($carts, $customer);
+                $pricingPreview = $this->pricingService->previewCart($carts, $customer, null, $outlet);
                 $checkoutPreview = $this->loyaltyService->previewCheckout($pricingPreview, $customer, [
                     'manual_discount' => $manualDiscount,
                     'shipping_cost' => $shippingCost,

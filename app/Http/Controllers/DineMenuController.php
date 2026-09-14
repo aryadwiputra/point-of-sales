@@ -21,6 +21,7 @@ class DineMenuController extends Controller
             ->where('is_active', true)
             ->with('area')
             ->firstOrFail();
+        $outlet = $table->area?->outlet;
 
         $selfOrderEnabled = Setting::getBool('dine_in_self_order_enabled', true);
 
@@ -29,12 +30,17 @@ class DineMenuController extends Controller
             ->get();
 
         $products = Product::where('is_active', true)
-            ->where('stock', '>', 0)
+            ->where(function ($query) use ($outlet) {
+                $query->where('stock', '>', 0);
+                if ($outlet) {
+                    $query->orWhereHas('warehouses', fn ($warehouse) => $warehouse->where('outlet_id', $outlet->id)->where('stock', '>', 0));
+                }
+            })
             ->with(['category', 'units.unit'])
             ->get();
 
         // ponytail: previewProducts() returns arrays keyed by product id (pricing fields only) — merge the effective price back onto model-shaped payloads the menu page expects (id/title/image/category_id/sell_price)
-        $previews = $this->pricingService->previewProducts($products);
+        $previews = $this->pricingService->previewProducts($products, null, null, $outlet);
 
         $products = $products->map(function (Product $product) use ($previews) {
             $preview = $previews->get($product->id);
@@ -48,8 +54,8 @@ class DineMenuController extends Controller
             ];
         })->values();
 
-        $storeName = Setting::get('store_name', 'Restoran');
-        $storeLogo = Setting::get('store_logo');
+        $storeName = Setting::getForOutlet('store_name', $outlet, 'Restoran');
+        $storeLogo = Setting::getForOutlet('store_logo', $outlet);
 
         return Inertia::render('Public/DineMenu', [
             'table' => [

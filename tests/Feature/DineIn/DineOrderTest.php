@@ -3,8 +3,10 @@
 namespace Tests\Feature\DineIn;
 
 use App\Models\Category;
+use App\Models\DineArea;
 use App\Models\DineOrder;
 use App\Models\DiningTable;
+use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
 use App\Models\User;
@@ -206,6 +208,50 @@ class DineOrderTest extends TestCase
 
         $this->assertEquals('submitted', $order->fresh()->status);
         $this->assertEquals(50, $product->fresh()->stock);
+    }
+
+    public function test_accept_rejects_shift_from_another_outlet(): void
+    {
+        $outletA = Outlet::create(['code' => 'OUT-A', 'name' => 'Outlet A', 'is_active' => true, 'is_sales_enabled' => true]);
+        $outletB = Outlet::create(['code' => 'OUT-B', 'name' => 'Outlet B', 'is_active' => true, 'is_sales_enabled' => true]);
+        $shiftWarehouse = Warehouse::create([
+            'outlet_id' => $outletA->id,
+            'code' => 'WH-A',
+            'name' => 'Gudang A',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+        $orderWarehouse = Warehouse::create([
+            'outlet_id' => $outletB->id,
+            'code' => 'WH-B',
+            'name' => 'Gudang B',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+        $area = DineArea::create(['outlet_id' => $outletB->id, 'name' => 'Area B', 'is_active' => true]);
+        $table = DiningTable::create([
+            'dine_area_id' => $area->id,
+            'name' => 'Meja B',
+            'is_active' => true,
+            'capacity' => 4,
+        ]);
+        $product = $this->createProduct(10);
+        $product->warehouses()->attach($orderWarehouse->id, ['stock' => 10]);
+
+        $this->post(route('dine-order.store', $table->token), $this->orderPayload([
+            ['product_id' => $product->id, 'qty' => 1],
+        ]));
+        $order = DineOrder::firstOrFail();
+
+        $this->actingAs($this->cashier);
+        app(CashierShiftService::class)->openShift($this->cashier, $this->cashier, 0, null, $shiftWarehouse->id);
+
+        $this->post(route('dine-orders.accept', $order))
+            ->assertSessionHasErrors('shift');
+
+        $this->assertSame('submitted', $order->fresh()->status);
+        $this->assertSame(10, $product->fresh()->stock);
+        $this->assertSame(10, $orderWarehouse->products()->whereKey($product->id)->first()->pivot->stock);
     }
 
     public function test_status_page_renders_order(): void

@@ -17,7 +17,10 @@ class DineOrderService
     public function accept(DineOrder $order): void
     {
         $cashierId = $order->cashier_id ?? auth()->id();
-        $shift = CashierShift::where('user_id', $cashierId)->open()->first();
+        $shift = CashierShift::with('warehouse.outlet')
+            ->where('user_id', $cashierId)
+            ->open()
+            ->first();
 
         // ponytail: without an open shift there is no warehouse context to take stock from — refuse instead of accepting an order whose stock is never decremented
         if (! $shift) {
@@ -28,9 +31,21 @@ class DineOrderService
 
         $warehouseId = $shift->warehouse_id;
 
-        DB::transaction(function () use ($order, $warehouseId) {
+        DB::transaction(function () use ($order, $shift, $warehouseId) {
             // ponytail: lock the order row so accept cannot race with a second accept/reject
-            $order = DineOrder::with('items.product.components')->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order = DineOrder::with(['items.product.components', 'table.area.outlet'])
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $tableOutletId = $order->table?->area?->outlet_id;
+            $shiftOutletId = $shift->warehouse?->outlet_id;
+
+            if ($tableOutletId && $shiftOutletId && $tableOutletId !== $shiftOutletId) {
+                throw ValidationException::withMessages([
+                    'shift' => 'Shift kasir harus berada di outlet yang sama dengan meja.',
+                ]);
+            }
 
             foreach ($order->items as $item) {
                 $product = $item->product;

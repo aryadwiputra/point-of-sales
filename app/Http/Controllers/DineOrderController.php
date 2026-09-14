@@ -20,6 +20,7 @@ class DineOrderController extends Controller
     public function store(Request $request, string $token)
     {
         $table = DiningTable::where('token', $token)->where('is_active', true)->firstOrFail();
+        $outlet = $table->area?->outlet;
 
         $validated = $request->validate([
             'items' => ['required', 'array', 'min:1'],
@@ -40,7 +41,7 @@ class DineOrderController extends Controller
             ->get()
             ->keyBy('id');
 
-        $previews = $this->pricingService->previewProducts($productModels);
+        $previews = $this->pricingService->previewProducts($productModels, null, null, $outlet);
 
         $subtotal = 0;
         $orderItems = [];
@@ -51,10 +52,8 @@ class DineOrderController extends Controller
                 continue;
             }
 
-            // Server-side availability check against global stock (tables have no warehouse context).
-            $available = $product->is_composite
-                ? $product->compositeStock()
-                : (int) $product->stock;
+            // Public orders are routed to the outlet's warehouse when accepted.
+            $available = $this->availableStock($product, $outlet);
 
             if ($available < $item['qty']) {
                 return back()->with('error', "Stok {$product->title} tidak mencukupi (tersedia: {$available}).");
@@ -93,6 +92,33 @@ class DineOrderController extends Controller
             ->with('success', 'Pesanan berhasil dikirim.');
     }
 
+    private function availableStock(Product $product, $outlet): int
+    {
+        if (! $outlet) {
+            return $product->compositeStock();
+        }
+
+        if (! $product->is_composite) {
+            return (int) $product->warehouses()
+                ->where('outlet_id', $outlet->id)
+                ->where('warehouses.is_active', true)
+                ->sum('product_warehouse.stock');
+        }
+
+        $stock = null;
+        foreach ($product->components as $component) {
+            $componentStock = (int) $component->warehouses()
+                ->where('outlet_id', $outlet->id)
+                ->where('warehouses.is_active', true)
+                ->sum('product_warehouse.stock');
+            $stock = $stock === null
+                ? (int) floor($componentStock / max(1, (float) $component->pivot->qty))
+                : min($stock, (int) floor($componentStock / max(1, (float) $component->pivot->qty)));
+        }
+
+        return $stock ?? 0;
+    }
+
     public function status(string $accessToken)
     {
         $order = DineOrder::with(['table.area', 'items.product'])
@@ -103,7 +129,7 @@ class DineOrderController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $storeName = Setting::get('store_name', 'Restoran');
+        $storeName = Setting::getForOutlet('store_name', $order->table?->area?->outlet, 'Restoran');
 
         return Inertia::render('Public/DineOrderStatus', [
             'order' => $order,

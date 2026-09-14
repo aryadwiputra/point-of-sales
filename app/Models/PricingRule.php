@@ -39,6 +39,7 @@ class PricingRule extends Model
 
     protected $fillable = [
         'name',
+        'outlet_id',
         'kind',
         'is_active',
         'priority',
@@ -61,6 +62,7 @@ class PricingRule extends Model
         'is_active' => 'boolean',
         'priority' => 'integer',
         'product_id' => 'integer',
+        'outlet_id' => 'integer',
         'category_id' => 'integer',
         'eligible_loyalty_tiers' => 'array',
         'discount_value' => 'float',
