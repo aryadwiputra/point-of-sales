@@ -231,7 +231,8 @@ class SettingController extends Controller
     public function whatsapp()
     {
         $waStatus = ['connected' => false, 'phone' => null, 'qr' => null];
-        if (Setting::get('wa_service_url')) {
+        // Fonnte selalu "siap" kalau token ada — tidak butuh service URL
+        if ($this->whatsAppService->provider() === 'fonnte' || Setting::get('wa_service_url')) {
             try {
                 $waStatus = $this->whatsAppService->status();
             } catch (\Exception $e) {
@@ -241,10 +242,12 @@ class SettingController extends Controller
 
         return Inertia::render('Dashboard/Settings/Whatsapp', [
             'settings' => [
-                'wa_service_url' => Setting::get('wa_service_url', ''),
-                'wa_enabled' => Setting::getBool('wa_enabled', false),
+                'wa_provider'      => Setting::get('wa_provider', 'self_hosted'),
+                'wa_service_url'   => Setting::get('wa_service_url', ''),
+                'wa_fonnte_token'  => Setting::get('wa_fonnte_token', ''),
+                'wa_enabled'        => Setting::getBool('wa_enabled', false),
                 'wa_auto_reminder' => Setting::getBool('wa_auto_reminder', false),
-                'wa_auto_invoice' => Setting::getBool('wa_auto_invoice', false),
+                'wa_auto_invoice'   => Setting::getBool('wa_auto_invoice', false),
             ],
             'waStatus' => $waStatus,
         ]);
@@ -253,13 +256,17 @@ class SettingController extends Controller
     public function updateWhatsapp(Request $request)
     {
         $validated = $request->validate([
-            'wa_service_url' => ['nullable', 'string', 'max:255'],
-            'wa_enabled' => ['boolean'],
+            'wa_provider'       => ['nullable', 'string', 'in:self_hosted,fonnte'],
+            'wa_service_url'    => ['nullable', 'string', 'max:255'],
+            'wa_fonnte_token'   => ['nullable', 'string', 'max:500'],
+            'wa_enabled'        => ['boolean'],
             'wa_auto_reminder' => ['boolean'],
-            'wa_auto_invoice' => ['boolean'],
+            'wa_auto_invoice'   => ['boolean'],
         ]);
 
+        Setting::set('wa_provider', $validated['wa_provider'] ?? 'self_hosted', 'Provider WhatsApp (self_hosted | fonnte)');
         Setting::set('wa_service_url', $validated['wa_service_url'] ?? '', 'URL service WhatsApp');
+        Setting::set('wa_fonnte_token', $validated['wa_fonnte_token'] ?? '', 'Token API Fonnte');
         Setting::set('wa_enabled', ($validated['wa_enabled'] ?? false) ? '1' : '0', 'WhatsApp gateway aktif');
         Setting::set('wa_auto_reminder', ($validated['wa_auto_reminder'] ?? false) ? '1' : '0', 'Auto-kirim reminder via WA');
         Setting::set('wa_auto_invoice', ($validated['wa_auto_invoice'] ?? false) ? '1' : '0', 'Auto-kirim invoice via WA');
@@ -273,10 +280,13 @@ class SettingController extends Controller
 
         $sent = $this->whatsAppService->send(
             $request->target,
-            'Test pesan dari Point of Sales — '.config('app.url')
+            "🧪 *Tes WhatsApp — bayr POS*\n\nTest pesan dari ".config('app.url')."\n\n".now()->format('d M Y H:i')
         );
 
-        return response()->json(['status' => $sent]);
+        return response()->json([
+            'status'  => $sent,
+            'provider' => $this->whatsAppService->provider(),
+        ]);
     }
 
     public function startWhatsapp()
