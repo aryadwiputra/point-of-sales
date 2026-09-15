@@ -31,6 +31,7 @@ class CustomerCampaign extends Model
 
     protected $fillable = [
         'name',
+        'outlet_id',
         'type',
         'status',
         'channel',
@@ -47,6 +48,7 @@ class CustomerCampaign extends Model
         'audience_snapshot' => 'array',
         'processed_at' => 'datetime',
         'created_by' => 'integer',
+        'outlet_id' => 'integer',
     ];
 
     public function creator()

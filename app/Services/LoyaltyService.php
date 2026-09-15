@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\LoyaltyPointHistory;
+use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Transaction;
@@ -173,7 +174,8 @@ class LoyaltyService
         array $pricingPreview,
         ?Customer $customer = null,
         array $options = [],
-        ?CarbonInterface $at = null
+        ?CarbonInterface $at = null,
+        ?Outlet $outlet = null
     ): array {
         $at = $at ?? now();
         $settings = $this->settings();
@@ -184,7 +186,7 @@ class LoyaltyService
         $voucher = $options['voucher'] ?? null;
 
         $availablePoints = $customer?->is_loyalty_member ? (int) $customer->loyalty_points : 0;
-        $validatedVoucher = $this->validateVoucher($customer, $voucher, $subtotalAfterPromo, $at);
+        $validatedVoucher = $this->validateVoucher($customer, $voucher, $subtotalAfterPromo, $at, $outlet);
         $voucherDiscount = $validatedVoucher
             ? $this->calculateVoucherDiscount($validatedVoucher, $subtotalAfterPromo)
             : 0;
@@ -273,10 +275,10 @@ class LoyaltyService
             ] : null,
             'voucher' => $validatedVoucher ? $this->serializeVoucher($validatedVoucher) : null,
             'eligible_vouchers' => $customer
-                ? $this->eligibleVouchersForCustomer($customer, $subtotalAfterPromo, $at)
-                    ->map(fn (CustomerVoucher $eligibleVoucher) => $this->serializeVoucher($eligibleVoucher))
-                    ->values()
-                    ->all()
+                 ? $this->eligibleVouchersForCustomer($customer, $subtotalAfterPromo, $at, $outlet)
+                     ->map(fn (CustomerVoucher $eligibleVoucher) => $this->serializeVoucher($eligibleVoucher))
+                     ->values()
+                     ->all()
                 : [],
             'settings' => $this->settingsPayload(),
         ];
@@ -285,13 +287,20 @@ class LoyaltyService
     public function eligibleVouchersForCustomer(
         Customer $customer,
         int $subtotalAfterPromo = 0,
-        ?CarbonInterface $at = null
+        ?CarbonInterface $at = null,
+        ?Outlet $outlet = null
     ): Collection {
         $at = $at ?? now();
 
         return $customer->vouchers()
             ->where('is_active', true)
             ->where('is_used', false)
+            ->where(function ($query) use ($outlet) {
+                $query->whereNull('outlet_id');
+                if ($outlet) {
+                    $query->orWhere('outlet_id', $outlet->id);
+                }
+            })
             ->where(function ($query) use ($at) {
                 $query->whereNull('starts_at')->orWhere('starts_at', '<=', $at);
             })
@@ -403,7 +412,8 @@ class LoyaltyService
         ?Customer $customer,
         mixed $voucher,
         int $subtotalAfterPromo,
-        ?CarbonInterface $at = null
+        ?CarbonInterface $at = null,
+        ?Outlet $outlet = null
     ): ?CustomerVoucher {
         $at = $at ?? now();
 
@@ -412,6 +422,10 @@ class LoyaltyService
         }
 
         if ((int) $voucher->customer_id !== (int) $customer->id) {
+            return null;
+        }
+
+        if ($voucher->outlet_id && (! $outlet || (int) $voucher->outlet_id !== (int) $outlet->id)) {
             return null;
         }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Services\AuditLogService;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -14,7 +15,8 @@ use Inertia\Inertia;
 class CustomerVoucherController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -24,7 +26,14 @@ class CustomerVoucherController extends Controller
             'status' => $request->input('status'),
         ];
 
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $vouchers = CustomerVoucher::query()
+            ->where(function ($query) use ($outlet) {
+                $query->whereNull('outlet_id');
+                if ($outlet) {
+                    $query->orWhere('outlet_id', $outlet->id);
+                }
+            })
             ->with(['customer:id,name,no_telp', 'creator:id,name'])
             ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($builder) use ($search) {
@@ -67,6 +76,7 @@ class CustomerVoucherController extends Controller
 
         $voucher = CustomerVoucher::create([
             ...$validated,
+            'outlet_id' => $this->outletAccessService->activeOutlet($request)?->id,
             'created_by' => $request->user()?->id,
             'code' => $validated['code'] ?: $this->generateVoucherCode(),
         ]);
@@ -86,6 +96,8 @@ class CustomerVoucherController extends Controller
 
     public function edit(CustomerVoucher $customerVoucher)
     {
+        abort_unless($this->canUseVoucher($customerVoucher), 404);
+
         return Inertia::render('Dashboard/CustomerVouchers/Edit', [
             'voucher' => $customerVoucher->load('customer:id,name,no_telp'),
             'customers' => Customer::orderBy('name')->get(['id', 'name', 'no_telp', 'is_loyalty_member', 'loyalty_tier', 'loyalty_points']),
@@ -94,6 +106,8 @@ class CustomerVoucherController extends Controller
 
     public function update(Request $request, CustomerVoucher $customerVoucher)
     {
+        abort_unless($this->canUseVoucher($customerVoucher), 404);
+
         $before = $this->auditPayload($customerVoucher);
         $validated = $this->validateVoucher($request, $customerVoucher);
 
@@ -118,6 +132,8 @@ class CustomerVoucherController extends Controller
 
     public function destroy(CustomerVoucher $customerVoucher)
     {
+        abort_unless($this->canUseVoucher($customerVoucher), 404);
+
         $before = $this->auditPayload($customerVoucher);
         $customerVoucher->delete();
 
@@ -194,5 +210,12 @@ class CustomerVoucherController extends Controller
         } while (CustomerVoucher::query()->where('code', $code)->exists());
 
         return $code;
+    }
+
+    private function canUseVoucher(CustomerVoucher $voucher): bool
+    {
+        $outlet = $this->outletAccessService->activeOutlet(request());
+
+        return $voucher->outlet_id === null || ($outlet && (int) $voucher->outlet_id === (int) $outlet->id);
     }
 }

@@ -106,6 +106,7 @@ class CrmAutomationService
     {
         return CustomerCampaign::query()->create([
             'name' => $payload['name'],
+            'outlet_id' => $payload['outlet_id'] ?? null,
             'type' => $payload['type'],
             'status' => CustomerCampaign::STATUS_DRAFT,
             'channel' => $payload['channel'] ?? CustomerCampaign::CHANNEL_INTERNAL,

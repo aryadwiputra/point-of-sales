@@ -237,7 +237,7 @@ class TransactionController extends Controller
                 'shipping_cost' => (int) ($validated['shipping_cost'] ?? 0),
                 'redeem_points' => (int) ($validated['redeem_points'] ?? 0),
                 'voucher' => $voucher,
-            ]),
+            ], null, $activeShift?->warehouse?->outlet),
         ]);
     }
 
@@ -687,7 +687,7 @@ class TransactionController extends Controller
                 'shipping_cost' => $shippingCost,
                 'redeem_points' => $requestedRedeemPoints,
                 'voucher' => $voucher,
-            ]);
+            ], null, $outlet);
             $pricingItems = collect($pricingPreview['items']);
             $subtotalAfterPromo = (int) data_get($pricingPreview, 'summary.subtotal_after_promo', 0);
             $voucherDiscount = (int) data_get($checkoutPreview, 'summary.voucher_discount_total', 0);
@@ -741,7 +741,7 @@ class TransactionController extends Controller
                 'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
                 'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                 'customer_npwp' => $request->customer_npwp,
-                'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
+                'price_list_id' => $this->priceListService->getApplicablePriceList($customer, $outlet)?->id,
             ]);
 
             if ($useTenders) {

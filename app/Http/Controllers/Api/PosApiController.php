@@ -232,12 +232,13 @@ class PosApiController extends Controller
 
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
         $activeShift?->loadMissing('warehouse.outlet');
-        $preview = $this->pricingService->previewCart($carts, $customer, null, $activeShift?->warehouse?->outlet);
+        $outlet = $activeShift?->warehouse?->outlet;
+        $preview = $this->pricingService->previewCart($carts, $customer, null, $outlet);
         $checkout = $this->loyaltyService->previewCheckout($preview, $customer, [
             'manual_discount' => (int) $request->integer('discount', 0),
             'shipping_cost' => (int) $request->integer('shipping_cost', 0),
             'redeem_points' => (int) $request->integer('redeem_points', 0),
-        ]);
+        ], null, $outlet);
 
         return $this->ok([
             'items' => CartResource::collection($carts),
@@ -607,7 +608,7 @@ class PosApiController extends Controller
                     'shipping_cost' => $shippingCost,
                     'redeem_points' => $requestedRedeemPoints,
                     'voucher' => $voucher,
-                ]);
+                ], null, $outlet);
                 $pricingItems = collect($pricingPreview['items']);
                 $subtotalAfterPromo = (int) data_get($pricingPreview, 'summary.subtotal_after_promo', 0);
                 $voucherDiscount = (int) data_get($checkoutPreview, 'summary.voucher_discount_total', 0);
@@ -658,7 +659,7 @@ class PosApiController extends Controller
                     'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
                     'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                     'customer_npwp' => $validated['customer_npwp'] ?? null,
-                    'price_list_id' => $this->priceListService->getApplicablePriceList($customer)?->id,
+                    'price_list_id' => $this->priceListService->getApplicablePriceList($customer, $outlet)?->id,
                 ]);
 
                 if ($useTenders) {

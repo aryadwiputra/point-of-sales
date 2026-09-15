@@ -15,6 +15,7 @@ class CustomerVoucher extends Model
 
     protected $fillable = [
         'customer_id',
+        'outlet_id',
         'code',
         'name',
         'discount_type',
@@ -32,6 +33,7 @@ class CustomerVoucher extends Model
 
     protected $casts = [
         'customer_id' => 'integer',
+        'outlet_id' => 'integer',
         'discount_value' => 'float',
         'minimum_order' => 'integer',
         'is_active' => 'boolean',

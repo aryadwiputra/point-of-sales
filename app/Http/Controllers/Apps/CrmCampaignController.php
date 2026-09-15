@@ -8,6 +8,7 @@ use App\Models\CustomerCampaignLog;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Services\CrmAutomationService;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -15,7 +16,8 @@ use Inertia\Inertia;
 class CrmCampaignController extends Controller
 {
     public function __construct(
-        private readonly CrmAutomationService $crmAutomationService
+        private readonly CrmAutomationService $crmAutomationService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -25,7 +27,14 @@ class CrmCampaignController extends Controller
             'status' => $request->input('status'),
         ];
 
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $campaigns = CustomerCampaign::query()
+            ->where(function ($query) use ($outlet) {
+                $query->whereNull('outlet_id');
+                if ($outlet) {
+                    $query->orWhere('outlet_id', $outlet->id);
+                }
+            })
             ->with(['creator:id,name'])
             ->withCount('logs')
             ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
@@ -51,6 +60,7 @@ class CrmCampaignController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateCampaign($request);
+        $validated['outlet_id'] = $this->outletAccessService->activeOutlet($request)?->id;
         $campaign = $this->crmAutomationService->createCampaign($validated, $request->user()->id);
 
         if (! $request->boolean('save_as_draft')) {
@@ -64,6 +74,8 @@ class CrmCampaignController extends Controller
 
     public function show(CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         $crmCampaign->load([
             'creator:id,name',
             'logs.customer:id,name,no_telp',
@@ -78,6 +90,8 @@ class CrmCampaignController extends Controller
 
     public function edit(CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         return Inertia::render('Dashboard/CrmCampaigns/Edit', [
             'campaign' => $crmCampaign,
             'audienceOptions' => $this->crmAutomationService->audienceOptions(),
@@ -86,6 +100,8 @@ class CrmCampaignController extends Controller
 
     public function update(Request $request, CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         $validated = $this->validateCampaign($request);
         $crmCampaign = $this->crmAutomationService->updateCampaign($crmCampaign, $validated);
 
@@ -96,6 +112,8 @@ class CrmCampaignController extends Controller
 
     public function destroy(CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         $crmCampaign->delete();
 
         return redirect()
@@ -105,6 +123,8 @@ class CrmCampaignController extends Controller
 
     public function process(CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         $crmCampaign = $this->crmAutomationService->processCampaign($crmCampaign);
 
         return redirect()
@@ -114,6 +134,8 @@ class CrmCampaignController extends Controller
 
     public function cancel(CustomerCampaign $crmCampaign)
     {
+        abort_unless($this->canUseCampaign($crmCampaign), 404);
+
         $crmCampaign = $this->crmAutomationService->cancelCampaign($crmCampaign);
 
         return redirect()
@@ -175,5 +197,12 @@ class CrmCampaignController extends Controller
             'audience_filters.receivable_status' => ['nullable', Rule::in(['all', 'has_receivable', 'overdue', 'due_soon'])],
             'audience_filters.voucher_filter' => ['nullable', Rule::in(['all', 'has_active_voucher', 'no_active_voucher'])],
         ]);
+    }
+
+    private function canUseCampaign(CustomerCampaign $campaign): bool
+    {
+        $outlet = $this->outletAccessService->activeOutlet(request());
+
+        return $campaign->outlet_id === null || ($outlet && (int) $campaign->outlet_id === (int) $outlet->id);
     }
 }
