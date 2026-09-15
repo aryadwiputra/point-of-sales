@@ -64,7 +64,8 @@ pm2 start whatsapp-service/server.js --name wa-service
 
 # Artisan commands
 php artisan inventory:reconcile           # report global vs pivot stock mismatch
-php artisan inventory:reconcile --fix     # align global stock to pivot sum
+  php artisan inventory:reconcile --fix     # align global stock to pivot sum
+  php artisan outlet:audit                  # read-only outlet/warehouse data audit
 php artisan reorder:generate              # generate draft PO from low-stock products (daily 02:00)
 php artisan crm:sync-segments             # refresh auto segment memberships (daily 01:00)
 php artisan crm:generate-reminders       # queue campaign reminder messages (daily 01:15)

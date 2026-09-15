@@ -26,8 +26,12 @@ class ProductController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
         $products = Product::query()
-            ->with('category')
+            ->with([
+                'category',
+                'warehouses' => fn ($query) => $query->whereIn('warehouses.id', $warehouseIds),
+            ])
             ->when($request->string('search')->toString(), function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('title', 'like', "%{$search}%")
@@ -107,7 +111,11 @@ class ProductController extends Controller
      */
     public function show(Request $request, Product $product): JsonResponse
     {
-        $product->load('category', 'warehouses');
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $product->load([
+            'category',
+            'warehouses' => fn ($query) => $query->whereIn('warehouses.id', $warehouseIds),
+        ]);
 
         return $this->ok(new ProductResource($product));
     }

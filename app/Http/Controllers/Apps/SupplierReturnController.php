@@ -7,6 +7,7 @@ use App\Models\GoodsReceiving;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierReturn;
+use App\Services\OutletAccessService;
 use App\Services\SupplierReturnService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,8 @@ use Inertia\Inertia;
 class SupplierReturnController extends Controller
 {
     public function __construct(
-        private readonly SupplierReturnService $supplierReturnService
+        private readonly SupplierReturnService $supplierReturnService,
+        private readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -25,10 +27,12 @@ class SupplierReturnController extends Controller
             'search' => $request->input('search'),
         ];
 
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
         $query = SupplierReturn::with([
             'supplier:id,name',
             'creator:id,name',
         ])->withCount('items as items_count')
+            ->whereIn('warehouse_id', $warehouseIds)
             ->orderByDesc('created_at');
 
         $query->when($filters['status'], fn ($q, $s) => $q->where('status', $s))
@@ -56,6 +60,7 @@ class SupplierReturnController extends Controller
                 'items.product:id,title,sku',
                 'items.purchaseOrderItem:id,unit_price',
             ])->where('supplier_id', $request->input('supplier_id'))
+                ->whereIn('warehouse_id', $this->outletAccessService->warehousesFor($request->user())->pluck('id'))
                 ->whereHas('purchaseOrder', fn ($q) => $q->whereIn('status', ['ordered', 'partial_received', 'completed']))
                 ->orderByDesc('received_at')
                 ->get();
@@ -98,6 +103,8 @@ class SupplierReturnController extends Controller
 
     public function show(SupplierReturn $supplierReturn)
     {
+        $this->ensureAccess(request(), $supplierReturn);
+
         $supplierReturn->load([
             'supplier:id,name,phone,email,address',
             'goodsReceiving:id,document_number',
@@ -114,6 +121,8 @@ class SupplierReturnController extends Controller
 
     public function complete(Request $request, SupplierReturn $supplierReturn)
     {
+        $this->ensureAccess($request, $supplierReturn);
+
         if ($supplierReturn->status !== 'draft') {
             return back()->with('error', 'Hanya retur dengan status draft yang bisa diselesaikan.');
         }
@@ -127,6 +136,8 @@ class SupplierReturnController extends Controller
 
     public function cancel(Request $request, SupplierReturn $supplierReturn)
     {
+        $this->ensureAccess($request, $supplierReturn);
+
         if (! in_array($supplierReturn->status, ['draft'])) {
             return back()->with('error', 'Retur tidak dapat dibatalkan.');
         }
@@ -136,5 +147,14 @@ class SupplierReturnController extends Controller
         return redirect()
             ->route('supplier-returns.index')
             ->with('success', 'Retur supplier dibatalkan.');
+    }
+
+    private function ensureAccess(Request $request, SupplierReturn $supplierReturn): void
+    {
+        $warehouse = $supplierReturn->warehouse_id
+            ? $supplierReturn->warehouse()->first()
+            : null;
+
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
     }
 }

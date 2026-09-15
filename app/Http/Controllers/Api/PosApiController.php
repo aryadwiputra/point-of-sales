@@ -1024,6 +1024,9 @@ class PosApiController extends Controller
             $query->where('cashier_id', $request->user()->id);
         }
 
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $query->whereIn('warehouse_id', $warehouseIds);
+
         $query
             ->when($request->string('invoice')->toString(), fn ($q, $inv) => $q->where('invoice', 'like', "%{$inv}%"))
             ->when($request->string('date_from')->toString(), fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
@@ -1042,6 +1045,11 @@ class PosApiController extends Controller
     {
         if (! $request->user()->isSuperAdmin() && $transaction->cashier_id !== $request->user()->id) {
             return $this->forbidden('Bukan transaksi Anda.');
+        }
+
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        if (! $warehouseIds->contains($transaction->warehouse_id)) {
+            return $this->notFound('Transaksi tidak ditemukan.');
         }
 
         $transaction->load('details.product', 'customer', 'cashier', 'warehouse', 'receivable', 'bankAccount', 'tenders');
