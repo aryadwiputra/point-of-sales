@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class OutletAccessService
 {
@@ -122,5 +124,41 @@ class OutletAccessService
             ->open()
             ->whereHas('warehouse', fn ($query) => $query->where('outlet_id', '!=', $outlet->id))
             ->exists();
+    }
+
+    public function hasWarehouseHistory(Warehouse $warehouse): bool
+    {
+        $warehouseId = $warehouse->id;
+
+        foreach ([
+            'transactions',
+            'carts',
+            'stock_mutations',
+            'cashier_shifts',
+            'purchase_orders',
+            'goods_receivings',
+            'supplier_returns',
+            'stock_opnames',
+            'product_batches',
+        ] as $table) {
+            if (Schema::hasTable($table)
+                && Schema::hasColumn($table, 'warehouse_id')
+                && DB::table($table)->where('warehouse_id', $warehouseId)->exists()) {
+                return true;
+            }
+        }
+
+        return Schema::hasTable('stock_transfers')
+            && (DB::table('stock_transfers')->where('source_warehouse_id', $warehouseId)->exists()
+                || DB::table('stock_transfers')->where('destination_warehouse_id', $warehouseId)->exists());
+    }
+
+    public function hasOpenShift(Warehouse $warehouse): bool
+    {
+        return Schema::hasTable('cashier_shifts')
+            && DB::table('cashier_shifts')
+                ->where('warehouse_id', $warehouse->id)
+                ->where('status', 'open')
+                ->exists();
     }
 }

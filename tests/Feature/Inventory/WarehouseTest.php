@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\CashierShiftService;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\UserSeeder;
@@ -150,6 +151,36 @@ class WarehouseTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertDatabaseMissing('warehouses', ['id' => $warehouse->id]);
+    }
+
+    public function test_cannot_delete_warehouse_with_operational_history(): void
+    {
+        $warehouse = Warehouse::factory()->create(['code' => 'USED-WH', 'type' => 'branch']);
+
+        $shift = app(CashierShiftService::class)->openShift($this->admin, $this->admin, 0, null, $warehouse->id);
+        $shift->update(['status' => 'closed']);
+
+        $this->delete(route('settings.warehouses.destroy', $warehouse->id))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id]);
+    }
+
+    public function test_cannot_deactivate_warehouse_with_open_shift(): void
+    {
+        $warehouse = Warehouse::factory()->create(['code' => 'OPEN-WH', 'type' => 'branch']);
+
+        app(CashierShiftService::class)->openShift($this->admin, $this->admin, 0, null, $warehouse->id);
+
+        $this->put(route('settings.warehouses.update', $warehouse->id), [
+            'code' => $warehouse->code,
+            'name' => $warehouse->name,
+            'type' => $warehouse->type,
+            'is_active' => false,
+            'sort_order' => 0,
+        ])->assertSessionHas('error');
+
+        $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id, 'is_active' => true]);
     }
 
     public function test_default_warehouse_is_created_after_seed()

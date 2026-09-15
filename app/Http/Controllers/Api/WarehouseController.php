@@ -89,6 +89,12 @@ class WarehouseController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        if (array_key_exists('is_active', $validated)
+            && ! $validated['is_active']
+            && $this->outletAccessService->hasOpenShift($warehouse)) {
+            return $this->error('Tutup shift aktif sebelum menonaktifkan gudang.', 422);
+        }
+
         $warehouse->update($validated);
 
         return $this->ok(new WarehouseResource($warehouse), 'Gudang berhasil diperbarui');
@@ -100,6 +106,10 @@ class WarehouseController extends Controller
     public function destroy(Request $request, Warehouse $warehouse): JsonResponse
     {
         abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
+
+        if ($this->outletAccessService->hasWarehouseHistory($warehouse)) {
+            return $this->error('Gudang yang memiliki histori operasional tidak bisa dihapus.', 422);
+        }
 
         $warehouse->delete();
 

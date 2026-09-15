@@ -69,6 +69,12 @@ class WarehouseController extends Controller
             'sort_order' => ['integer', 'min:0'],
         ]);
 
+        if (array_key_exists('is_active', $validated)
+            && ! $validated['is_active']
+            && $this->outletAccessService->hasOpenShift($warehouse)) {
+            return back()->with('error', 'Tutup shift aktif sebelum menonaktifkan gudang.');
+        }
+
         $warehouse->update($validated);
 
         return back()->with('success', 'Gudang berhasil diperbarui.');
@@ -84,6 +90,10 @@ class WarehouseController extends Controller
         $totalStock = $warehouse->products()->sum('product_warehouse.stock');
         if ($totalStock > 0) {
             return back()->with('error', 'Gudang masih memiliki stok. Pindahkan stok terlebih dahulu.');
+        }
+
+        if ($this->outletAccessService->hasWarehouseHistory($warehouse)) {
+            return back()->with('error', 'Gudang yang memiliki histori operasional tidak bisa dihapus. Nonaktifkan gudang sebagai gantinya.');
         }
 
         $warehouse->delete();

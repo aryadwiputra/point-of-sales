@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Outlet;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UserRequest extends FormRequest
 {
@@ -37,5 +39,31 @@ class UserRequest extends FormRequest
             'outlet_ids.*' => ['integer', 'exists:outlets,id'],
             'default_outlet_id' => ['nullable', 'integer', 'exists:outlets,id'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $outletIds = collect($this->input('outlet_ids', []))
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->unique();
+            $defaultOutletId = (int) $this->input('default_outlet_id');
+
+            if ($defaultOutletId && ! $outletIds->contains($defaultOutletId)) {
+                $validator->errors()->add('default_outlet_id', 'Outlet default harus termasuk outlet yang dipilih.');
+            }
+
+            if ($outletIds->isNotEmpty()) {
+                $activeCount = Outlet::query()
+                    ->whereIn('id', $outletIds)
+                    ->where('is_active', true)
+                    ->count();
+
+                if ($activeCount !== $outletIds->count()) {
+                    $validator->errors()->add('outlet_ids', 'Semua outlet yang dipilih harus aktif.');
+                }
+            }
+        });
     }
 }
