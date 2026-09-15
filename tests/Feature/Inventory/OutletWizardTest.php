@@ -5,6 +5,7 @@ namespace Tests\Feature\Inventory;
 use App\Models\Outlet;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\CashierShiftService;
 use App\Services\OutletAccessService;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
@@ -93,6 +94,45 @@ class OutletWizardTest extends TestCase
         $response->assertNotFound();
         $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id, 'name' => 'Gudang Puter']);
         $this->assertTrue(app(OutletAccessService::class)->canUseWarehouse($user, Warehouse::find($warehouse->id)) === false);
+    }
+
+    public function test_outlet_cannot_be_disabled_with_an_open_shift(): void
+    {
+        $this->seedPermissions();
+        $user = User::factory()->create();
+        $user->assignRole(Role::findByName('super-admin'));
+        $user->markEmailAsVerified();
+        $outlet = Outlet::create(['code' => 'MAL', 'name' => 'Malabar', 'is_sales_enabled' => true]);
+        $warehouse = Warehouse::create([
+            'outlet_id' => $outlet->id, 'code' => 'MAL', 'name' => 'Malabar',
+            'type' => 'branch', 'is_active' => true, 'sort_order' => 0,
+        ]);
+        app(CashierShiftService::class)->openShift($user, $user, 0, null, $warehouse->id);
+
+        $response = $this->withSession($this->recentlyConfirmedSession())->actingAs($user)->put(route('settings.outlets.update', $outlet), [
+            'name' => 'Malabar', 'code' => 'MAL', 'is_active' => false, 'is_sales_enabled' => true,
+        ]);
+
+        $response->assertSessionHas('error');
+        $this->assertTrue($outlet->fresh()->is_active);
+    }
+
+    public function test_pusat_and_used_outlets_cannot_be_deleted(): void
+    {
+        $this->seedPermissions();
+        $user = User::factory()->create();
+        $user->assignRole(Role::findByName('super-admin'));
+        $user->markEmailAsVerified();
+        $pusat = Outlet::create(['code' => 'PUSAT', 'name' => 'Pusat', 'is_sales_enabled' => false]);
+        Warehouse::create(['outlet_id' => $pusat->id, 'code' => 'PUSAT', 'name' => 'Pusat', 'type' => 'main', 'is_active' => true]);
+        $used = Outlet::create(['code' => 'MAL', 'name' => 'Malabar', 'is_sales_enabled' => true]);
+        $warehouse = Warehouse::create(['outlet_id' => $used->id, 'code' => 'MAL', 'name' => 'Malabar', 'type' => 'branch', 'is_active' => true]);
+        app(CashierShiftService::class)->openShift($user, $user, 0, null, $warehouse->id);
+
+        $this->withSession($this->recentlyConfirmedSession())->actingAs($user)->delete(route('settings.outlets.destroy', $pusat))->assertSessionHas('error');
+        $this->withSession($this->recentlyConfirmedSession())->actingAs($user)->delete(route('settings.outlets.destroy', $used))->assertSessionHas('error');
+        $this->assertDatabaseHas('outlets', ['id' => $pusat->id]);
+        $this->assertDatabaseHas('outlets', ['id' => $used->id]);
     }
 
     private function seedPermissions(): void

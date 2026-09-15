@@ -378,6 +378,12 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
     Route::post('/settings/outlets', [OutletController::class, 'store'])
         ->middleware(['permission:outlets-create', 'step_up'])
         ->name('settings.outlets.store');
+    Route::put('/settings/outlets/{outlet}', [OutletController::class, 'update'])
+        ->middleware(['permission:outlets-update', 'step_up'])
+        ->name('settings.outlets.update');
+    Route::delete('/settings/outlets/{outlet}', [OutletController::class, 'destroy'])
+        ->middleware(['permission:outlets-delete', 'step_up'])
+        ->name('settings.outlets.destroy');
 
     // settings units
     Route::resource('/settings/units', UnitController::class)
