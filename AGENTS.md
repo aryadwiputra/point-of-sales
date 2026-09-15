@@ -70,7 +70,8 @@ php artisan crm:sync-segments             # refresh auto segment memberships (da
 php artisan crm:generate-reminders       # queue campaign reminder messages (daily 01:15)
 php artisan scramble:cache               # warm Scramble OpenAPI cache
 php artisan scramble:clear               # invalidate Scramble OpenAPI cache
-php artisan seed:demo                    # regenerate full demo dataset (truncates 19 tables; --force skips confirm)
+php artisan seed:demo                    # regenerate full demo dataset (truncates demo tables; --force skips confirm)
+php artisan db:seed --class=DemoSeeder --force # explicit full demo dataset (never use on production)
 
 # Formatting
 vendor/bin/pint
@@ -113,7 +114,7 @@ After seeding, a default `PUSAT` warehouse is created and existing product stock
 
 **No default users.** Admin account, store profile, business type, categories, and main warehouse are created via the first-install setup wizard at `/setup`. Open the root URL after migration; it automatically redirects to `/setup` while `Setting::app_setup_completed` is false. The `setup.notinstalled` middleware redirects to login once setup is done.
 
-**Demo seeders are opt-in, not part of `DatabaseSeeder`:** `php artisan db:seed --class=SampleDataSeeder` (needs UserSeeder first: `--class=UserSeeder`), plus `OperationalCoreSeeder`, `FeatureCoverageSeeder`, `FeatureDemoSeeder` for full demo data.
+**Demo data is opt-in, not part of `DatabaseSeeder`:** run `php artisan db:seed --class=DemoSeeder --force` (or `php artisan seed:demo --force`) for the complete demo dataset. It creates demo outlets `MAL`, `TKB`, and `PUT`; `PUSAT` remains a central non-sales warehouse. Never run the demo seeder on production.
 
 ## Inventory Model
 

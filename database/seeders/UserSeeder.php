@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Outlet;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -37,6 +38,13 @@ class UserSeeder extends Seeder
         // Demo accounts skip email verification (dashboard is guarded by 'verified' middleware).
         $admin->markEmailAsVerified();
 
+        $outlets = Outlet::whereIn('code', ['MAL', 'TKB', 'PUT'])->get();
+        if ($outlets->isNotEmpty()) {
+            $admin->outlets()->sync($outlets->mapWithKeys(fn (Outlet $outlet) => [
+                $outlet->id => ['is_default' => $outlet->code === 'MAL'],
+            ])->all());
+        }
+
         $cashier = User::updateOrCreate(
             ['email' => 'cashier@gmail.com'],
             [
@@ -47,6 +55,11 @@ class UserSeeder extends Seeder
 
         $cashierRole = Role::where('name', 'cashier')->first();
         $cashier->markEmailAsVerified();
+
+        $mal = $outlets->firstWhere('code', 'MAL');
+        if ($mal) {
+            $cashier->outlets()->sync([$mal->id => ['is_default' => true]]);
+        }
 
         if ($cashierRole) {
             $cashier->syncRoles([$cashierRole->name]);

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Database\Seeders\DemoSeeder;
 use Illuminate\Console\Command;
 
 class SeedDemoCommand extends Command
@@ -22,20 +23,8 @@ class SeedDemoCommand extends Command
             }
         }
 
-        $this->info('Seeding demo users...');
-        $this->call('db:seed', ['--class' => 'UserSeeder', '--force' => true]);
-
-        $this->info('Seeding sample data (requires internet for product images)...');
-        $this->call('db:seed', ['--class' => 'SampleDataSeeder', '--force' => true]);
-
-        $this->info('Seeding operational core data...');
-        $this->call('db:seed', ['--class' => 'OperationalCoreSeeder', '--force' => true]);
-
-        $this->info('Seeding feature coverage data...');
-        $this->call('db:seed', ['--class' => 'FeatureCoverageSeeder', '--force' => true]);
-
-        $this->info('Seeding feature demo data...');
-        $this->call('db:seed', ['--class' => 'FeatureDemoSeeder', '--force' => true]);
+        $this->info('Seeding complete demo dataset...');
+        $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
 
         $this->newLine();
         $this->info('Demo data regenerated! Login: arya@gmail.com / cashier@gmail.com (password: "password")');

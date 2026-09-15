@@ -13,11 +13,11 @@ use App\Models\DiningTable;
 use App\Models\DiscountApprovalLog;
 use App\Models\LoyaltyPointHistory;
 use App\Models\PriceList;
-use App\Models\ProductWarehouse;
 use App\Models\PricingRule;
 use App\Models\PricingRuleBuyGetItem;
 use App\Models\Product;
 use App\Models\ProductBatch;
+use App\Models\ProductWarehouse;
 use App\Models\Transaction;
 use App\Models\Unit;
 use App\Models\User;
@@ -40,6 +40,8 @@ class FeatureDemoSeeder extends Seeder
             return;
         }
 
+        $this->resetFeatureData();
+
         $admin = User::where('email', 'arya@gmail.com')->first() ?? User::first();
         $cashier = User::where('email', 'cashier@gmail.com')->first() ?? $admin;
 
@@ -59,8 +61,6 @@ class FeatureDemoSeeder extends Seeder
         }
 
         $this->command?->info('Seeding feature demo data...');
-
-        $this->resetFeatureData();
 
         Auth::setUser($admin);
 
@@ -171,27 +171,27 @@ class FeatureDemoSeeder extends Seeder
             );
         }
 
-        $cabang = Warehouse::where('code', 'CABANG')->first();
+        $salesWarehouses = Warehouse::whereIn('code', ['WH-MAL', 'WH-TKB', 'WH-PUT'])
+            ->get()
+            ->keyBy('code');
 
-        if (! $cabang) {
-            $cabang = Warehouse::create([
-                'code' => 'CABANG',
-                'name' => 'Gudang Cabang',
-                'type' => 'branch',
-                'address' => 'Jl. Merdeka No. 12, Bandung',
-                'phone' => '022-7654321',
-                'is_active' => true,
-                'sort_order' => 1,
-            ]);
-
+        foreach ($salesWarehouses as $warehouse) {
             foreach ($products as $product) {
-                $product->warehouses()->syncWithoutDetaching([$cabang->id => ['stock' => 0]]);
+                ProductWarehouse::firstOrCreate(
+                    ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
+                    ['stock' => 25]
+                );
             }
         }
 
-        $this->command?->info('  - Warehouses ready (PUSAT + CABANG).');
+        $this->command?->info('  - Warehouses ready (PUSAT + 3 sales outlets).');
 
-        return ['pusat' => $pusat, 'cabang' => $cabang];
+        return [
+            'pusat' => $pusat,
+            'mal' => $salesWarehouses->get('WH-MAL'),
+            'tkb' => $salesWarehouses->get('WH-TKB'),
+            'put' => $salesWarehouses->get('WH-PUT'),
+        ];
     }
 
     private function seedUnits(Collection $products): void
@@ -513,20 +513,21 @@ class FeatureDemoSeeder extends Seeder
 
         $transfer = $service->createDraft([
             'source_warehouse_id' => $warehouses['pusat']->id,
-            'destination_warehouse_id' => $warehouses['cabang']->id,
-            'notes' => 'Demo: transfer stok ke cabang.',
+            'destination_warehouse_id' => $warehouses['tkb']->id,
+            'notes' => 'Demo: transfer stok ke outlet Taman Kencana.',
         ], $items, $admin->id);
 
         $service->send($transfer, $admin->id);
         $service->receive($transfer, $admin->id);
 
-        $this->command?->info('  - Stock transfer completed (PUSAT → CABANG).');
+        $this->command?->info('  - Stock transfer completed (PUSAT → WH-TKB).');
     }
 
     private function seedDineIn(Collection $products, Collection $customers, User $cashier): void
     {
-        $area = DineArea::create(['name' => 'Area Utama', 'sort_order' => 1, 'is_active' => true]);
-        $area2 = DineArea::create(['name' => 'Area Teras', 'sort_order' => 2, 'is_active' => true]);
+        $outletId = Warehouse::where('code', 'WH-MAL')->value('outlet_id');
+        $area = DineArea::create(['outlet_id' => $outletId, 'name' => 'Area Utama', 'sort_order' => 1, 'is_active' => true]);
+        $area2 = DineArea::create(['outlet_id' => $outletId, 'name' => 'Area Teras', 'sort_order' => 2, 'is_active' => true]);
 
         $table1 = DiningTable::create(['dine_area_id' => $area->id, 'name' => 'Meja 1', 'capacity' => 4, 'pos_x' => 10, 'pos_y' => 10, 'shape' => 'circle', 'sort_order' => 1, 'is_active' => true]);
         $table2 = DiningTable::create(['dine_area_id' => $area->id, 'name' => 'Meja 2', 'capacity' => 6, 'pos_x' => 30, 'pos_y' => 10, 'shape' => 'rectangle', 'sort_order' => 2, 'is_active' => true]);

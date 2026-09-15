@@ -20,6 +20,7 @@ use App\Models\SupplierReturn;
 use App\Models\SupplierReturnItem;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\AuditLogService;
 use App\Services\GoodsReceivingService;
 use App\Services\PurchaseOrderService;
@@ -253,10 +254,12 @@ class FeatureCoverageSeeder extends Seeder
         $purchaseOrderService = app(PurchaseOrderService::class);
         $goodsReceivingService = app(GoodsReceivingService::class);
         $supplierReturnService = app(SupplierReturnService::class);
+        $warehouseId = Warehouse::where('code', 'WH-MAL')->value('id');
 
         $draftOrder = $purchaseOrderService->createOrder(
             [
                 'supplier_id' => $suppliers->get('CV Makmur Jaya Distribusi')?->id,
+                'warehouse_id' => $warehouseId,
                 'notes' => 'Draft pengadaan perlengkapan rumah tangga akhir minggu.',
             ],
             [
@@ -282,6 +285,7 @@ class FeatureCoverageSeeder extends Seeder
         $cancelledOrder = $purchaseOrderService->createOrder(
             [
                 'supplier_id' => $suppliers->get('UD Berkah Retail Grosir')?->id,
+                'warehouse_id' => $warehouseId,
                 'notes' => 'PO dibatalkan karena harga supplier berubah.',
             ],
             [
@@ -310,6 +314,7 @@ class FeatureCoverageSeeder extends Seeder
         $partialOrder = $purchaseOrderService->createOrder(
             [
                 'supplier_id' => $suppliers->get('PT Sumber Pangan Nusantara')?->id,
+                'warehouse_id' => $warehouseId,
                 'notes' => 'PO barang cepat laku untuk restock mingguan.',
             ],
             [
@@ -366,6 +371,7 @@ class FeatureCoverageSeeder extends Seeder
         $completedOrder = $purchaseOrderService->createOrder(
             [
                 'supplier_id' => $suppliers->get('PT Segar Sentosa Abadi')?->id,
+                'warehouse_id' => $warehouseId,
                 'notes' => 'PO lengkap untuk frozen food dan produk susu.',
             ],
             [
@@ -501,9 +507,11 @@ class FeatureCoverageSeeder extends Seeder
     {
         $stockMutationService = app(StockMutationService::class);
         $auditLogService = app(AuditLogService::class);
+        $warehouseId = Warehouse::where('code', 'WH-MAL')->value('id');
 
         $draftOpname = StockOpname::create([
             'code' => 'SO-DRAFT-001',
+            'warehouse_id' => $warehouseId,
             'status' => 'draft',
             'notes' => 'Sesi stock opname rak depan, belum semua item dihitung.',
             'created_by' => $admin->id,
@@ -529,6 +537,7 @@ class FeatureCoverageSeeder extends Seeder
         $finalizedAt = now()->subHours(2);
         $finalizedOpname = StockOpname::create([
             'code' => 'SO-FINAL-001',
+            'warehouse_id' => $warehouseId,
             'status' => 'draft',
             'notes' => 'Opname gudang pendingin untuk batch awal pekan.',
             'created_by' => $admin->id,

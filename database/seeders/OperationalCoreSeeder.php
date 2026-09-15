@@ -9,6 +9,7 @@ use App\Models\SalesReturn;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use App\Services\StockMutationService;
 use Illuminate\Database\Seeder;
@@ -33,8 +34,9 @@ class OperationalCoreSeeder extends Seeder
 
         $cashier = User::where('email', 'cashier@gmail.com')->first() ?? User::first();
         $supervisor = User::where('email', 'arya@gmail.com')->first() ?? $cashier;
+        $warehouse = Warehouse::where('code', 'WH-MAL')->first();
 
-        if (! $cashier || ! $supervisor) {
+        if (! $cashier || ! $supervisor || ! $warehouse) {
             $this->command?->warn('Skipping OperationalCoreSeeder because seed users are missing.');
 
             return;
@@ -52,7 +54,7 @@ class OperationalCoreSeeder extends Seeder
 
         $this->command?->info('Seeding cashier shifts and sales returns...');
 
-        DB::transaction(function () use ($cashier, $supervisor, $transactions) {
+        DB::transaction(function () use ($cashier, $supervisor, $warehouse, $transactions) {
             SalesReturn::query()->delete();
             CustomerCredit::query()->delete();
             CashierShift::query()->delete();
@@ -70,6 +72,7 @@ class OperationalCoreSeeder extends Seeder
                 'user_id' => $cashier->id,
                 'opened_by' => $supervisor->id,
                 'opened_at' => $twoDaysAgoOpen,
+                'warehouse_id' => $warehouse->id,
                 'opening_cash' => 175000,
                 'expected_cash' => 175000,
                 'notes' => 'Shift pagi weekday untuk sample histori.',
@@ -80,6 +83,7 @@ class OperationalCoreSeeder extends Seeder
                 'user_id' => $cashier->id,
                 'opened_by' => $cashier->id,
                 'opened_at' => $yesterdayOpen,
+                'warehouse_id' => $warehouse->id,
                 'opening_cash' => 200000,
                 'expected_cash' => 200000,
                 'notes' => 'Shift sore yang nanti ditutup supervisor.',
@@ -90,6 +94,7 @@ class OperationalCoreSeeder extends Seeder
                 'user_id' => $cashier->id,
                 'opened_by' => $cashier->id,
                 'opened_at' => $todayOpen,
+                'warehouse_id' => $warehouse->id,
                 'opening_cash' => 250000,
                 'expected_cash' => 250000,
                 'notes' => 'Shift aktif hari ini.',
