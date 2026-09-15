@@ -47,10 +47,15 @@ class WarehouseController extends Controller
             'address' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:30'],
             'is_active' => ['nullable', 'boolean'],
+            'outlet_id' => ['nullable', 'integer', 'exists:outlets,id'],
         ]);
+
+        $outlet = $validated['outlet_id'] ?? $request->user()->outlets()->first()?->id;
+        abort_unless($request->user()->isSuperAdmin() || $outlet === null || $request->user()->outlets()->whereKey($outlet)->exists(), 403);
 
         $warehouse = Warehouse::create([
             ...$validated,
+            'outlet_id' => $outlet,
             'is_active' => $validated['is_active'] ?? true,
             'sort_order' => 0,
         ]);

@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class WarehouseController extends Controller
 {
+    public function __construct(private readonly OutletAccessService $outletAccessService) {}
+
     public function index()
     {
-        $warehouses = Warehouse::orderBy('sort_order')->orderBy('code')->get();
+        $warehouses = $this->outletAccessService->warehousesFor(request()->user());
 
         return Inertia::render('Dashboard/Settings/Warehouses', [
             'warehouses' => $warehouses,
@@ -32,6 +36,14 @@ class WarehouseController extends Controller
             'sort_order' => ['integer', 'min:0'],
         ]);
 
+        $outlet = $request->user()->isSuperAdmin()
+            ? Outlet::find($request->input('outlet_id'))
+            : $this->outletAccessService->activeOutlet($request);
+        if ($outlet) {
+            abort_unless($request->user()->isSuperAdmin() || $request->user()->outlets()->whereKey($outlet->id)->exists(), 403);
+            $validated['outlet_id'] = $outlet->id;
+        }
+
         $warehouse = Warehouse::create($validated);
 
         // Sync all existing products to this warehouse with 0 stock
@@ -46,6 +58,7 @@ class WarehouseController extends Controller
 
     public function update(Request $request, Warehouse $warehouse)
     {
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:20', Rule::unique('warehouses', 'code')->ignore($warehouse->id)],
             'name' => ['required', 'string', 'max:100'],
@@ -63,6 +76,7 @@ class WarehouseController extends Controller
 
     public function destroy(Warehouse $warehouse)
     {
+        abort_unless($this->outletAccessService->canUseWarehouse(request()->user(), $warehouse), 404);
         if ($warehouse->type === 'main') {
             return back()->with('error', 'Gudang utama tidak bisa dihapus.');
         }

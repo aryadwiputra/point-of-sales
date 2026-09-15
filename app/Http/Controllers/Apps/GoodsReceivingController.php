@@ -51,6 +51,10 @@ class GoodsReceivingController extends Controller
             'supplier:id,name',
             'items.product:id,title,sku',
         ])->whereIn('status', ['ordered', 'partial_received'])
+            ->where(function ($query) use ($request) {
+                $ids = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+                $query->whereIn('warehouse_id', $ids)->orWhereNull('warehouse_id');
+            })
             ->orderByDesc('created_at')
             ->get();
 
@@ -118,6 +122,8 @@ class GoodsReceivingController extends Controller
 
     public function show(GoodsReceiving $goodsReceiving)
     {
+        $warehouse = $goodsReceiving->warehouse_id ? $goodsReceiving->warehouse : null;
+        abort_unless($this->outletAccessService->canUseWarehouse(request()->user(), $warehouse), 404);
         $goodsReceiving->load([
             'purchaseOrder:id,document_number,status',
             'supplier:id,name',

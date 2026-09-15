@@ -5,6 +5,7 @@ namespace Tests\Feature\Inventory;
 use App\Models\Outlet;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,6 +64,35 @@ class OutletWizardTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_user_cannot_update_warehouse_from_another_outlet(): void
+    {
+        $this->seedPermissions();
+        $user = User::factory()->create();
+        $user->givePermissionTo('warehouses-update');
+        $user->markEmailAsVerified();
+        $allowed = Outlet::create(['code' => 'MAL', 'name' => 'Malabar']);
+        $blocked = Outlet::create(['code' => 'PUT', 'name' => 'Puter']);
+        $user->outlets()->attach($allowed->id, ['is_default' => true]);
+        $warehouse = Warehouse::create([
+            'outlet_id' => $blocked->id,
+            'code' => 'PUT',
+            'name' => 'Gudang Puter',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('settings.warehouses.update', $warehouse), [
+            'code' => 'PUT',
+            'name' => 'Tidak Boleh',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+
+        $response->assertNotFound();
+        $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id, 'name' => 'Gudang Puter']);
+        $this->assertTrue(app(OutletAccessService::class)->canUseWarehouse($user, Warehouse::find($warehouse->id)) === false);
     }
 
     private function seedPermissions(): void

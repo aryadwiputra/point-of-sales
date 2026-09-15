@@ -83,8 +83,9 @@ class PurchaseOrderController extends Controller
             ->with('success', 'Purchase order berhasil dibuat.');
     }
 
-    public function show(PurchaseOrder $purchaseOrder)
+    public function show(Request $request, PurchaseOrder $purchaseOrder)
     {
+        $this->ensureOrderAccess($request, $purchaseOrder);
         $purchaseOrder->load([
             'supplier:id,name,phone,email,address',
             'warehouse:id,code,name',
@@ -103,6 +104,7 @@ class PurchaseOrderController extends Controller
 
     public function placeOrder(Request $request, PurchaseOrder $purchaseOrder)
     {
+        $this->ensureOrderAccess($request, $purchaseOrder);
         if ($purchaseOrder->status !== 'draft') {
             return back()->with('error', 'Hanya PO dengan status draft yang bisa dipesan.');
         }
@@ -116,6 +118,7 @@ class PurchaseOrderController extends Controller
 
     public function cancel(Request $request, PurchaseOrder $purchaseOrder)
     {
+        $this->ensureOrderAccess($request, $purchaseOrder);
         if (! in_array($purchaseOrder->status, ['draft', 'ordered', 'partial_received'])) {
             return back()->with('error', 'PO tidak dapat dibatalkan.');
         }
@@ -125,5 +128,11 @@ class PurchaseOrderController extends Controller
         return redirect()
             ->route('purchase-orders.index')
             ->with('success', 'Purchase order dibatalkan.');
+    }
+
+    private function ensureOrderAccess(Request $request, PurchaseOrder $order): void
+    {
+        $warehouse = $order->warehouse_id ? $order->warehouse : null;
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
     }
 }

@@ -22,6 +22,7 @@ use App\Services\AuditLogService;
 use App\Services\BatchService;
 use App\Services\CashierShiftService;
 use App\Services\LoyaltyService;
+use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
@@ -46,7 +47,8 @@ class TransactionController extends Controller
         private readonly LoyaltyService $loyaltyService,
         private readonly PriceListService $priceListService,
         private readonly BatchService $batchService,
-        private readonly TransactionTenderService $tenderService
+        private readonly TransactionTenderService $tenderService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     /**
@@ -950,32 +952,35 @@ class TransactionController extends Controller
         return to_route('transactions.print', $transaction->invoice);
     }
 
-    public function print($invoice)
+    public function print(Request $request, $invoice)
     {
         // get transaction
         $transaction = Transaction::with('details.product', 'details.pricingRule', 'cashier', 'customer', 'receivable', 'bankAccount', 'tenders')
             ->where('invoice', $invoice)
             ->firstOrFail();
+        $this->ensureTransactionAccess($request, $transaction);
 
         return Inertia::render('Dashboard/Transactions/Print', [
             'transaction' => $transaction,
         ]);
     }
 
-    public function status($invoice)
+    public function status(Request $request, $invoice)
     {
         $transaction = Transaction::where('invoice', $invoice)
-            ->firstOrFail(['payment_status']);
+            ->firstOrFail();
+        $this->ensureTransactionAccess($request, $transaction);
 
         return response()->json([
             'payment_status' => $transaction->payment_status,
         ]);
     }
 
-    public function qrisImage($invoice)
+    public function qrisImage(Request $request, $invoice)
     {
         $transaction = Transaction::where('invoice', $invoice)
-            ->firstOrFail(['qr_string']);
+            ->firstOrFail();
+        $this->ensureTransactionAccess($request, $transaction);
 
         abort_unless(filled($transaction->qr_string), 404);
 
@@ -1010,6 +1015,9 @@ class TransactionController extends Controller
             ->withSum('profits as total_profit', 'total')
             ->orderByDesc('created_at');
 
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $query->whereIn('warehouse_id', $warehouseIds);
+
         if ($salesReturnTablesReady) {
             $query->with('details.salesReturnItems.salesReturn:id,status');
         }
@@ -1033,7 +1041,7 @@ class TransactionController extends Controller
             });
 
         $transactions = $query->paginate($this->perPage())->withQueryString();
-        $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
+        $warehouses = $this->outletAccessService->warehousesFor($request->user());
         $transactions->through(function (Transaction $transaction) use ($salesReturnTablesReady) {
             $canCreateSalesReturn = false;
 
@@ -1071,8 +1079,9 @@ class TransactionController extends Controller
     /**
      * Confirm payment for bank transfer transactions
      */
-    public function confirmPayment(Transaction $transaction)
+    public function confirmPayment(Request $request, Transaction $transaction)
     {
+        $this->ensureTransactionAccess($request, $transaction);
         if ($transaction->payment_status === 'paid') {
             return redirect()
                 ->back()
@@ -1128,5 +1137,11 @@ class TransactionController extends Controller
         return redirect()
             ->back()
             ->with('success', "Pembayaran untuk invoice {$transaction->invoice} berhasil dikonfirmasi.");
+    }
+
+    private function ensureTransactionAccess(Request $request, Transaction $transaction): void
+    {
+        $warehouse = $transaction->warehouse_id ? $transaction->warehouse : null;
+        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);
     }
 }

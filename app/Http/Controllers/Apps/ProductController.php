@@ -9,6 +9,7 @@ use App\Models\ProductWarehouse;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
+use App\Services\OutletAccessService;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,7 +20,8 @@ class ProductController extends Controller
 {
     public function __construct(
         private readonly StockMutationService $stockMutationService,
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     /**
@@ -33,7 +35,7 @@ class ProductController extends Controller
             $products = $products->where('title', 'like', '%'.$search.'%');
         })->with('category')->latest()->paginate($this->perPage())->withQueryString();
 
-        $warehouses = Warehouse::active()->orderBy('code')->get(['id', 'code', 'name']);
+        $warehouses = $this->outletAccessService->warehousesFor($request->user());
 
         return Inertia::render('Dashboard/Products/Index', [
             'products' => $products,
@@ -124,6 +126,8 @@ class ProductController extends Controller
             $warehouse = Warehouse::find($request->warehouse_id)
                 ?? Warehouse::active()->where('type', 'main')->orderBy('sort_order')->orderBy('code')->first()
                 ?? Warehouse::active()->orderBy('sort_order')->orderBy('code')->first();
+
+            abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 403);
 
             if ($warehouse) {
                 ProductWarehouse::updateOrCreate(

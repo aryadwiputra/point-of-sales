@@ -70,8 +70,13 @@ class StockTransferController extends Controller
             ->with('success', 'Transfer stok berhasil dibuat.');
     }
 
-    public function show(StockTransfer $stockTransfer): Response
+    public function show(Request $request, StockTransfer $stockTransfer): Response
     {
+        abort_unless(
+            $this->outletAccessService->canUseWarehouse($request->user(), $stockTransfer->sourceWarehouse)
+            && $this->outletAccessService->canUseWarehouse($request->user(), $stockTransfer->destinationWarehouse),
+            404
+        );
         $stockTransfer->load([
             'sourceWarehouse:id,code,name',
             'destinationWarehouse:id,code,name',

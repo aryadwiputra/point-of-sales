@@ -41,7 +41,9 @@ class StockOpnameController extends Controller
             'warehouse_id' => $request->input('warehouse_id'),
         ];
 
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
         $stockOpnames = StockOpname::query()
+            ->whereIn('warehouse_id', $warehouseIds)
             ->with(['creator:id,name', 'finalizer:id,name', 'warehouse:id,code,name'])
             ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($builder) use ($search) {
