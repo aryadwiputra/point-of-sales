@@ -418,6 +418,13 @@ export default function Menu() {
                     permissions: hasAnyPermission(["warehouses-access"]),
                 },
                 {
+                    title: t("sidebar.items.outlets"),
+                    href: route("settings.outlets.index"),
+                    active: url === "/dashboard/settings/outlets",
+                    icon: <IconBuildingStore size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["outlets-access"]),
+                },
+                {
                     title: t("sidebar.items.units"),
                     href: route("settings.units.index"),
                     active: url === "/dashboard/settings/units",

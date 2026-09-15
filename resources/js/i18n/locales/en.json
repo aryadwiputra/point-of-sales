@@ -340,6 +340,7 @@
             "loyalty": "Loyalty",
             "salesTarget": "Sales Target",
             "warehouses": "Warehouses",
+            "outlets": "Outlets",
             "whatsapp": "WhatsApp",
             "printers": "Printers",
             "taxSettings": "Tax"

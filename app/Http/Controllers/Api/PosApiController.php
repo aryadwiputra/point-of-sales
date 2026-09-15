@@ -74,11 +74,11 @@ class PosApiController extends Controller
 
         $warehouseId = $validated['warehouse_id'] ?? null;
         if (! $warehouseId) {
-            $warehouse = Warehouse::active()->orderBy('code')->first();
+            $warehouse = $this->outletAccessService->salesWarehousesFor($request->user())->first();
             $warehouseId = $warehouse?->id;
         }
 
-        if (! $this->outletAccessService->canUseWarehouse(
+        if (! $this->outletAccessService->canSellAtWarehouse(
             $request->user(),
             $warehouseId ? Warehouse::find($warehouseId) : null
         )) {

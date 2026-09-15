@@ -44,7 +44,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => $pusat->name,
                 'is_active' => true,
-                'is_sales_enabled' => true,
+                'is_sales_enabled' => false,
                 'address' => $pusat->address,
                 'phone' => $pusat->phone,
             ],

@@ -36,6 +36,22 @@ class OutletAccessService
         return (bool) ($warehouse->outlet_id && $outletIds->contains($warehouse->outlet_id));
     }
 
+    public function canSellAtWarehouse(User $user, ?Warehouse $warehouse): bool
+    {
+        return $this->canUseWarehouse($user, $warehouse)
+            && (! $warehouse?->outlet_id && Outlet::active()->count() <= 1
+                || (bool) ($warehouse?->outlet ?? Outlet::find($warehouse?->outlet_id))?->is_sales_enabled);
+    }
+
+    public function salesWarehousesFor(User $user): Collection
+    {
+        return $this->warehousesFor($user)
+            ->filter(fn (Warehouse $warehouse) => ! $warehouse->outlet_id
+                ? Outlet::active()->count() <= 1
+                : (bool) $warehouse->outlet?->is_sales_enabled)
+            ->values();
+    }
+
     public function warehousesFor(User $user): Collection
     {
         $query = Warehouse::query()->active()->orderBy('sort_order')->orderBy('code');
@@ -46,7 +62,7 @@ class OutletAccessService
             }
         }
 
-        return $query->get(['id', 'code', 'name']);
+        return $query->with('outlet:id,is_sales_enabled')->get(['id', 'code', 'name', 'outlet_id']);
     }
 
     public function defaultOutlet(User $user): ?Outlet

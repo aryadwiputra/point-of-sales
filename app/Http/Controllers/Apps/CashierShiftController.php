@@ -55,7 +55,7 @@ class CashierShiftController extends Controller
             ? User::query()->orderBy('name')->get(['id', 'name'])
             : collect([$request->user()->only(['id', 'name'])]);
 
-        $warehouses = $this->outletAccessService->warehousesFor($request->user());
+        $warehouses = $this->outletAccessService->salesWarehousesFor($request->user());
 
         return Inertia::render('Dashboard/CashierShifts/Index', [
             'shifts' => $shifts,
@@ -83,7 +83,7 @@ class CashierShiftController extends Controller
             ? Warehouse::find($request->validated('warehouse_id'))
             : Warehouse::active()->orderBy('code')->first();
 
-        abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 403);
+        abort_unless($this->outletAccessService->canSellAtWarehouse($request->user(), $warehouse), 403);
 
         $shift = $this->cashierShiftService->openShift(
             cashier: $request->user(),

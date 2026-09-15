@@ -27,7 +27,7 @@ return new class extends Migration
             [
                 'name' => $pusat->name,
                 'is_active' => true,
-                'is_sales_enabled' => true,
+                'is_sales_enabled' => false,
                 'address' => $pusat->address,
                 'phone' => $pusat->phone,
             ],

@@ -155,6 +155,12 @@ class PermissionSeeder extends Seeder
         $create('warehouses-update');
         $create('warehouses-delete');
 
+        // outlets
+        $create('outlets-access');
+        $create('outlets-create');
+        $create('outlets-update');
+        $create('outlets-delete');
+
         // units
         $create('units-access');
         $create('units-create');

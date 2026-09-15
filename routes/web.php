@@ -16,6 +16,7 @@ use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
 use App\Http\Controllers\Apps\MemberController;
+use App\Http\Controllers\Apps\OutletController;
 use App\Http\Controllers\Apps\PayableController;
 use App\Http\Controllers\Apps\PaymentSettingController;
 use App\Http\Controllers\Apps\PriceListController;
@@ -370,6 +371,13 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], fu
         ->middlewareFor('store', 'permission:warehouses-create')
         ->middlewareFor('update', 'permission:warehouses-update')
         ->middlewareFor('destroy', 'permission:warehouses-delete');
+
+    Route::get('/settings/outlets', [OutletController::class, 'index'])
+        ->middleware('permission:outlets-access')
+        ->name('settings.outlets.index');
+    Route::post('/settings/outlets', [OutletController::class, 'store'])
+        ->middleware(['permission:outlets-create', 'step_up'])
+        ->name('settings.outlets.store');
 
     // settings units
     Route::resource('/settings/units', UnitController::class)
