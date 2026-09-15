@@ -3,6 +3,7 @@
 namespace Tests\Feature\Setup;
 
 use App\Models\Category;
+use App\Models\Outlet;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -82,7 +83,11 @@ class SetupWizardTest extends TestCase
         $user = User::where('email', 'owner@example.com')->first();
         $this->assertNotNull($user);
         $this->assertTrue($user->hasRole('super-admin'));
-        $this->assertTrue(Warehouse::where('code', 'PUSAT')->where('type', 'main')->exists());
+        $warehouse = Warehouse::where('code', 'PUSAT')->where('type', 'main')->firstOrFail();
+        $outlet = Outlet::where('code', 'PUSAT')->firstOrFail();
+        $this->assertSame($outlet->id, $warehouse->outlet_id);
+        $this->assertFalse($outlet->is_sales_enabled);
+        $this->assertTrue($user->outlets()->whereKey($outlet->id)->wherePivot('is_default', true)->exists());
         $this->assertSame(
             ['Makanan', 'Minuman'],
             Category::orderBy('id')->pluck('name')->all(),
@@ -164,7 +169,7 @@ class SetupWizardTest extends TestCase
         $this->assertSame($warehouse->id, (int) Setting::get('setup_warehouse_id'));
     }
 
-    public function test_store_rejects_duplicate_warehouse_code_when_updating(): void
+    public function test_store_rejects_non_pusat_warehouse_when_updating(): void
     {
         $warehouse1 = Warehouse::create([
             'code' => 'PUSAT',
@@ -186,7 +191,7 @@ class SetupWizardTest extends TestCase
         $payload['warehouse_code'] = 'PUSAT';
 
         $this->post(route('setup.store'), $payload)
-            ->assertSessionHasErrors(['warehouse_code']);
+            ->assertSessionHasErrors(['warehouse_id']);
     }
 
     public function test_store_allows_renaming_same_warehouse_code(): void

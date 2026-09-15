@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Outlet;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -52,7 +53,16 @@ class SetupController extends Controller
             'user_name' => 'required|string|max:255',
             'user_email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'warehouse_id' => 'nullable|integer|exists:warehouses,id',
+            'warehouse_id' => [
+                'nullable',
+                'integer',
+                'exists:warehouses,id',
+                function ($attribute, $value, $fail) {
+                    if ($value && ! Warehouse::whereKey($value)->where('code', 'PUSAT')->exists()) {
+                        $fail('Wizard setup hanya dapat memakai gudang PUSAT.');
+                    }
+                },
+            ],
             'warehouse_code' => [
                 'required',
                 'string',
@@ -79,14 +89,28 @@ class SetupController extends Controller
             ]);
             $user->assignRole('super-admin');
 
+            $outlet = Outlet::firstOrCreate(
+                ['code' => 'PUSAT'],
+                [
+                    'name' => 'Gudang Pusat',
+                    'is_active' => true,
+                    'is_sales_enabled' => false,
+                ],
+            );
+            $outlet->update(['is_active' => true, 'is_sales_enabled' => false]);
+
             if (! empty($validated['warehouse_id'])) {
                 Warehouse::where('id', $validated['warehouse_id'])->update([
                     'code' => $validated['warehouse_code'],
                     'name' => $validated['warehouse_name'],
+                    'outlet_id' => $outlet->id,
+                    'type' => 'main',
+                    'is_active' => true,
                 ]);
                 Setting::set('setup_warehouse_id', $validated['warehouse_id']);
             } else {
                 $warehouse = Warehouse::create([
+                    'outlet_id' => $outlet->id,
                     'code' => $validated['warehouse_code'],
                     'name' => $validated['warehouse_name'],
                     'type' => 'main',
@@ -95,6 +119,10 @@ class SetupController extends Controller
                 ]);
                 Setting::set('setup_warehouse_id', $warehouse->id);
             }
+
+            $user->outlets()->syncWithoutDetaching([
+                $outlet->id => ['is_default' => true],
+            ]);
 
             foreach (array_unique($validated['categories']) as $name) {
                 Category::create(['name' => $name]);
