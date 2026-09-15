@@ -11,9 +11,6 @@ class DemoSeeder extends Seeder
     {
         $this->command?->info('Running full demo data seeder...');
 
-        // Clear feature rows first so a second demo run can replace products safely.
-        $this->call(FeatureDemoSeeder::class);
-
         $this->call([
             DemoOutletSeeder::class,
             UserSeeder::class,

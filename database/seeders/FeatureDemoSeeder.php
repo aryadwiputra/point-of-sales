@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\BankAccount;
 use App\Models\Customer;
 use App\Models\CustomerCampaign;
 use App\Models\CustomerCampaignLog;
@@ -19,6 +20,7 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\Transaction;
+use App\Models\TransactionTender;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -77,9 +79,66 @@ class FeatureDemoSeeder extends Seeder
             $this->seedDineIn($products, $customers, $cashier);
             $this->seedDiscountApprovalLogs($cashier, $admin);
             $this->seedLoyaltyPointHistory($customers);
+            $this->seedSplitPayment();
+            $this->syncGlobalStock();
         } finally {
             Auth::logout();
         }
+    }
+
+    private function seedSplitPayment(): void
+    {
+        if (! Schema::hasTable('transaction_tenders')) {
+            return;
+        }
+
+        $transaction = Transaction::where('payment_method', 'cash')->oldest('id')->first();
+        $bankAccount = BankAccount::active()->ordered()->first();
+
+        if (! $transaction || ! $bankAccount || (int) $transaction->grand_total < 2) {
+            return;
+        }
+
+        $cashAmount = intdiv((int) $transaction->grand_total, 2);
+        $bankAmount = (int) $transaction->grand_total - $cashAmount;
+        $transaction->tenders()->delete();
+        $transaction->tenders()->createMany([
+            [
+                'method' => TransactionTender::METHOD_CASH,
+                'amount' => $cashAmount,
+                'cash_received' => $cashAmount,
+                'change' => 0,
+                'payment_status' => TransactionTender::STATUS_PAID,
+                'paid_at' => now(),
+            ],
+            [
+                'method' => TransactionTender::METHOD_BANK_TRANSFER,
+                'amount' => $bankAmount,
+                'bank_account_id' => $bankAccount->id,
+                'payment_status' => TransactionTender::STATUS_PAID,
+                'paid_at' => now(),
+            ],
+        ]);
+        $transaction->update([
+            'payment_method' => 'split',
+            'payment_status' => 'paid',
+            'cash' => $cashAmount,
+            'change' => 0,
+            'bank_account_id' => $bankAccount->id,
+        ]);
+    }
+
+    private function syncGlobalStock(): void
+    {
+        Product::query()
+            ->select('products.id')
+            ->selectRaw('COALESCE(SUM(product_warehouse.stock), 0) AS pivot_total')
+            ->leftJoin('product_warehouse', 'product_warehouse.product_id', '=', 'products.id')
+            ->groupBy('products.id')
+            ->get()
+            ->each(fn ($product) => Product::whereKey($product->id)->update([
+                'stock' => (int) $product->pivot_total,
+            ]));
     }
 
     private function requiredTablesExist(): bool
