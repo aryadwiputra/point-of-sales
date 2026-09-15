@@ -2,28 +2,29 @@
 
 namespace App\Services;
 
+use App\Models\Outlet;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 
 class WhatsAppService
 {
-    private function baseUrl(): ?string
+    private function baseUrl(?Outlet $outlet = null): ?string
     {
-        $url = Setting::get('wa_service_url');
+        $url = Setting::getForOutlet('wa_service_url', $outlet);
 
         return $url ?: null;
     }
 
-    public function isAvailable(): bool
+    public function isAvailable(?Outlet $outlet = null): bool
     {
-        return $this->baseUrl() !== null
-            && Setting::getBool('wa_enabled', false);
+        return $this->baseUrl($outlet) !== null
+            && Setting::getBoolForOutlet('wa_enabled', $outlet, false);
     }
 
-    public function status(): array
+    public function status(?Outlet $outlet = null): array
     {
         try {
-            $res = Http::timeout(5)->get($this->baseUrl().'/status');
+            $res = Http::timeout(5)->get($this->baseUrl($outlet).'/status');
 
             return $res->successful() ? $res->json() : ['connected' => false, 'error' => 'unreachable'];
         } catch (\Exception $e) {
@@ -31,10 +32,10 @@ class WhatsAppService
         }
     }
 
-    public function start(): array
+    public function start(?Outlet $outlet = null): array
     {
         try {
-            $res = Http::timeout(10)->post($this->baseUrl().'/start');
+            $res = Http::timeout(10)->post($this->baseUrl($outlet).'/start');
 
             return $res->successful() ? $res->json() : ['status' => false];
         } catch (\Exception $e) {
@@ -42,10 +43,10 @@ class WhatsAppService
         }
     }
 
-    public function send(string $target, string $message): bool
+    public function send(string $target, string $message, ?Outlet $outlet = null): bool
     {
         try {
-            $res = Http::timeout(15)->post($this->baseUrl().'/send', [
+            $res = Http::timeout(15)->post($this->baseUrl($outlet).'/send', [
                 'target' => $target,
                 'message' => $message,
             ]);
@@ -56,10 +57,10 @@ class WhatsAppService
         }
     }
 
-    public function disconnect(): bool
+    public function disconnect(?Outlet $outlet = null): bool
     {
         try {
-            $res = Http::timeout(10)->post($this->baseUrl().'/disconnect');
+            $res = Http::timeout(10)->post($this->baseUrl($outlet).'/disconnect');
 
             return $res->successful();
         } catch (\Exception $e) {

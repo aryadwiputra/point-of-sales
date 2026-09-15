@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\CustomerCampaign;
 use App\Models\CustomerCampaignLog;
+use App\Models\Outlet;
 use App\Models\Receivable;
 use App\Models\Setting;
 use App\Models\Transaction;
@@ -142,9 +143,10 @@ class CrmAutomationService
             'segments' => $customer->segments->pluck('name')->values()->all(),
         ])->values()->all();
 
-        $waAvailable = Setting::getBool('wa_enabled', false)
-            && Setting::get('wa_service_url')
-            && $this->whatsAppService?->status()['connected'] ?? false;
+        $outlet = $campaign->outlet_id ? Outlet::find($campaign->outlet_id) : null;
+        $waAvailable = Setting::getBoolForOutlet('wa_enabled', $outlet, false)
+            && Setting::getForOutlet('wa_service_url', $outlet)
+            && ($this->whatsAppService?->status($outlet)['connected'] ?? false);
 
         foreach ($audience as $customer) {
             $payload = $this->buildCustomerPayload($campaign, $customer);
@@ -157,7 +159,7 @@ class CrmAutomationService
             ]);
 
             if ($waAvailable && $customer->no_telp) {
-                $sent = $this->whatsAppService->send($customer->no_telp, $payload['message']);
+                $sent = $this->whatsAppService->send($customer->no_telp, $payload['message'], $outlet);
                 if ($sent) {
                     $this->markLog($log, CustomerCampaignLog::STATUS_SENT);
                 }

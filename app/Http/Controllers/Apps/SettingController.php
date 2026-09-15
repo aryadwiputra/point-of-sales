@@ -26,8 +26,9 @@ class SettingController extends Controller
      */
     public function target()
     {
+        $outlet = $this->outletAccessService->activeOutlet(request());
         $settings = [
-            'monthly_sales_target' => Setting::get('monthly_sales_target', 0),
+            'monthly_sales_target' => Setting::getForOutlet('monthly_sales_target', $outlet, 0),
         ];
 
         return Inertia::render('Dashboard/Settings/Target', [
@@ -44,9 +45,10 @@ class SettingController extends Controller
             'monthly_sales_target' => 'required|numeric|min:0',
         ]);
 
-        Setting::set(
+        Setting::setForOutlet(
             'monthly_sales_target',
             $request->monthly_sales_target,
+            $this->outletAccessService->activeOutlet($request),
             'Target penjualan bulanan'
         );
 
@@ -237,10 +239,11 @@ class SettingController extends Controller
 
     public function whatsapp()
     {
+        $outlet = $this->outletAccessService->activeOutlet(request());
         $waStatus = ['connected' => false, 'phone' => null, 'qr' => null];
-        if (Setting::get('wa_service_url')) {
+        if (Setting::getForOutlet('wa_service_url', $outlet)) {
             try {
-                $waStatus = $this->whatsAppService->status();
+                $waStatus = $this->whatsAppService->status($outlet);
             } catch (\Exception $e) {
                 $waStatus['error'] = $e->getMessage();
             }
@@ -248,10 +251,10 @@ class SettingController extends Controller
 
         return Inertia::render('Dashboard/Settings/Whatsapp', [
             'settings' => [
-                'wa_service_url' => Setting::get('wa_service_url', ''),
-                'wa_enabled' => Setting::getBool('wa_enabled', false),
-                'wa_auto_reminder' => Setting::getBool('wa_auto_reminder', false),
-                'wa_auto_invoice' => Setting::getBool('wa_auto_invoice', false),
+                'wa_service_url' => Setting::getForOutlet('wa_service_url', $outlet, ''),
+                'wa_enabled' => Setting::getBoolForOutlet('wa_enabled', $outlet, false),
+                'wa_auto_reminder' => Setting::getBoolForOutlet('wa_auto_reminder', $outlet, false),
+                'wa_auto_invoice' => Setting::getBoolForOutlet('wa_auto_invoice', $outlet, false),
             ],
             'waStatus' => $waStatus,
         ]);
@@ -259,6 +262,7 @@ class SettingController extends Controller
 
     public function updateWhatsapp(Request $request)
     {
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $validated = $request->validate([
             'wa_service_url' => ['nullable', 'string', 'max:255'],
             'wa_enabled' => ['boolean'],
@@ -266,10 +270,10 @@ class SettingController extends Controller
             'wa_auto_invoice' => ['boolean'],
         ]);
 
-        Setting::set('wa_service_url', $validated['wa_service_url'] ?? '', 'URL service WhatsApp');
-        Setting::set('wa_enabled', ($validated['wa_enabled'] ?? false) ? '1' : '0', 'WhatsApp gateway aktif');
-        Setting::set('wa_auto_reminder', ($validated['wa_auto_reminder'] ?? false) ? '1' : '0', 'Auto-kirim reminder via WA');
-        Setting::set('wa_auto_invoice', ($validated['wa_auto_invoice'] ?? false) ? '1' : '0', 'Auto-kirim invoice via WA');
+        Setting::setForOutlet('wa_service_url', $validated['wa_service_url'] ?? '', $outlet, 'URL service WhatsApp');
+        Setting::setForOutlet('wa_enabled', ($validated['wa_enabled'] ?? false) ? '1' : '0', $outlet, 'WhatsApp gateway aktif');
+        Setting::setForOutlet('wa_auto_reminder', ($validated['wa_auto_reminder'] ?? false) ? '1' : '0', $outlet, 'Auto-kirim reminder via WA');
+        Setting::setForOutlet('wa_auto_invoice', ($validated['wa_auto_invoice'] ?? false) ? '1' : '0', $outlet, 'Auto-kirim invoice via WA');
 
         return back()->with('success', 'Pengaturan WhatsApp disimpan.');
     }
@@ -277,32 +281,34 @@ class SettingController extends Controller
     public function testWhatsapp(Request $request)
     {
         $request->validate(['target' => 'required|string']);
+        $outlet = $this->outletAccessService->activeOutlet($request);
 
         $sent = $this->whatsAppService->send(
             $request->target,
-            'Test pesan dari Point of Sales — '.config('app.url')
+            'Test pesan dari Point of Sales — '.config('app.url'),
+            $outlet
         );
 
         return response()->json(['status' => $sent]);
     }
 
-    public function startWhatsapp()
+    public function startWhatsapp(Request $request)
     {
-        $result = $this->whatsAppService->start();
+        $result = $this->whatsAppService->start($this->outletAccessService->activeOutlet($request));
 
         return response()->json($result);
     }
 
-    public function whatsappStatus()
+    public function whatsappStatus(Request $request)
     {
-        $status = $this->whatsAppService->status();
+        $status = $this->whatsAppService->status($this->outletAccessService->activeOutlet($request));
 
         return response()->json($status);
     }
 
-    public function disconnectWhatsapp()
+    public function disconnectWhatsapp(Request $request)
     {
-        $this->whatsAppService->disconnect();
+        $this->whatsAppService->disconnect($this->outletAccessService->activeOutlet($request));
 
         return response()->json(['status' => true]);
     }

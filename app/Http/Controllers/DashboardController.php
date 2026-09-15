@@ -47,7 +47,11 @@ class DashboardController extends Controller
         $todayProfit = $scopeProfits(Profit::whereDate('created_at', Carbon::today()))->sum('total');
 
         // New: Monthly Target (from settings)
-        $monthlyTarget = Setting::where('key', 'monthly_sales_target')->first()?->value ?? 0;
+        $monthlyTarget = Setting::getForOutlet(
+            'monthly_sales_target',
+            $outletAccessService->activeOutlet(request()),
+            0
+        );
         $currentMonthSales = $scopeTransactions(Transaction::whereMonth('created_at', Carbon::now()->month)
             ->whereYear('created_at', Carbon::now()->year))
             ->sum('grand_total');
