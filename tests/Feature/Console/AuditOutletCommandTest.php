@@ -19,4 +19,21 @@ class AuditOutletCommandTest extends TestCase
             ->expectsOutputToContain('Outlets: 1')
             ->assertSuccessful();
     }
+
+    public function test_strict_audit_passes_for_clean_system_seed(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->artisan('outlet:audit', ['--strict' => true])
+            ->assertSuccessful();
+    }
+
+    public function test_legacy_audit_is_read_only(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->artisan('outlet:legacy-audit')
+            ->expectsOutputToContain('Legacy outlet audit (read-only; no backfill performed)')
+            ->assertSuccessful();
+    }
 }

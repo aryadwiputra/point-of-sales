@@ -20,6 +20,12 @@ class SalesReportController extends Controller
     public function index(Request $request, OutletAccessService $outletAccessService)
     {
         $warehouseIds = $outletAccessService->warehousesFor($request->user())->pluck('id');
+        $activeOutlet = $outletAccessService->activeOutlet($request);
+        if ($activeOutlet) {
+            $warehouseIds = $outletAccessService->warehousesFor($request->user())
+                ->where('outlet_id', $activeOutlet->id)
+                ->pluck('id');
+        }
         $filters = [
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),

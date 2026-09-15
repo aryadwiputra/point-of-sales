@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
+use App\Models\Outlet;
 use App\Models\Payable;
 use App\Models\PayablePayment;
 use App\Models\Supplier;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +18,10 @@ use Inertia\Inertia;
 
 class PayableController extends Controller
 {
+    public function __construct(
+        private readonly OutletAccessService $outletAccessService,
+    ) {}
+
     public function index(Request $request)
     {
         $filters = [
@@ -25,7 +32,8 @@ class PayableController extends Controller
             'due_to' => $request->input('due_to'),
         ];
 
-        $query = Payable::with('supplier:id,name')
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $query = $this->scopeQuery(Payable::with('supplier:id,name'), $warehouseIds)
             ->withSum('payments as total_paid', 'amount')
             ->orderByDesc('created_at');
 
@@ -84,14 +92,18 @@ class PayableController extends Controller
 
     public function show(Payable $payable)
     {
+        $this->ensureAccess($payable);
         $payable->load([
             'supplier:id,name,phone,email,address',
-            'purchaseOrder:id,document_number,status',
+            'purchaseOrder:id,warehouse_id,document_number,status',
             'payments' => function ($query) {
                 $query->orderByDesc('paid_at')->with(['bankAccount:id,bank_name,account_number,account_name,logo', 'user:id,name']);
             },
         ]);
-        $bankAccounts = BankAccount::active()->ordered()->get(['id', 'bank_name', 'account_number', 'account_name', 'logo']);
+        $bankAccounts = BankAccount::active()
+            ->forOutlet($this->outletAccessService->activeOutlet(request()))
+            ->ordered()
+            ->get(['id', 'bank_name', 'account_number', 'account_name', 'logo']);
 
         return Inertia::render('Dashboard/Payables/Show', [
             'payable' => $payable,
@@ -107,7 +119,8 @@ class PayableController extends Controller
 
         $supplier = Supplier::findOrFail($request->input('supplier_id'));
 
-        $payables = Payable::where('supplier_id', $supplier->id)
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $payables = $this->scopeQuery(Payable::where('supplier_id', $supplier->id), $warehouseIds)
             ->withSum('payments as total_paid', 'amount')
             ->orderBy('due_date')
             ->get();
@@ -152,6 +165,7 @@ class PayableController extends Controller
 
     public function pay(Request $request, Payable $payable)
     {
+        $this->ensureAccess($payable);
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
             'paid_at' => ['required', 'date'],
@@ -169,6 +183,15 @@ class PayableController extends Controller
                 throw ValidationException::withMessages([
                     'amount' => 'Nominal melebihi sisa hutang.',
                 ]);
+            }
+
+            if (! empty($validated['bank_account_id'])) {
+                abort_unless(
+                    BankAccount::active()->forOutlet($this->outletAccessService->activeOutlet($request))
+                        ->whereKey($validated['bank_account_id'])->exists(),
+                    422,
+                    'Rekening bank tidak tersedia untuk outlet aktif.'
+                );
             }
 
             PayablePayment::create([
@@ -193,5 +216,26 @@ class PayableController extends Controller
         return redirect()
             ->route('payables.show', $payable)
             ->with('success', 'Pembayaran hutang berhasil dicatat.');
+    }
+
+    private function scopeQuery($query, Collection $warehouseIds)
+    {
+        return $query->where(function ($builder) use ($warehouseIds) {
+            $builder->whereHas('purchaseOrder', fn ($purchaseOrder) => $purchaseOrder->whereIn('warehouse_id', $warehouseIds));
+
+            if ($warehouseIds->isEmpty()) {
+                $builder->whereRaw('1 = 0');
+            } elseif (Outlet::active()->count() <= 1) {
+                $builder->orWhereDoesntHave('purchaseOrder');
+            }
+        });
+    }
+
+    private function ensureAccess(Payable $payable): void
+    {
+        abort_unless(
+            $this->outletAccessService->canUseWarehouse(request()->user(), $payable->purchaseOrder?->warehouse),
+            404
+        );
     }
 }

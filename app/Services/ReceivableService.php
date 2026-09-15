@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\Outlet;
 use App\Models\Receivable;
 use Illuminate\Support\Collection;
 
 class ReceivableService
 {
-    public function getAgingSummary(): Collection
+    public function getAgingSummary(?Collection $warehouseIds = null): Collection
     {
-        $receivables = Receivable::where('status', '!=', 'paid')
+        $receivables = $this->scope(Receivable::query(), $warehouseIds)
+            ->where('status', '!=', 'paid')
             ->whereNotNull('due_date')
             ->get();
 
@@ -29,11 +31,16 @@ class ReceivableService
         });
     }
 
-    public function getCustomerStatement(int $customerId): array
+    public function scopeQuery($query, Collection $warehouseIds)
+    {
+        return $this->scope($query, $warehouseIds);
+    }
+
+    public function getCustomerStatement(int $customerId, ?Collection $warehouseIds = null): array
     {
         $customer = Customer::findOrFail($customerId);
 
-        $receivables = Receivable::where('customer_id', $customerId)
+        $receivables = $this->scope(Receivable::where('customer_id', $customerId), $warehouseIds)
             ->withSum('payments as total_paid', 'amount')
             ->orderBy('due_date')
             ->get();
@@ -58,13 +65,14 @@ class ReceivableService
         ];
     }
 
-    public function getCollectionRate(): array
+    public function getCollectionRate(?Collection $warehouseIds = null): array
     {
-        $totalReceivables = Receivable::sum('total');
-        $totalPaid = Receivable::sum('paid');
+        $query = $this->scope(Receivable::query(), $warehouseIds);
+        $totalReceivables = (clone $query)->sum('total');
+        $totalPaid = (clone $query)->sum('paid');
 
-        $paidReceivables = Receivable::where('status', 'paid')->count();
-        $totalReceivablesCount = Receivable::count();
+        $paidReceivables = (clone $query)->where('status', 'paid')->count();
+        $totalReceivablesCount = (clone $query)->count();
 
         return [
             'total_receivables_amount' => $totalReceivables,
@@ -77,13 +85,15 @@ class ReceivableService
         ];
     }
 
-    public function getTopCustomersByReceivable(int $limit = 10): Collection
+    public function getTopCustomersByReceivable(int $limit = 10, ?Collection $warehouseIds = null): Collection
     {
+        $scope = fn ($query) => $this->scope($query, $warehouseIds);
+
         return Customer::withSum([
-            'receivables as total_receivable' => fn ($q) => $q->where('status', '!=', 'paid'),
+            'receivables as total_receivable' => fn ($q) => $scope($q)->where('status', '!=', 'paid'),
         ], 'total')
             ->withSum([
-                'receivables as total_paid' => fn ($q) => $q,
+                'receivables as total_paid' => fn ($q) => $scope($q),
             ], 'paid')
             ->orderByRaw('COALESCE(total_receivable, 0) DESC')
             ->limit($limit)
@@ -97,5 +107,27 @@ class ReceivableService
             ])
             ->filter(fn ($c) => $c['remaining'] > 0)
             ->values();
+    }
+
+    private function scope($query, ?Collection $warehouseIds)
+    {
+        if ($warehouseIds === null) {
+            return $query;
+        }
+
+        return $query->where(function ($builder) use ($warehouseIds) {
+            $builder->whereHas('transaction', fn ($transaction) => $transaction->whereIn('warehouse_id', $warehouseIds));
+
+            if ($warehouseIds->isEmpty()) {
+                $builder->whereRaw('1 = 0');
+            } elseif ($this->singleOutlet()) {
+                $builder->orWhereDoesntHave('transaction');
+            }
+        });
+    }
+
+    private function singleOutlet(): bool
+    {
+        return Outlet::active()->count() <= 1;
     }
 }

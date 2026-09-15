@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\Receivable;
 use App\Models\ReceivablePayment;
+use App\Services\OutletAccessService;
 use App\Services\ReceivableService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,8 @@ use Inertia\Inertia;
 class ReceivableController extends Controller
 {
     public function __construct(
-        private readonly ReceivableService $receivableService
+        private readonly ReceivableService $receivableService,
+        private readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -28,7 +30,8 @@ class ReceivableController extends Controller
             'due_to' => $request->input('due_to'),
         ];
 
-        $query = Receivable::with('customer:id,name')
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $query = $this->receivableService->scopeQuery(Receivable::with('customer:id,name'), $warehouseIds)
             ->withSum('payments as total_paid', 'amount')
             ->orderByDesc('created_at');
 
@@ -61,6 +64,7 @@ class ReceivableController extends Controller
 
     public function show(Receivable $receivable)
     {
+        $this->ensureAccess($receivable);
         $receivable->load([
             'customer:id,name,no_telp',
             'transaction',
@@ -69,7 +73,8 @@ class ReceivableController extends Controller
             },
         ]);
 
-        $bankAccounts = BankAccount::active()->ordered()->get(['id', 'bank_name', 'account_number', 'account_name', 'logo']);
+        $outlet = $this->outletAccessService->activeOutlet(request());
+        $bankAccounts = BankAccount::active()->forOutlet($outlet)->ordered()->get(['id', 'bank_name', 'account_number', 'account_name', 'logo']);
 
         return Inertia::render('Dashboard/Receivables/Show', [
             'receivable' => $receivable,
@@ -79,6 +84,7 @@ class ReceivableController extends Controller
 
     public function pay(Request $request, Receivable $receivable)
     {
+        $this->ensureAccess($receivable);
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
             'paid_at' => ['required', 'date'],
@@ -96,6 +102,15 @@ class ReceivableController extends Controller
                 throw ValidationException::withMessages([
                     'amount' => 'Nominal melebihi sisa piutang.',
                 ]);
+            }
+
+            if (! empty($validated['bank_account_id'])) {
+                abort_unless(
+                    BankAccount::active()->forOutlet($this->outletAccessService->activeOutlet($request))
+                        ->whereKey($validated['bank_account_id'])->exists(),
+                    422,
+                    'Rekening bank tidak tersedia untuk outlet aktif.'
+                );
             }
 
             ReceivablePayment::create([
@@ -130,9 +145,10 @@ class ReceivableController extends Controller
 
     public function aging()
     {
-        $summary = $this->receivableService->getAgingSummary();
-        $topCustomers = $this->receivableService->getTopCustomersByReceivable(10);
-        $collectionRate = $this->receivableService->getCollectionRate();
+        $warehouseIds = $this->outletAccessService->warehousesFor(request()->user())->pluck('id');
+        $summary = $this->receivableService->getAgingSummary($warehouseIds);
+        $topCustomers = $this->receivableService->getTopCustomersByReceivable(10, $warehouseIds);
+        $collectionRate = $this->receivableService->getCollectionRate($warehouseIds);
 
         return response()->json([
             'aging_summary' => $summary,
@@ -147,13 +163,15 @@ class ReceivableController extends Controller
             'customer_id' => ['required', 'exists:customers,id'],
         ]);
 
-        $data = $this->receivableService->getCustomerStatement($validated['customer_id']);
+        $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $data = $this->receivableService->getCustomerStatement($validated['customer_id'], $warehouseIds);
 
         return response()->json($data);
     }
 
     public function updateCollectionNotes(Request $request, Receivable $receivable)
     {
+        $this->ensureAccess($receivable);
         $validated = $request->validate([
             'collection_notes' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -161,5 +179,11 @@ class ReceivableController extends Controller
         $receivable->update(['collection_notes' => $validated['collection_notes'] ?? null]);
 
         return back()->with('success', 'Catatan penagihan berhasil disimpan.');
+    }
+
+    private function ensureAccess(Receivable $receivable): void
+    {
+        $warehouse = $receivable->transaction?->warehouse;
+        abort_unless($this->outletAccessService->canUseWarehouse(request()->user(), $warehouse), 404);
     }
 }

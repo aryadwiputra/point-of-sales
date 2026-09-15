@@ -195,7 +195,7 @@ class HandleInertiaRequests extends Middleware
         ];
         $outlet = $activeShift?->warehouse?->outlet;
         if (! $outlet && $request->user()) {
-            $outlet = app(OutletAccessService::class)->defaultOutlet($request->user());
+            $outlet = app(OutletAccessService::class)->activeOutlet($request);
         }
 
         if (Schema::hasTable('settings')) {

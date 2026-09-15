@@ -22,6 +22,12 @@ class DashboardController extends Controller
     public function index(CashierShiftService $cashierShiftService, OutletAccessService $outletAccessService)
     {
         $warehouseIds = $outletAccessService->warehousesFor(request()->user())->pluck('id');
+        $activeOutlet = $outletAccessService->activeOutlet(request());
+        if ($activeOutlet) {
+            $warehouseIds = $outletAccessService->warehousesFor(request()->user())
+                ->where('outlet_id', $activeOutlet->id)
+                ->pluck('id');
+        }
         $includeLegacy = Outlet::active()->count() <= 1;
         $scope = fn ($query, $column = 'warehouse_id') => $query->where(function ($q) use ($warehouseIds, $includeLegacy, $column) {
             $q->whereIn($column, $warehouseIds);
@@ -35,9 +41,9 @@ class DashboardController extends Controller
 
         $totalCategories = Category::count();
         $totalProducts = Product::count();
-        $totalTransactions = Transaction::whereIn('warehouse_id', $warehouseIds)->count();
+        $totalTransactions = $scopeTransactions(Transaction::query())->count();
         $totalCustomers = Customer::count();
-        $totalRevenue = Transaction::whereIn('warehouse_id', $warehouseIds)->sum('grand_total');
+        $totalRevenue = $scopeTransactions(Transaction::query())->sum('grand_total');
         $totalProfit = $scopeProfits(Profit::query())->sum('total');
         $averageOrder = $scopeTransactions(Transaction::query())->avg('grand_total') ?? 0;
         $todayTransactions = $scopeTransactions(Transaction::whereDate('created_at', Carbon::today()))->count();

@@ -32,6 +32,12 @@ class AdvancedSalesInsightsController extends Controller
     public function index(Request $request)
     {
         $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+        $activeOutlet = $this->outletAccessService->activeOutlet($request);
+        if ($activeOutlet) {
+            $warehouseIds = $this->outletAccessService->warehousesFor($request->user())
+                ->where('outlet_id', $activeOutlet->id)
+                ->pluck('id');
+        }
         $filters = [
             'start_date' => $request->input('start_date'),
             'end_date' => $request->input('end_date'),
@@ -75,9 +81,9 @@ class AdvancedSalesInsightsController extends Controller
         $cashierPerformance = $this->cashierPerformance($filters);
         $repeatCustomerMetrics = $this->repeatCustomerMetrics($filters);
         $stockCoverage = $this->stockCoverageAnalysis($filters);
-        $promoMonitor = $this->promoMonitor();
-        $loyaltyPerformance = $this->loyaltyPerformance($filters);
-        $crmOperations = $this->crmOperations($filters);
+        $promoMonitor = $this->promoMonitor($activeOutlet?->id);
+        $loyaltyPerformance = $this->loyaltyPerformance($filters, $activeOutlet?->id);
+        $crmOperations = $this->crmOperations($filters, $activeOutlet?->id);
 
         return Inertia::render('Dashboard/Reports/Insights', [
             'filters' => $filters,
@@ -621,9 +627,12 @@ class AdvancedSalesInsightsController extends Controller
         return 'healthy';
     }
 
-    protected function promoMonitor(): array
+    protected function promoMonitor(?int $outletId = null): array
     {
         $rules = PricingRule::query()
+            ->when($outletId, fn ($query) => $query->where(function ($scope) use ($outletId) {
+                $scope->whereNull('outlet_id')->orWhere('outlet_id', $outletId);
+            }))
             ->with(['product:id,title', 'category:id,name'])
             ->orderByDesc('priority')
             ->orderBy('name')
@@ -670,7 +679,7 @@ class AdvancedSalesInsightsController extends Controller
         ];
     }
 
-    protected function loyaltyPerformance(array $filters): array
+    protected function loyaltyPerformance(array $filters, ?int $outletId = null): array
     {
         $members = Customer::query()
             ->where('is_loyalty_member', true)
@@ -679,7 +688,11 @@ class AdvancedSalesInsightsController extends Controller
         $historyQuery = LoyaltyPointHistory::query();
         $this->applyDateRangeFilter($historyQuery, 'created_at', $filters);
 
-        $vouchers = CustomerVoucher::query()->get();
+        $vouchers = CustomerVoucher::query()
+            ->when($outletId, fn ($query) => $query->where(function ($scope) use ($outletId) {
+                $scope->whereNull('outlet_id')->orWhere('outlet_id', $outletId);
+            }))
+            ->get();
 
         return [
             'summary' => [
@@ -726,15 +739,21 @@ class AdvancedSalesInsightsController extends Controller
         ];
     }
 
-    protected function crmOperations(array $filters): array
+    protected function crmOperations(array $filters, ?int $outletId = null): array
     {
         $segments = CustomerSegment::query()->withCount('memberships')->get();
 
         $campaignsQuery = CustomerCampaign::query()->withCount('logs');
+        $campaignsQuery->when($outletId, fn ($query) => $query->where(function ($scope) use ($outletId) {
+            $scope->whereNull('outlet_id')->orWhere('outlet_id', $outletId);
+        }));
         $this->applyDateRangeFilter($campaignsQuery, 'created_at', $filters);
         $campaigns = $campaignsQuery->get();
 
         $logsQuery = CustomerCampaignLog::query();
+        $logsQuery->when($outletId, fn ($query) => $query->whereHas('campaign', function ($campaign) use ($outletId) {
+            $campaign->whereNull('outlet_id')->orWhere('outlet_id', $outletId);
+        }));
         $this->applyDateRangeFilter($logsQuery, 'created_at', $filters);
         $logs = $logsQuery->get();
 
@@ -756,6 +775,9 @@ class AdvancedSalesInsightsController extends Controller
                 'queue_skipped' => $logs->where('status', CustomerCampaignLog::STATUS_SKIPPED)->count(),
             ],
             'recent_campaigns' => CustomerCampaign::query()
+                ->when($outletId, fn ($query) => $query->where(function ($scope) use ($outletId) {
+                    $scope->whereNull('outlet_id')->orWhere('outlet_id', $outletId);
+                }))
                 ->withCount('logs')
                 ->latest('id')
                 ->limit(5)
