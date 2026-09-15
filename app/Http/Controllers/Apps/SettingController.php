@@ -58,7 +58,7 @@ class SettingController extends Controller
      */
     public function storeProfile()
     {
-        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+        $outlet = $this->outletAccessService->activeOutlet(request());
         $settings = [
             'store_name' => Setting::getForOutlet('store_name', $outlet, ''),
             'store_logo' => Setting::getForOutlet('store_logo', $outlet, ''),
@@ -82,7 +82,7 @@ class SettingController extends Controller
      */
     public function updateStoreProfile(Request $request)
     {
-        $outlet = $this->outletAccessService->defaultOutlet($request->user());
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $request->validate([
             'store_name' => 'required|string|max:255',
             'store_address' => 'required|string|max:500',
@@ -152,7 +152,7 @@ class SettingController extends Controller
 
     public function printer()
     {
-        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+        $outlet = $this->outletAccessService->activeOutlet(request());
 
         return Inertia::render('Dashboard/Settings/Printer', [
             'settings' => [
@@ -164,7 +164,7 @@ class SettingController extends Controller
 
     public function updatePrinter(Request $request)
     {
-        $outlet = $this->outletAccessService->defaultOutlet($request->user());
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $validated = $request->validate([
             'printer_auto_print' => ['boolean'],
             'printer_paper_size' => ['required', 'in:80mm,58mm'],

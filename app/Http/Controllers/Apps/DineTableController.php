@@ -18,7 +18,7 @@ class DineTableController extends Controller
 
     public function index(Request $request)
     {
-        $outlet = $this->outletAccess->defaultOutlet($request->user());
+        $outlet = $this->outletAccess->activeOutlet($request);
         $query = DiningTable::with('area')->whereHas('area', function ($query) use ($outlet) {
             $query->whereNull('outlet_id');
             if ($outlet) {
@@ -114,7 +114,7 @@ class DineTableController extends Controller
 
     private function ownsTable(DiningTable $table, Request $request): bool
     {
-        $outlet = $this->outletAccess->defaultOutlet($request->user());
+        $outlet = $this->outletAccess->activeOutlet($request);
         $area = $table->area;
 
         return $area?->outlet_id === null || ($outlet && (int) $area->outlet_id === (int) $outlet->id);
@@ -132,7 +132,7 @@ class DineTableController extends Controller
 
     private function ownsArea(DineArea $area, Request $request): bool
     {
-        $outlet = $this->outletAccess->defaultOutlet($request->user());
+        $outlet = $this->outletAccess->activeOutlet($request);
 
         return $area->outlet_id === null || ($outlet && (int) $area->outlet_id === (int) $outlet->id);
     }

@@ -38,7 +38,7 @@ class PricingRuleController extends Controller
             'kind' => $request->input('kind'),
         ];
 
-        $outlet = $this->outletAccess->defaultOutlet($request->user());
+        $outlet = $this->outletAccess->activeOutlet($request);
         $rules = PricingRule::query()
             ->where(function ($query) use ($outlet) {
                 $query->whereNull('outlet_id');
@@ -129,7 +129,7 @@ class PricingRuleController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateRule($request);
-        $validated['rule']['outlet_id'] = $this->outletAccess->defaultOutlet($request->user())?->id;
+        $validated['rule']['outlet_id'] = $this->outletAccess->activeOutlet($request)?->id;
 
         $rule = PricingRule::create([
             ...$validated['rule'],
@@ -209,7 +209,7 @@ class PricingRuleController extends Controller
 
     private function canUseRule(PricingRule $rule): bool
     {
-        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+        $outlet = $this->outletAccess->activeOutlet(request());
 
         return $rule->outlet_id === null || ($outlet && (int) $rule->outlet_id === (int) $outlet->id);
     }

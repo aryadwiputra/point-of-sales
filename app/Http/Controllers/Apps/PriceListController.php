@@ -16,7 +16,7 @@ class PriceListController extends Controller
 
     public function index()
     {
-        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+        $outlet = $this->outletAccess->activeOutlet(request());
         $priceLists = PriceList::withCount('items')
             ->whereNull('outlet_id')->when($outlet, fn ($query) => $query->orWhere('outlet_id', $outlet->id))
             ->orderBy('priority')->get();
@@ -51,7 +51,7 @@ class PriceListController extends Controller
         ]);
 
         $validated['is_active'] = true;
-        $validated['outlet_id'] = $this->outletAccess->defaultOutlet($request->user())?->id;
+        $validated['outlet_id'] = $this->outletAccess->activeOutlet($request)?->id;
 
         PriceList::create($validated);
 
@@ -110,7 +110,7 @@ class PriceListController extends Controller
 
     private function canUseList(PriceList $priceList): bool
     {
-        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+        $outlet = $this->outletAccess->activeOutlet(request());
 
         return $priceList->outlet_id === null || ($outlet && (int) $priceList->outlet_id === (int) $outlet->id);
     }

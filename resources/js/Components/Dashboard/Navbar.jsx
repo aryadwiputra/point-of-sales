@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react";
 import AuthDropdown from "@/Components/Dashboard/AuthDropdown";
 import LanguageSwitcher from "@/Components/Dashboard/LanguageSwitcher";
+import OutletSwitcher from "@/Components/Dashboard/OutletSwitcher";
 import Menu from "@/Utils/Menu";
 import Notification from "@/Components/Dashboard/Notification";
 import { useTour } from "@/Hooks/useTour";
@@ -88,6 +89,7 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
+                <OutletSwitcher outlet={auth?.currentOutlet} outlets={auth?.outlets} locked={auth?.outletLocked} />
                 {/* Tour Guide */}
                 <button
                     onClick={startTour}

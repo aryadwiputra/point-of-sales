@@ -44,6 +44,8 @@ class HandleInertiaRequests extends Middleware
         $pendingApprovalCount = 0;
         $pendingDineOrdersCount = 0;
         $activeShift = null;
+        $activeOutlet = null;
+        $availableOutlets = collect();
 
         if ($request->user()) {
             $userId = $request->user()->id;
@@ -164,6 +166,10 @@ class HandleInertiaRequests extends Middleware
                 ->latest('opened_at')
                 ->first();
 
+            $outletAccess = app(OutletAccessService::class);
+            $activeOutlet = $outletAccess->activeOutlet($request);
+            $availableOutlets = $outletAccess->accessibleOutlets($request->user());
+
             if ($activeShift) {
                 $activeCashierShift = app(CashierShiftService::class)->summarizeForDisplay($activeShift);
             }
@@ -226,6 +232,9 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
                 'super' => $request->user() ? $request->user()->isSuperAdmin() : false,
                 'completedTours' => $request->user()?->completed_tours ?? [],
+                'currentOutlet' => $activeOutlet?->only(['id', 'code', 'name']),
+                'outlets' => $availableOutlets->map(fn (Outlet $outlet) => $outlet->only(['id', 'code', 'name']))->values(),
+                'outletLocked' => (bool) $activeShift,
             ],
             'locale' => [
                 'current' => app()->getLocale(),

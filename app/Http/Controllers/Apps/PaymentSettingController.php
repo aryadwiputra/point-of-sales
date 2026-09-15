@@ -226,7 +226,7 @@ class PaymentSettingController extends Controller
 
     private function setting(): PaymentSetting
     {
-        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+        $outlet = $this->outletAccessService->activeOutlet(request());
 
         return PaymentSetting::forOutletOrCreate($outlet);
     }

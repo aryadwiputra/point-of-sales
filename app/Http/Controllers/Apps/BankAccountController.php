@@ -22,7 +22,7 @@ class BankAccountController extends Controller
      */
     public function index()
     {
-        $outlet = $this->outletAccessService->defaultOutlet(request()->user());
+        $outlet = $this->outletAccessService->activeOutlet(request());
         $bankAccounts = BankAccount::forOutlet($outlet)->ordered()->get();
 
         return Inertia::render('Dashboard/Settings/BankAccounts', [
@@ -37,7 +37,7 @@ class BankAccountController extends Controller
     {
         return Inertia::render('Dashboard/Settings/BankAccountForm', [
             'bankAccount' => null,
-            'outlet' => $this->outletAccessService->defaultOutlet(request()->user()),
+            'outlet' => $this->outletAccessService->activeOutlet(request()),
         ]);
     }
 
@@ -75,7 +75,7 @@ class BankAccountController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active');
-        $outlet = $this->outletAccessService->defaultOutlet($request->user());
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $validated['outlet_id'] = $outlet?->id;
         $validated['sort_order'] = BankAccount::forOutlet($outlet)->max('sort_order') + 1;
 
@@ -207,7 +207,7 @@ class BankAccountController extends Controller
      */
     public function updateOrder(Request $request)
     {
-        $outlet = $this->outletAccessService->defaultOutlet($request->user());
+        $outlet = $this->outletAccessService->activeOutlet($request);
         $validated = $request->validate([
             'order' => 'required|array',
             'order.*' => 'integer|exists:bank_accounts,id',
@@ -261,7 +261,7 @@ class BankAccountController extends Controller
     private function ensureVisible(BankAccount $bankAccount): void
     {
         abort_unless(
-            BankAccount::forOutlet($this->outletAccessService->defaultOutlet(request()->user()))
+            BankAccount::forOutlet($this->outletAccessService->activeOutlet(request()))
                 ->whereKey($bankAccount->id)
                 ->exists(),
             404

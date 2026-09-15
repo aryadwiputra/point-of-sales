@@ -14,7 +14,7 @@ class DineAreaController extends Controller
 
     public function index()
     {
-        $outlet = $this->outletAccess->defaultOutlet(request()->user());
+        $outlet = $this->outletAccess->activeOutlet(request());
         $areas = DineArea::with('tables')
             ->where(function ($query) use ($outlet) {
                 $query->whereNull('outlet_id');
@@ -37,7 +37,7 @@ class DineAreaController extends Controller
             'is_active' => ['boolean'],
         ]);
 
-        $validated['outlet_id'] = $this->outletAccess->defaultOutlet($request->user())?->id;
+        $validated['outlet_id'] = $this->outletAccess->activeOutlet($request)?->id;
         DineArea::create($validated);
 
         return back()->with('success', 'Area berhasil ditambahkan.');
@@ -71,7 +71,7 @@ class DineAreaController extends Controller
 
     private function ownsArea(DineArea $area, Request $request): bool
     {
-        $outlet = $this->outletAccess->defaultOutlet($request->user());
+        $outlet = $this->outletAccess->activeOutlet($request);
 
         return $area->outlet_id === null || ($outlet && (int) $area->outlet_id === (int) $outlet->id);
     }

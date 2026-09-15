@@ -39,6 +39,7 @@ use App\Http\Controllers\DineOrderController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OutletContextController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPortalController;
@@ -97,6 +98,7 @@ Route::post('/portal/receivables/{receivable}/pay', [PublicPortalController::cla
 Route::post('/language/switch', [LanguageController::class, 'switch'])->name('language.switch');
 
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'verified']], function () {
+    Route::post('/outlet', [OutletContextController::class, 'switch'])->name('outlet.switch');
     Route::post('/tours/{tour}/complete', [TourController::class, 'complete'])->name('tours.complete');
     Route::post('/tours/reset', [TourController::class, 'reset'])->name('tours.reset');
     Route::get('/', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'permission:dashboard-access'])->name('dashboard');
