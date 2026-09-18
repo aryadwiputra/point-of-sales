@@ -3,6 +3,37 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [v3.0.0] - 2026-09-18
+
+### Breaking
+
+- Outlet context is now a first-class security and operational boundary. Existing installs must run `php artisan outlet:audit --strict` after upgrade; multi-outlet data isolation is enforced and arbitrary warehouse/outlet IDs are rejected where they were previously global.
+- `warehouses.outlet_id` is required for new operational records. Records with `outlet_id IS NULL` are treated as legacy and remain readable only while a single active outlet exists.
+- The cashier shift now requires a sales-enabled warehouse; `PUSAT` can no longer open a sales shift.
+
+### Added
+
+- Multi-outlet architecture: `outlets`, `user_outlets` assignments, `OutletAccessService` (`canUseWarehouse`, `canSellAtWarehouse`, `salesWarehousesFor`, `warehousesFor`, `defaultOutlet`, `accessibleOutlets`, `activeOutlet`), outlet switcher in the navbar, session-based active outlet with shift locking.
+- Per-outlet settings with global fallback: store profile, printer/auto-print, payment settings, bank accounts, WhatsApp, sales target, pricing rules, price lists, dine-in areas/tables, customer vouchers, customer campaigns.
+- Operational scoping for transactions, carts, returns, stock mutations, stock opname, stock transfers, purchase orders, goods receiving, supplier returns, API POS endpoints, and DineOrder table-vs-shift outlet validation.
+- Reporting and dashboard scoped by accessible warehouses with single-outlet legacy fallback.
+- Outlet lifecycle controls: create outlets, edit basic fields, deactivate, delete blocked when operational history exists; setup wizard creates the central `PUSAT` plus user-defined branch outlets.
+- `php artisan outlet:audit` (read-only) and `--strict` (release gate) plus `php artisan outlet:legacy-audit` for warehouse-less record classification.
+- Setup wizard now asks for branch outlets (code/name/warehouse code/name/optional address/phone) on a dedicated step.
+- Demo seeding split: `php artisan migrate --seed` is production-safe and only provisions `PUSAT`; `php artisan db:seed --class=DemoSeeder --force` (or `seed:demo --force`) loads the canonical multi-outlet demo dataset.
+
+### Changed
+
+- `PUSAT` is central-only and not sales-enabled; cashier shifts and POS use sales-enabled branch warehouses.
+- Per-receivable/per-payable access is derived from the source transaction/purchase-order warehouse/outlet; the ledger remains global.
+- `docs/multi-outlet.md` documents the model and day-to-day operations; the rollout runbook is the second half of the same page.
+- Demo data shifted to four outlets (`PUSAT`, `MAL`, `TKB`, `PUT`) with sales shifts/transactions only on branch warehouses.
+
+### Notes
+
+- Production rollout of an existing single-outlet install must follow `docs/multi-outlet.md` (Rollout section) including `php artisan outlet:audit --strict` before activating the second sales outlet.
+- No new migrations are required for fresh installs beyond the outlet series shipped over recent releases; existing installs must run `php artisan migrate` before upgrading.
+
 ## [v2.11.0] - 2026-09-13
 
 ### Added
