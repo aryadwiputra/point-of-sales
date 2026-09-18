@@ -98,6 +98,7 @@
             "store": "Profil Toko",
             "businessType": "Jenis Usaha",
             "categories": "Kategori Produk",
+            "branches": "Cabang",
             "account": "Akun Admin & Gudang"
         },
         "store": {
@@ -158,6 +159,22 @@
             "placeholder": "Tambah kategori lain...",
             "add": "Tambah"
         },
+        "branches": {
+            "hint": "Tambahkan cabang toko — setiap cabang punya gudang sendiri dan bisa buka shift kasir",
+            "label": "Cabang #{{index}}",
+            "add": "Tambah Cabang",
+            "remove": "Hapus cabang",
+            "outletCode": "Kode Outlet",
+            "outletCodePlaceholder": "Contoh: MAL",
+            "outletName": "Nama Outlet",
+            "outletNamePlaceholder": "Contoh: Cafe Malabar",
+            "warehouseCode": "Kode Gudang Cabang",
+            "warehouseCodePlaceholder": "Contoh: WH-MAL",
+            "warehouseName": "Nama Gudang Cabang",
+            "warehouseNamePlaceholder": "Contoh: Gudang Malabar",
+            "address": "Alamat (opsional)",
+            "phone": "Telepon (opsional)"
+        },
         "account": {
             "name": "Nama Lengkap",
             "adminHint": "Akun ini menjadi Super Admin — digunakan untuk masuk pertama kali",
@@ -171,7 +188,8 @@
         "next": "Lanjut",
         "finish": "Selesaikan Setup",
         "completed": "Setup selesai! Silakan masuk dengan akun yang Anda buat.",
-        "required": "Bagian ini wajib diisi"
+        "required": "Bagian ini wajib diisi",
+        "duplicateCode": "Kode sudah digunakan"
     },
     "auth": {
         "login": {

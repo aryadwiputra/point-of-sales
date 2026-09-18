@@ -6,15 +6,23 @@ import {
     IconBuildingStore,
     IconTags,
     IconUserShield,
+    IconBuilding,
     IconLoader2,
     IconPlus,
     IconX,
     IconCheck,
     IconArrowLeft,
     IconArrowRight,
+    IconTrash,
 } from "@tabler/icons-react";
 
-const STEPS = ["store", "businessType", "categories", "account"];
+const STEPS = [
+    "store",
+    "businessType",
+    "categories",
+    "branches",
+    "account",
+];
 
 export default function Wizard({ businessTypes, primaryWarehouse }) {
     const { t, i18n } = useTranslation();
@@ -50,6 +58,16 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
             store_email: "",
             business_type: "",
             categories: [],
+            branches: [
+                {
+                    outlet_code: "",
+                    outlet_name: "",
+                    warehouse_code: "",
+                    warehouse_name: "",
+                    address: "",
+                    phone: "",
+                },
+            ],
             user_name: "",
             user_email: "",
             password: "",
@@ -58,6 +76,37 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
             warehouse_name: primaryWarehouse?.name ?? "",
         });
     const [customCategory, setCustomCategory] = useState("");
+
+    const addBranch = () => {
+        setData("branches", [
+            ...data.branches,
+            {
+                outlet_code: "",
+                outlet_name: "",
+                warehouse_code: "",
+                warehouse_name: "",
+                address: "",
+                phone: "",
+            },
+        ]);
+    };
+
+    const removeBranch = (index) => {
+        if (data.branches.length <= 1) return;
+        setData(
+            "branches",
+            data.branches.filter((_, i) => i !== index),
+        );
+        clearErrors(`branches.${index}`);
+    };
+
+    const updateBranch = (index, field, value) => {
+        const next = data.branches.map((branch, i) =>
+            i === index ? { ...branch, [field]: value } : branch,
+        );
+        setData("branches", next);
+        clearErrors(`branches.${index}.${field}`);
+    };
 
     const categoryValue = (category) =>
         `__setup:${data.business_type}:${category}`;
@@ -89,6 +138,46 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
         }
         if (step === 2 && data.categories.length === 0) {
             nextErrors.categories = t("setup.required");
+        }
+        if (step === 3) {
+            const branchErrors = {};
+            const outletCodes = new Set();
+            const warehouseCodes = new Set();
+            data.branches.forEach((branch, i) => {
+                if (!branch.outlet_code.trim()) {
+                    branchErrors[`branches.${i}.outlet_code`] = t(
+                        "setup.required",
+                    );
+                } else if (outletCodes.has(branch.outlet_code.trim())) {
+                    branchErrors[`branches.${i}.outlet_code`] = t(
+                        "setup.duplicateCode",
+                    );
+                } else {
+                    outletCodes.add(branch.outlet_code.trim());
+                }
+                if (!branch.outlet_name.trim()) {
+                    branchErrors[`branches.${i}.outlet_name`] = t(
+                        "setup.required",
+                    );
+                }
+                if (!branch.warehouse_code.trim()) {
+                    branchErrors[`branches.${i}.warehouse_code`] = t(
+                        "setup.required",
+                    );
+                } else if (warehouseCodes.has(branch.warehouse_code.trim())) {
+                    branchErrors[`branches.${i}.warehouse_code`] = t(
+                        "setup.duplicateCode",
+                    );
+                } else {
+                    warehouseCodes.add(branch.warehouse_code.trim());
+                }
+                if (!branch.warehouse_name.trim()) {
+                    branchErrors[`branches.${i}.warehouse_name`] = t(
+                        "setup.required",
+                    );
+                }
+            });
+            Object.assign(nextErrors, branchErrors);
         }
         if (Object.keys(nextErrors).length) {
             setError(nextErrors);
@@ -129,6 +218,7 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
         IconBuildingStore,
         IconBuildingStore,
         IconTags,
+        IconBuilding,
         IconUserShield,
     ];
 
@@ -453,8 +543,239 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
                                 </>
                             )}
 
-                            {/* Step 4: Admin + warehouse */}
+                            {/* Step 4: Branches */}
                             {step === 3 && (
+                                <>
+                                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                                        {t("setup.branches.hint")}
+                                    </p>
+                                    <div className="space-y-4">
+                                        {data.branches.map((branch, index) => (
+                                            <div
+                                                key={index}
+                                                className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                        {t(
+                                                            "setup.branches.label",
+                                                            { index: index + 1 },
+                                                        )}
+                                                    </span>
+                                                    {data.branches.length >
+                                                        1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                removeBranch(
+                                                                    index,
+                                                                )
+                                                            }
+                                                            className="text-slate-400 hover:text-danger-500"
+                                                            aria-label={t(
+                                                                "setup.branches.remove",
+                                                            )}
+                                                        >
+                                                            <IconTrash
+                                                                size={16}
+                                                            />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="grid sm:grid-cols-2 gap-3">
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.outletCode",
+                                                        )}
+                                                        error={
+                                                            errors[
+                                                                `branches.${index}.outlet_code`
+                                                            ]
+                                                        }
+                                                        required
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.outlet_code
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "outlet_code",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder={t(
+                                                                "setup.branches.outletCodePlaceholder",
+                                                            )}
+                                                            className={inputCls(
+                                                                errors[
+                                                                    `branches.${index}.outlet_code`
+                                                                ],
+                                                            )}
+                                                        />
+                                                    </Field>
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.outletName",
+                                                        )}
+                                                        error={
+                                                            errors[
+                                                                `branches.${index}.outlet_name`
+                                                            ]
+                                                        }
+                                                        required
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.outlet_name
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "outlet_name",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder={t(
+                                                                "setup.branches.outletNamePlaceholder",
+                                                            )}
+                                                            className={inputCls(
+                                                                errors[
+                                                                    `branches.${index}.outlet_name`
+                                                                ],
+                                                            )}
+                                                        />
+                                                    </Field>
+                                                </div>
+                                                <div className="grid sm:grid-cols-2 gap-3">
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.warehouseCode",
+                                                        )}
+                                                        error={
+                                                            errors[
+                                                                `branches.${index}.warehouse_code`
+                                                            ]
+                                                        }
+                                                        required
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.warehouse_code
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "warehouse_code",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder={t(
+                                                                "setup.branches.warehouseCodePlaceholder",
+                                                            )}
+                                                            className={inputCls(
+                                                                errors[
+                                                                    `branches.${index}.warehouse_code`
+                                                                ],
+                                                            )}
+                                                        />
+                                                    </Field>
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.warehouseName",
+                                                        )}
+                                                        error={
+                                                            errors[
+                                                                `branches.${index}.warehouse_name`
+                                                            ]
+                                                        }
+                                                        required
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.warehouse_name
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "warehouse_name",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            placeholder={t(
+                                                                "setup.branches.warehouseNamePlaceholder",
+                                                            )}
+                                                            className={inputCls(
+                                                                errors[
+                                                                    `branches.${index}.warehouse_name`
+                                                                ],
+                                                            )}
+                                                        />
+                                                    </Field>
+                                                </div>
+                                                <div className="grid sm:grid-cols-2 gap-3">
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.address",
+                                                        )}
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.address
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "address",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            className={inputCls()}
+                                                        />
+                                                    </Field>
+                                                    <Field
+                                                        label={t(
+                                                            "setup.branches.phone",
+                                                        )}
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            value={
+                                                                branch.phone
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateBranch(
+                                                                    index,
+                                                                    "phone",
+                                                                    e.target.value,
+                                                                )
+                                                            }
+                                                            className={inputCls()}
+                                                        />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={addBranch}
+                                        className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:border-primary-400"
+                                    >
+                                        <IconPlus size={16} />
+                                        {t("setup.branches.add")}
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Step 5: Admin + warehouse */}
+                            {step === 4 && (
                                 <>
                                     <div className="p-3 rounded-xl bg-primary-50 dark:bg-primary-950/40 text-sm text-primary-700 dark:text-primary-300">
                                         {t("setup.account.adminHint")}

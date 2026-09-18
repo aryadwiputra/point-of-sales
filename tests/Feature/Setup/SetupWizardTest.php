@@ -23,12 +23,16 @@ class SetupWizardTest extends TestCase
         $this->seed([PermissionSeeder::class, RoleSeeder::class]);
     }
 
-    private function validPayload(): array
+    private function validPayload(array $branchOverrides = []): array
     {
+        $branch = ['outlet_code' => 'MAL', 'outlet_name' => 'Cabang Malabar', 'warehouse_code' => 'WH-MAL', 'warehouse_name' => 'Gudang Malabar'];
+        $branch = array_merge($branch, $branchOverrides);
+
         return [
             'store_name' => 'Toko Berkah',
             'business_type' => 'food',
             'categories' => ['Makanan', 'Minuman'],
+            'branches' => [$branch],
             'user_name' => 'Owner',
             'user_email' => 'owner@example.com',
             'password' => 'password123',
@@ -95,6 +99,69 @@ class SetupWizardTest extends TestCase
         $this->assertSame('Toko Berkah', Setting::get('store_name'));
         $this->assertSame('food', Setting::get('store_business_type'));
         $this->assertTrue(Setting::getBool('app_setup_completed'));
+    }
+
+    public function test_setup_creates_branch_outlet_and_warehouse(): void
+    {
+        $this->post(route('setup.store'), $this->validPayload())->assertRedirect(route('login'));
+
+        $branchOutlet = Outlet::where('code', 'MAL')->firstOrFail();
+        $this->assertTrue($branchOutlet->is_sales_enabled);
+        $this->assertTrue($branchOutlet->is_active);
+
+        $branchWarehouse = Warehouse::where('code', 'WH-MAL')->firstOrFail();
+        $this->assertSame('branch', $branchWarehouse->type);
+        $this->assertSame($branchOutlet->id, $branchWarehouse->outlet_id);
+        $this->assertTrue($branchWarehouse->is_active);
+
+        $admin = User::where('email', 'owner@example.com')->firstOrFail();
+        $this->assertTrue(
+            $admin->outlets()->whereKey($branchOutlet->id)->exists(),
+            'admin should be assigned to the new branch outlet',
+        );
+    }
+
+    public function test_setup_creates_multiple_branches(): void
+    {
+        $payload = $this->validPayload();
+        $payload['branches'] = [
+            ['outlet_code' => 'MAL', 'outlet_name' => 'Malabar', 'warehouse_code' => 'WH-MAL', 'warehouse_name' => 'Gudang Malabar'],
+            ['outlet_code' => 'TKB', 'outlet_name' => 'Taman Kencana', 'warehouse_code' => 'WH-TKB', 'warehouse_name' => 'Gudang TKB'],
+            ['outlet_code' => 'PUT', 'outlet_name' => 'Puter', 'warehouse_code' => 'WH-PUT', 'warehouse_name' => 'Gudang Puter'],
+        ];
+
+        $this->post(route('setup.store'), $payload)->assertRedirect(route('login'));
+
+        $this->assertSame(4, Outlet::count());
+        $this->assertSame(4, Warehouse::count());
+        $this->assertSame(
+            [1, 2, 3],
+            Warehouse::whereIn('code', ['WH-MAL', 'WH-TKB', 'WH-PUT'])
+                ->orderBy('sort_order')
+                ->pluck('sort_order')
+                ->all(),
+        );
+    }
+
+    public function test_setup_requires_at_least_one_branch(): void
+    {
+        $payload = $this->validPayload();
+        $payload['branches'] = [];
+
+        $this->post(route('setup.store'), $payload)
+            ->assertSessionHasErrors(['branches']);
+    }
+
+    public function test_setup_rejects_duplicate_branch_outlet_code(): void
+    {
+        $payload = $this->validPayload();
+        $payload['branches'] = [
+            ['outlet_code' => 'MAL', 'outlet_name' => 'Malabar', 'warehouse_code' => 'WH-MAL', 'warehouse_name' => 'Gudang Malabar'],
+            ['outlet_code' => 'MAL', 'outlet_name' => 'Malabar 2', 'warehouse_code' => 'WH-MAL2', 'warehouse_name' => 'Gudang Malabar 2'],
+        ];
+
+        $this->post(route('setup.store'), $payload)
+            ->assertSessionHasErrors(['branches.1.outlet_code']);
     }
 
     public function test_setup_requires_unique_email_and_warehouse_code(): void

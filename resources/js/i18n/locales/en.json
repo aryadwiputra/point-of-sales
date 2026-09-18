@@ -98,6 +98,7 @@
             "store": "Store Profile",
             "businessType": "Business Type",
             "categories": "Product Categories",
+            "branches": "Branches",
             "account": "Admin Account & Warehouse"
         },
         "store": {
@@ -158,6 +159,22 @@
             "placeholder": "Add another category...",
             "add": "Add"
         },
+        "branches": {
+            "hint": "Add your store branches — each branch gets its own warehouse and can open cashier shifts",
+            "label": "Branch #{{index}}",
+            "add": "Add Branch",
+            "remove": "Remove branch",
+            "outletCode": "Outlet Code",
+            "outletCodePlaceholder": "e.g. MAL",
+            "outletName": "Outlet Name",
+            "outletNamePlaceholder": "e.g. Malabar Cafe",
+            "warehouseCode": "Branch Warehouse Code",
+            "warehouseCodePlaceholder": "e.g. WH-MAL",
+            "warehouseName": "Branch Warehouse Name",
+            "warehouseNamePlaceholder": "e.g. Malabar Warehouse",
+            "address": "Address (optional)",
+            "phone": "Phone (optional)"
+        },
         "account": {
             "name": "Full Name",
             "adminHint": "This account becomes the Super Admin — used for your first sign in",
@@ -171,7 +188,8 @@
         "next": "Next",
         "finish": "Finish Setup",
         "completed": "Setup complete! Sign in with the account you created.",
-        "required": "This section is required"
+        "required": "This section is required",
+        "duplicateCode": "Code already used"
     },
     "auth": {
         "login": {

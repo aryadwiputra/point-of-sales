@@ -79,6 +79,25 @@ class SetupController extends Controller
                 },
             ],
             'warehouse_name' => 'required|string|max:255',
+            'branches' => 'required|array|min:1|max:10',
+            'branches.*.outlet_code' => [
+                'required',
+                'string',
+                'max:20',
+                'distinct',
+                'unique:outlets,code',
+            ],
+            'branches.*.outlet_name' => 'required|string|max:100',
+            'branches.*.warehouse_code' => [
+                'required',
+                'string',
+                'max:20',
+                'distinct',
+                'unique:warehouses,code',
+            ],
+            'branches.*.warehouse_name' => 'required|string|max:100',
+            'branches.*.address' => 'nullable|string|max:500',
+            'branches.*.phone' => 'nullable|string|max:50',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -89,7 +108,7 @@ class SetupController extends Controller
             ]);
             $user->assignRole('super-admin');
 
-            $outlet = Outlet::firstOrCreate(
+            $pusat = Outlet::firstOrCreate(
                 ['code' => 'PUSAT'],
                 [
                     'name' => 'Gudang Pusat',
@@ -97,20 +116,20 @@ class SetupController extends Controller
                     'is_sales_enabled' => false,
                 ],
             );
-            $outlet->update(['is_active' => true, 'is_sales_enabled' => false]);
+            $pusat->update(['is_active' => true, 'is_sales_enabled' => false]);
 
             if (! empty($validated['warehouse_id'])) {
                 Warehouse::where('id', $validated['warehouse_id'])->update([
                     'code' => $validated['warehouse_code'],
                     'name' => $validated['warehouse_name'],
-                    'outlet_id' => $outlet->id,
+                    'outlet_id' => $pusat->id,
                     'type' => 'main',
                     'is_active' => true,
                 ]);
                 Setting::set('setup_warehouse_id', $validated['warehouse_id']);
             } else {
                 $warehouse = Warehouse::create([
-                    'outlet_id' => $outlet->id,
+                    'outlet_id' => $pusat->id,
                     'code' => $validated['warehouse_code'],
                     'name' => $validated['warehouse_name'],
                     'type' => 'main',
@@ -121,8 +140,32 @@ class SetupController extends Controller
             }
 
             $user->outlets()->syncWithoutDetaching([
-                $outlet->id => ['is_default' => true],
+                $pusat->id => ['is_default' => true],
             ]);
+
+            foreach ($validated['branches'] as $i => $branch) {
+                $branchOutlet = Outlet::create([
+                    'code' => strtoupper($branch['outlet_code']),
+                    'name' => $branch['outlet_name'],
+                    'is_active' => true,
+                    'is_sales_enabled' => true,
+                    'address' => $branch['address'] ?? null,
+                    'phone' => $branch['phone'] ?? null,
+                ]);
+
+                Warehouse::create([
+                    'outlet_id' => $branchOutlet->id,
+                    'code' => strtoupper($branch['warehouse_code']),
+                    'name' => $branch['warehouse_name'],
+                    'type' => 'branch',
+                    'is_active' => true,
+                    'sort_order' => $i + 1,
+                ]);
+
+                $user->outlets()->syncWithoutDetaching([
+                    $branchOutlet->id => ['is_default' => false],
+                ]);
+            }
 
             foreach (array_unique($validated['categories']) as $name) {
                 Category::create(['name' => $name]);
