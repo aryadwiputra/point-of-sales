@@ -14,12 +14,11 @@ use App\Models\CustomerVoucher;
 use App\Models\DiscountApprovalLog;
 use App\Models\PaymentSetting;
 use App\Models\Product;
-use App\Models\ProductWarehouse;
-use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
 use App\Models\Warehouse;
 use App\Services\CashierShiftService;
+use App\Services\CheckoutService;
 use App\Services\LoyaltyService;
 use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
@@ -27,11 +26,12 @@ use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
+use App\Support\Checkout\CheckoutContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class PosApiController extends Controller
 {
@@ -45,6 +45,7 @@ class PosApiController extends Controller
         private readonly PriceListService $priceListService,
         private readonly TransactionTenderService $tenderService,
         private readonly OutletAccessService $outletAccessService,
+        private readonly CheckoutService $checkoutService,
     ) {}
 
     /**
@@ -573,197 +574,42 @@ class PosApiController extends Controller
             }
         }
 
-        $invoice = 'TRX-'.Str::upper(Str::random(10));
         $isCashPayment = ! $paymentGateway && ! $isPayLater && ! $useTenders;
         $cashAmount = $isCashPayment ? max(0, (int) $validated['cash'] ?? 0) : 0;
         $customer = isset($validated['customer_id']) ? Customer::find($validated['customer_id']) : null;
         $voucher = isset($validated['customer_voucher_id']) ? CustomerVoucher::find($validated['customer_voucher_id']) : null;
         $manualDiscount = max(0, (int) ($validated['discount'] ?? 0));
-        $shippingCost = max(0, (int) ($validated['shipping_cost'] ?? 0));
-        $requestedRedeemPoints = max(0, (int) ($validated['redeem_points'] ?? 0));
+
+        $context = new CheckoutContext(
+            userId: $request->user()->id,
+            customer: $customer,
+            voucher: $voucher,
+            manualDiscount: $manualDiscount,
+            shippingCost: max(0, (int) ($validated['shipping_cost'] ?? 0)),
+            requestedRedeemPoints: max(0, (int) ($validated['redeem_points'] ?? 0)),
+            isPayLater: $isPayLater,
+            dueDate: $validated['due_date'] ?? null,
+            orderType: $validated['order_type'] ?? null,
+            note: isset($validated['note']) ? trim($validated['note']) ?: null : null,
+            customerNpwp: $validated['customer_npwp'] ?? null,
+            isCashPayment: $isCashPayment,
+            cashAmount: $cashAmount,
+            paymentGateway: $paymentGateway,
+            useTenders: $useTenders,
+            tenderInput: $tenderInput,
+            outlet: $outlet,
+            bankAccountId: $validated['bank_account_id'] ?? null,
+        );
 
         try {
-            $transaction = DB::transaction(function () use (
-                $request, $invoice, $cashAmount, $paymentGateway, $isCashPayment, $isPayLater,
-                $manualDiscount, $shippingCost, $requestedRedeemPoints, $customer, $voucher, $validated,
-                $useTenders, $tenderInput, $outlet
-            ) {
-                $activeShift = $this->cashierShiftService->requireActiveShiftForUser(
-                    $request->user()->id,
-                    lockForUpdate: true
-                );
-
-                $carts = Cart::with('product')
-                    ->where('cashier_id', $request->user()->id)
-                    ->active()
-                    ->get();
-
-                if ($carts->isEmpty()) {
-                    throw new \RuntimeException('Keranjang kosong.');
-                }
-
-                $pricingPreview = $this->pricingService->previewCart($carts, $customer, null, $outlet);
-                $checkoutPreview = $this->loyaltyService->previewCheckout($pricingPreview, $customer, [
-                    'manual_discount' => $manualDiscount,
-                    'shipping_cost' => $shippingCost,
-                    'redeem_points' => $requestedRedeemPoints,
-                    'voucher' => $voucher,
-                ], null, $outlet);
-                $pricingItems = collect($pricingPreview['items']);
-                $subtotalAfterPromo = (int) data_get($pricingPreview, 'summary.subtotal_after_promo', 0);
-                $voucherDiscount = (int) data_get($checkoutPreview, 'summary.voucher_discount_total', 0);
-                $loyaltyDiscount = (int) data_get($checkoutPreview, 'summary.loyalty_discount_total', 0);
-                $appliedManualDiscount = (int) data_get($checkoutPreview, 'summary.manual_discount_total', 0);
-                $grandTotal = (int) data_get($checkoutPreview, 'summary.grand_total', 0);
-                $changeAmount = $isCashPayment ? max(0, $cashAmount - $grandTotal) : 0;
-
-                if ($isCashPayment && $cashAmount < $grandTotal) {
-                    throw ValidationException::withMessages([
-                        'cash' => 'Uang tunai kurang dari total belanja.',
-                    ]);
-                }
-
-                // ponytail: legacy single-method path kept — split tenders only activate when payload has tenders[]
-                $tenders = $useTenders ? $this->tenderService->normalize($tenderInput, $grandTotal, allowEmpty: false, outlet: $outlet) : [];
-                $tenderCash = collect($tenders)->where('method', TransactionTender::METHOD_CASH)->sum('cash_received');
-                $tenderChange = collect($tenders)->sum('change');
-                $tenderBankAccountId = collect($tenders)->firstWhere('bank_account_id', '!==', null)['bank_account_id'] ?? null;
-
-                $transaction = Transaction::create([
-                    'cashier_id' => $request->user()->id,
-                    'cashier_shift_id' => $activeShift->id,
-                    'warehouse_id' => $activeShift->warehouse_id,
-                    'customer_id' => $validated['customer_id'] ?? null,
-                    'invoice' => $invoice,
-                    'cash' => $useTenders ? $tenderCash : $cashAmount,
-                    'change' => $useTenders ? $tenderChange : $changeAmount,
-                    'discount' => $appliedManualDiscount,
-                    'loyalty_points_redeemed' => (int) data_get($checkoutPreview, 'summary.applied_redeem_points', 0),
-                    'loyalty_discount_total' => $loyaltyDiscount,
-                    'customer_voucher_discount' => $voucherDiscount,
-                    'customer_voucher_code' => data_get($checkoutPreview, 'voucher.code'),
-                    'customer_voucher_name' => data_get($checkoutPreview, 'voucher.name'),
-                    'shipping_cost' => $shippingCost,
-                    'grand_total' => $grandTotal,
-                    'payment_method' => $useTenders
-                        ? (count($tenders) > 1 ? 'split' : $tenders[0]['method'])
-                        : ($isPayLater ? 'pay_later' : ($paymentGateway ?: 'cash')),
-                    'payment_status' => $useTenders
-                        ? $this->tenderService->aggregateStatus($tenders)
-                        : ($isCashPayment ? 'paid' : ($isPayLater ? 'unpaid' : 'pending')),
-                    'bank_account_id' => $useTenders
-                        ? $tenderBankAccountId
-                        : ($paymentGateway === 'bank_transfer' ? ($validated['bank_account_id'] ?? null) : null),
-                    'order_type' => $validated['order_type'] ?? null,
-                    'note' => isset($validated['note']) ? trim($validated['note']) ?: null : null,
-                    'tax_rate' => data_get($checkoutPreview, 'summary.tax_rate'),
-                    'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
-                    'customer_npwp' => $validated['customer_npwp'] ?? null,
-                    'price_list_id' => $this->priceListService->getApplicablePriceList($customer, $outlet)?->id,
-                ]);
-
-                if ($useTenders) {
-                    $transaction->tenders()->createMany($tenders);
-                }
-
-                foreach ($carts as $cart) {
-                    $pricingItem = $pricingItems->firstWhere('cart_id', $cart->id);
-                    $lineTotal = (int) data_get($pricingItem, 'line_total', $cart->price);
-                    $linePromoDiscount = (int) data_get($pricingItem, 'line_discount_total', 0);
-                    $baseUnitPrice = (int) data_get($pricingItem, 'base_unit_price', $cart->product->sell_price);
-                    $unitPrice = (int) data_get($pricingItem, 'effective_unit_price', $cart->product->sell_price);
-
-                    $transaction->details()->create([
-                        'transaction_id' => $transaction->id,
-                        'product_id' => $cart->product_id,
-                        'unit_id' => $cart->unit_id,
-                        'conversion_factor' => $cart->conversion_factor,
-                        'qty' => $cart->qty,
-                        'base_unit_price' => $baseUnitPrice,
-                        'unit_price' => $unitPrice,
-                        'price' => $lineTotal,
-                        'discount_total' => $linePromoDiscount,
-                        'pricing_rule_id' => data_get($pricingItem, 'pricing_rule.id'),
-                        'pricing_rule_name' => data_get($pricingItem, 'pricing_rule.name'),
-                        'pricing_rule_kind' => data_get($pricingItem, 'pricing_rule.kind'),
-                        'pricing_group_key' => data_get($pricingItem, 'pricing_group_key'),
-                        'pricing_group_label' => data_get($pricingItem, 'pricing_group_label'),
-                    ]);
-
-                    $totalBuyPrice = $cart->product->buy_price * $cart->qty;
-                    $lineShare = $subtotalAfterPromo > 0 ? $lineTotal / $subtotalAfterPromo : 0;
-                    $allocatedManualDiscount = (int) round($appliedManualDiscount * $lineShare);
-                    $netSellPrice = max(0, $lineTotal - $allocatedManualDiscount);
-                    $transaction->profits()->create([
-                        'transaction_id' => $transaction->id,
-                        'total' => $netSellPrice - $totalBuyPrice,
-                    ]);
-
-                    $product = Product::find($cart->product_id);
-                    $warehouseId = $activeShift->warehouse_id;
-
-                    if ($product->is_composite) {
-                        $product->load('components');
-                        foreach ($product->components as $component) {
-                            $componentQty = (int) round((float) $component->pivot->qty * $cart->qty);
-                            $pw = $warehouseId
-                                ? ProductWarehouse::where([
-                                    'product_id' => $component->id,
-                                    'warehouse_id' => $warehouseId,
-                                ])->lockForUpdate()->first()
-                                : null;
-                            $available = $pw ? (int) $pw->stock : (int) $component->stock;
-                            if ($available < $componentQty) {
-                                throw ValidationException::withMessages(['stock' => "Stok komponen {$component->title} tidak mencukupi. Tersedia: {$available}."]);
-                            }
-                            if ($pw) {
-                                $pw->decrement('stock', $componentQty);
-                            }
-                            $component->decrement('stock', $componentQty);
-                        }
-                    } else {
-                        $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
-                        $pw = $warehouseId
-                            ? ProductWarehouse::where([
-                                'product_id' => $product->id,
-                                'warehouse_id' => $warehouseId,
-                            ])->lockForUpdate()->first()
-                            : null;
-                        $available = $pw ? (int) $pw->stock : (int) $product->stock;
-                        if ($available < $baseQty) {
-                            throw ValidationException::withMessages(['stock' => "Stok {$product->title} tidak mencukupi. Tersedia: {$available}."]);
-                        }
-                        if ($pw) {
-                            $pw->decrement('stock', $baseQty);
-                        }
-                        $product->decrement('stock', $baseQty);
-                    }
-                }
-
-                Cart::where('cashier_id', $request->user()->id)->active()->delete();
-
-                $this->loyaltyService->finalizeTransaction($transaction, $customer, $checkoutPreview);
-
-                if ($isPayLater) {
-                    Receivable::create([
-                        'customer_id' => $validated['customer_id'],
-                        'transaction_id' => $transaction->id,
-                        'invoice' => $invoice,
-                        'total' => $grandTotal,
-                        'paid' => 0,
-                        'due_date' => $validated['due_date'],
-                        'status' => 'unpaid',
-                    ]);
-                }
-
-                return $transaction->fresh(['customer', 'cashier:id,name', 'warehouse:id,code,name']);
-            });
-        } catch (\Throwable $e) {
-            if (str_contains($e->getMessage(), 'Keranjang kosong')) {
+            $result = $this->checkoutService->execute($context);
+            $transaction = $result->transaction;
+        } catch (ValidationException $e) {
+            return $this->validationError($e->errors(), $e->getMessage());
+        } catch (HttpException $e) {
+            // ponytail: legacy 422 for empty cart surfaces as a clean JSON error
+            if ($e->getMessage() === 'Keranjang kosong.') {
                 return $this->error('Keranjang kosong.', 422);
-            }
-            if ($e instanceof ValidationException) {
-                return $this->validationError($e->errors(), $e->getMessage());
             }
 
             throw $e;
