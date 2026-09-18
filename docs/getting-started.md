@@ -85,6 +85,20 @@ Cek minimal:
 3. `dashboard/settings/bank-accounts`
 4. `dashboard/settings/target`
 
+## Skenario Multi-Cabang
+
+Jika toko memiliki lebih dari satu cabang, gunakan skenario ini:
+
+1. Saat instalasi pertama (`/setup`), isi minimal satu cabang pada langkah "Cabang". Contoh untuk Cafe UD Djaya:
+   - `PUSAT` (pusat) sudah dibuat otomatis sebagai gudang pusat non-penjualan.
+   - `MAL` / Malabar (cabang penjualan)
+   - `TKB` / Taman Kencana (cabang penjualan)
+   - `PUT` / Puter (cabang penjualan)
+2. Akun Super Admin otomatis terasosiasi ke setiap outlet; kasir baru dibuat lewat `Pengguna` dengan outlet assignment dan satu default outlet.
+3. Stok awal cabang: transfer dari `PUSAT → WH-MAL/WH-TKB/WH-PUT` lewat menu **Stock Transfer** atau isi lewat **Stock Opname**.
+4. Pengaturan per-cabang (logo, struk, payment gateway, bank account, printer, WhatsApp, target) ada di halaman Settings dengan outlet switcher di navbar.
+5. Tutup shift sebelum pindah outlet — selector outlet terkunci selama shift kasir aktif.
+
 ## Tips Validasi Cepat
 
 - buka dashboard utama

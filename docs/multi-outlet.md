@@ -1,7 +1,16 @@
-# Multi-Outlet Rollout Runbook
+# Multi-Outlet
 
-This runbook is for staging and production rollout of the shared-database outlet model.
-It is intentionally read-only until the business approves each data mapping.
+The POS supports multiple branches (outlets) from a single shared database. Each outlet owns one or more warehouses; the cashier shift picks the warehouse the POS will sell from. This page documents the model and how to use it day-to-day. For staging/production rollout of an existing single-outlet install see the **Rollout** section below.
+
+## Model
+
+- `outlets` is the business boundary above `warehouses`.
+- `warehouses.outlet_id` ties every warehouse to its outlet.
+- `PUSAT` is the central warehouse/outlet for stock distribution and is **not sales-enabled**.
+- Sales outlets (branches) each have a `branch`-type warehouse and can open cashier shifts.
+- Cashier assignments are stored in `user_outlets` (one default per user).
+- Active outlet context is session-based; the active shift warehouse/outlet is the source of truth and locks outlet switching while a shift is open.
+- Global fallback remains for legacy single-outlet installations.
 
 ## Scope Policy
 
@@ -11,7 +20,22 @@ It is intentionally read-only until the business approves each data mapping.
 - A cashier uses one active shift and one outlet warehouse at a time.
 - Global configuration remains a fallback for legacy single-outlet installations.
 
-## Preflight
+## Day-to-Day Operations
+
+After the first install the active outlet is set in the navbar selector (`OutletSwitcher`). While a shift is open the selector is locked to the shift's warehouse/outlet.
+
+- **Opening a shift** — pick the branch warehouse from the cashiers' assigned active warehouses only.
+- **Switching outlets** — close all open shifts first; the selector allows switching between assigned active outlets.
+- **Stock transfers** — `PUSAT → branch` is the typical replenishment path; cross-outlet transfers require both endpoints to be assigned to the operator.
+- **Per-outlet settings** — store profile, printer, payment settings, bank accounts, pricing, vouchers, dine-in, WhatsApp, and sales target each have an outlet override and a global fallback.
+- **Reports** — sales, profit, and dashboard reflect the operator's accessible outlets. Use the warehouse filter for finer selection.
+- **Receivables and payables** — remain in a global ledger; visibility and payment authorization derive from the source transaction/purchase-order outlet.
+
+## Rollout (existing single-outlet installs)
+
+> Read-only until the business approves every data mapping. Do not run `--fix` or `--strict` until staging has been exercised end-to-end.
+
+### Preflight
 
 1. Back up the database and restore that backup into staging.
 2. Run `php artisan migrate --pretend`, then `php artisan migrate` on staging.
