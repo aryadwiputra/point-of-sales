@@ -3,6 +3,34 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [v3.0.1] - 2026-09-18
+
+### Added
+
+- CI workflow now runs `php artisan test --compact` on every push and PR, so broken tests block merges before they reach `main`.
+- `sentry/sentry-laravel` SDK installed; environment-ready for Sentry DSN. SDK stays inactive when `SENTRY_LARAVEL_DSN` is empty.
+- `tests/Feature/Transactions/CheckoutServiceTest.php` covers cash-below-total rejection, exact-cash success, split-tender creation, and empty-cart 422.
+
+### Changed
+
+- Refactored: extracted the ~250 LOC `DB::transaction` closure from `TransactionController::store()` into a dedicated `App\Services\CheckoutService`. Controller now builds a `CheckoutContext` DTO, calls the service, and handles only post-commit side effects (discount approval, gateway tenders, redirect). Reduces controller complexity and makes the checkout core directly unit-testable.
+- `docs/architecture-overview.md` updated with current counts (194 routes, 59 models, 97 migrations, 5 layouts) and middleware table including `abilities`, `setup.notinstalled`, `SetLocale`, `SecureHeaders`, `EnforceAbsoluteSessionLifetime`, and `HandleInertiaRequests`.
+- `.env.example` now includes all environment variables actually consumed by `config/*.php`: `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION`, `XENDIT_SECRET_KEY`, `XENDIT_IS_PRODUCTION`, full `INERTIA_SSR_*` block, `SECURITY_BOT_GUARD_*` group, `SECURITY_SESSION_ABSOLUTE_LIFETIME_SECONDS`, `AUTH_PASSWORD_TIMEOUT`, optional mail/log keys, and `SENTRY_LARAVEL_DSN`.
+
+### Performance
+
+- Composite index `transactions (warehouse_id, created_at)` added to support dashboard revenue-trend queries at scale.
+
+### Hygiene
+
+- Deleted local `feature/split-payment` branch (already merged into development).
+- Confirmed `bun.lock` already excluded from git tracking (per AGENTS.md).
+
+### Notes
+
+- No new migrations required; one added: `2026_09_18_000001_add_warehouse_created_at_index_to_transactions.php`.
+- Sentry integration is installed but disabled until a DSN is provided; no production behavior change.
+
 ## [v3.0.0] - 2026-09-18
 
 ### Breaking
