@@ -32,6 +32,14 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Run test suite
+        run: |
+          php artisan key:generate --force
+          php artisan test --compact
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+
       - name: Install JS dependencies
         run: PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund
 
