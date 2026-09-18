@@ -13,21 +13,23 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 
 ## Struktur Area Penting
 
-- `routes/web.php` — ~60+ route dashboard, public share, portal
-- `routes/api.php` — webhook Midtrans & Xendit (tanpa auth)
-- `app/Http/Controllers/Apps/` — controller per modul dashboard
-- `app/Http/Controllers/Reports/` — controller laporan
+- `routes/web.php` — ~190+ route dashboard, public share, portal
+- `routes/api.php` — webhook Midtrans & Xendit (tanpa auth), REST `/api/v1/*` master-data + POS
+- `app/Http/Controllers/Apps/` — controller per modul dashboard (~36 file)
+- `app/Http/Controllers/Reports/` — controller laporan (sales, profit, insights)
 - `app/Http/Controllers/DocumentController.php` — PDF documents
 - `app/Http/Controllers/PublicPortalController.php` — customer self-service
-- `app/Http/Middleware/` — 7 custom middleware
-- `app/Http/Middleware/HandleInertiaRequests.php` — shared props global (auth, permissions, notifications, shift, store profile, security)
-- `app/Models/` — ~45+ model
-- `app/Services/` — business logic layer
-- `resources/js/Pages/Dashboard/` — Inertia page components
+- `app/Http/Middleware/` — 9 custom middleware
+- `app/Http/Middleware/HandleInertiaRequests.php` — shared props global (auth, permissions, notifications, shift, store profile, active outlet, security, printer settings)
+- `app/Models/` — 59 model
+- `app/Services/` — business logic layer (26 service: PaymentGatewayManager, TransactionTenderService, PricingService, OutletAccessService, CashierShiftService, dll)
+- `app/Services/Payments/` — MidtransGateway, XenditGateway
+- `resources/js/Pages/Dashboard/` — Inertia page components (~115 file di 39 direktori)
 - `resources/js/Pages/Public/` — public Inertia pages (customer portal)
-- `resources/js/Layouts/` — 4 layout: POSLayout, DashboardLayout, AuthenticatedLayout, GuestLayout
-- `database/migrations/` — ~55+ migration
-- `database/seeders/` — seeder inti dan seeder demo/coverage yang dijalankan secara eksplisit
+- `resources/js/Layouts/` — 5 layout: POSLayout, DashboardLayout, AuthenticatedLayout, GuestLayout, PublicLayout
+- `resources/js/Utils/` — escpos (WebUSB), offlineDb (IndexedDB), tours (driver.js), authorization
+- `database/migrations/` — 97 migration
+- `database/seeders/` — seeder inti (PermissionSeeder, RoleSeeder, PaymentSettingSeeder, DineInSettingsSeeder) dan seeder demo/coverage (UserSeeder, SampleDataSeeder, OperationalCoreSeeder, FeatureCoverageSeeder, FeatureDemoSeeder) yang dijalankan secara eksplisit
 
 ### Seeder
 
@@ -49,12 +51,18 @@ dan `FeatureDemoSeeder` bersifat opt-in untuk demo atau pengujian.
 | Alias | Class | Fungsi |
 |-------|-------|--------|
 | `permission` | Spatie PermissionMiddleware | Proteksi route berbasis permission string |
+| `role` | Spatie RoleMiddleware | Proteksi route berbasis role |
+| `role_or_permission` | Spatie RoleOrPermissionMiddleware | Proteksi route role ATAU permission |
 | `active_shift` | EnsureActiveCashierShift | Wajibkan shift aktif untuk operasi POS (cart, hold, checkout) |
 | `step_up` | EnsureRecentPasswordConfirmation | Minta konfirmasi password untuk aksi sensitif (role/user CRUD, payment settings, bank accounts, payment confirmation) |
 | `bot.guard` | EnsureBotGuard | Honeypot + timer anti-bot di form login/register/forgot-password |
 | `registration.enabled` | EnsurePublicRegistrationEnabled | Matikan registrasi publik (default: off) |
-| `SecureHeaders` | — | Security response headers |
-| `EnforceAbsoluteSessionLifetime` | — | Paksa logout setelah session lifetime habis |
+| `setup.notinstalled` | EnsureNotInstalled | Redirect ke `/setup` saat app_setup_completed=false |
+| `abilities` | CheckAbilities (Sanctum) | Cek token abilities untuk endpoint API master-data |
+| `SetLocale` | (web group) | Prioritas locale: user column → session → cookie → Accept-Language (default `id`) |
+| `SecureHeaders` | (web group) | Set X-Content-Type-Options, Referrer-Policy, X-Frame-Options, Permissions-Policy |
+| `EnforceAbsoluteSessionLifetime` | (web group) | Paksa logout setelah session lifetime habis (`SECURITY_SESSION_ABSOLUTE_LIFETIME_SECONDS`, default 12 jam) |
+| `HandleInertiaRequests` | (web group) | Inject shared props ke semua Inertia page |
 
 ## Service Layer
 
