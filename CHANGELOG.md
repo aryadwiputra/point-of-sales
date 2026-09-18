@@ -3,6 +3,12 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [v3.0.2] - 2026-09-18
+
+### Changed
+
+- Refactor: `PosApiController::checkout()` now reuses `CheckoutService` instead of duplicating ~250 LOC of transaction creation, pricing preview, stock decrement, FEFO batch consumption, and receivable creation logic. API checkout behavior is unchanged; web and API flows now share the same code path through the `CheckoutContext` DTO.
+
 ## [v3.0.1] - 2026-09-18
 
 ### Added
