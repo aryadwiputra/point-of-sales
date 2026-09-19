@@ -6,6 +6,8 @@ use App\Models\Payable;
 use App\Models\Receivable;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use App\Services\ThermalPrintService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -13,6 +15,15 @@ use Picqer\Barcode\BarcodeGeneratorPNG;
 
 class DocumentController extends Controller
 {
+    public function __construct(
+        private readonly OutletAccessService $outletAccessService,
+    ) {}
+
+    private function ensureWarehouseAccess(?Warehouse $warehouse): void
+    {
+        abort_unless($this->outletAccessService->canUseWarehouse(request()->user(), $warehouse), 404);
+    }
+
     private function ensureFontDirectory(): void
     {
         $fontDir = storage_path('fonts');
@@ -68,6 +79,7 @@ class DocumentController extends Controller
         $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
             ->where('invoice', $invoice)
             ->firstOrFail();
+        $this->ensureWarehouseAccess($transaction->warehouse);
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'transaction' => $transaction,
@@ -106,6 +118,7 @@ class DocumentController extends Controller
         $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
             ->where('invoice', $invoice)
             ->firstOrFail();
+        $this->ensureWarehouseAccess($transaction->warehouse);
 
         $template = $size === '58' ? 'pdf.receipt_58' : 'pdf.receipt_80';
         $width = $size === '58' ? 164.4 : 226.8; // points (mm*2.8346)
@@ -125,6 +138,7 @@ class DocumentController extends Controller
         $transaction = Transaction::with(['details.product', 'customer', 'cashier'])
             ->where('invoice', $invoice)
             ->firstOrFail();
+        $this->ensureWarehouseAccess($transaction->warehouse);
 
         $pdf = Pdf::loadView('pdf.shipping_label', [
             'transaction' => $transaction,
@@ -144,6 +158,7 @@ class DocumentController extends Controller
         $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
             ->where('invoice', $invoice)
             ->firstOrFail();
+        $this->ensureWarehouseAccess($transaction->warehouse);
 
         $service = app(ThermalPrintService::class);
         $html = $service->generateReceiptHtml($transaction);
@@ -156,6 +171,7 @@ class DocumentController extends Controller
         $this->ensureFontDirectory();
 
         $receivable->load(['customer', 'payments.bankAccount', 'payments.user']);
+        $this->ensureWarehouseAccess($receivable->transaction?->warehouse);
 
         $pdf = Pdf::loadView('pdf.receivable', [
             'receivable' => $receivable,
@@ -171,6 +187,7 @@ class DocumentController extends Controller
         $this->ensureFontDirectory();
 
         $payable->load(['supplier', 'payments.bankAccount', 'payments.user']);
+        $this->ensureWarehouseAccess($payable->purchaseOrder?->warehouse);
 
         $pdf = Pdf::loadView('pdf.payable', [
             'payable' => $payable,

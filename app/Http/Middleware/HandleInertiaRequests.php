@@ -49,17 +49,40 @@ class HandleInertiaRequests extends Middleware
 
         if ($request->user()) {
             $userId = $request->user()->id;
+            $outletAccess = app(OutletAccessService::class);
+            $warehouseIds = $outletAccess->warehousesFor($request->user())->pluck('id');
+            $outletIds = $outletAccess->accessibleOutlets($request->user())->pluck('id');
+            $includeLegacy = Outlet::active()->count() <= 1;
 
             if ($request->user()->can('discounts-approve')) {
-                $pendingApprovalCount = Transaction::where('discount_approval_status', 'pending')->count();
+                $pendingApprovalCount = Transaction::query()
+                    ->where('discount_approval_status', 'pending')
+                    ->where(function ($query) use ($warehouseIds, $includeLegacy) {
+                        if ($warehouseIds->isEmpty()) {
+                            $query->whereRaw('1 = 0');
+                        } else {
+                            $query->whereIn('warehouse_id', $warehouseIds);
+                            if ($includeLegacy) {
+                                $query->orWhereNull('warehouse_id');
+                            }
+                        }
+                    })
+                    ->count();
             }
 
             if ($request->user()->can('dine-orders-access')) {
-                $pendingDineOrdersCount = DineOrder::pending()->count();
+                $pendingDineOrdersCount = DineOrder::query()
+                    ->pending()
+                    ->whereHas('table.area', function ($query) use ($outletIds) {
+                        if ($outletIds->isEmpty()) {
+                            $query->whereRaw('1 = 0');
+                        } else {
+                            $query->whereIn('outlet_id', $outletIds);
+                        }
+                    })
+                    ->count();
             }
 
-            $warehouseIds = app(OutletAccessService::class)->warehousesFor($request->user())->pluck('id');
-            $includeLegacy = Outlet::active()->count() <= 1;
             $lowStockNotifications = Product::query()
                 ->leftJoinSub(
                     DB::table('product_warehouse')
@@ -99,6 +122,7 @@ class HandleInertiaRequests extends Middleware
                 });
 
             $expiringBatchNotifications = ProductBatch::with('product:id,title')
+                ->whereIn('warehouse_id', $warehouseIds)
                 ->where('stock', '>', 0)
                 ->whereNotNull('expired_at')
                 ->whereBetween('expired_at', [now(), now()->addDays(30)])
@@ -118,10 +142,11 @@ class HandleInertiaRequests extends Middleware
             $payableAgingService = new PayableAgingService;
             $receivableService = new ReceivableService;
 
-            $payableAgingSummary = $payableAgingService->getAgingSummary();
-            $receivableAgingSummary = $receivableService->getAgingSummary();
+            $payableAgingSummary = $payableAgingService->getAgingSummary($warehouseIds);
+            $receivableAgingSummary = $receivableService->getAgingSummary($warehouseIds);
 
-            $receivableNotifications = Receivable::whereNot('status', 'paid')
+            $receivableNotifications = $receivableService->scopeQuery(Receivable::query(), $warehouseIds)
+                ->whereNot('status', 'paid')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<=', now()->addDays(3))
                 ->orderBy('due_date')
@@ -140,7 +165,8 @@ class HandleInertiaRequests extends Middleware
                     ];
                 });
 
-            $payableNotifications = Payable::whereNot('status', 'paid')
+            $payableNotifications = $payableAgingService->scopeQuery(Payable::query(), $warehouseIds)
+                ->whereNot('status', 'paid')
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '<=', now()->addDays(3))
                 ->orderBy('due_date')
@@ -166,7 +192,6 @@ class HandleInertiaRequests extends Middleware
                 ->latest('opened_at')
                 ->first();
 
-            $outletAccess = app(OutletAccessService::class);
             $activeOutlet = $outletAccess->activeOutlet($request);
             $availableOutlets = $outletAccess->accessibleOutlets($request->user());
 

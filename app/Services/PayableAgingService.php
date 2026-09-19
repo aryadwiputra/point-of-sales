@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Models\Payable;
+use App\Models\Outlet;
 use App\Models\Supplier;
 use Illuminate\Support\Collection;
 
 class PayableAgingService
 {
-    public function getAgingSummary(): Collection
+    public function getAgingSummary(?Collection $warehouseIds = null): Collection
     {
-        $payables = Payable::where('status', '!=', 'paid')
+        $payables = $this->scopeQuery(Payable::query(), $warehouseIds)
+            ->where('status', '!=', 'paid')
             ->whereNotNull('due_date')
             ->get();
 
@@ -26,6 +28,25 @@ class PayableAgingService
                 'paid' => $filtered->sum('paid'),
                 'remaining' => $filtered->sum(fn ($p) => max(0, $p->total - $p->paid)),
             ];
+        });
+    }
+
+    public function scopeQuery($query, ?Collection $warehouseIds)
+    {
+        if ($warehouseIds === null) {
+            return $query;
+        }
+
+        return $query->where(function ($builder) use ($warehouseIds) {
+            if ($warehouseIds->isEmpty()) {
+                $builder->whereRaw('1 = 0');
+            } else {
+                $builder->whereHas('purchaseOrder', fn ($purchaseOrder) => $purchaseOrder->whereIn('warehouse_id', $warehouseIds));
+
+                if ($this->singleOutlet()) {
+                    $builder->orWhereDoesntHave('purchaseOrder');
+                }
+            }
         });
     }
 
@@ -67,5 +88,10 @@ class PayableAgingService
                 'remaining' => max(0, $p->total - $p->paid),
                 'aging_bucket' => $p->aging_bucket,
             ]);
+    }
+
+    private function singleOutlet(): bool
+    {
+        return Outlet::active()->count() <= 1;
     }
 }

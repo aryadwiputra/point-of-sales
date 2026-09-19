@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\DiscountApprovalLog;
+use App\Models\Outlet;
 use App\Models\Transaction;
 use App\Services\AuditLogService;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -17,7 +19,20 @@ class DiscountApprovalController extends Controller
 
     public function pending()
     {
+        $warehouseIds = app(OutletAccessService::class)->warehousesFor(request()->user())->pluck('id');
+        $includeLegacy = Outlet::active()->count() <= 1;
+
         $pending = Transaction::where('discount_approval_status', 'pending')
+            ->where(function ($query) use ($warehouseIds, $includeLegacy) {
+                if ($warehouseIds->isEmpty()) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                    if ($includeLegacy) {
+                        $query->orWhereNull('warehouse_id');
+                    }
+                }
+            })
             ->with(['cashier:id,name', 'customer:id,name', 'cashierShift:id,opened_at'])
             ->orderByDesc('created_at')
             ->get()
