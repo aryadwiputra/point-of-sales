@@ -130,6 +130,7 @@ class StockTransferIntegrityTest extends TestCase
             ->where('mutation_type', 'out')
             ->first();
         $this->assertNotNull($mutation);
+        $this->assertEquals($this->source->id, $mutation->warehouse_id);
         $this->assertEquals(50, $mutation->stock_before);
         $this->assertEquals(40, $mutation->stock_after);
     }
@@ -182,6 +183,7 @@ class StockTransferIntegrityTest extends TestCase
             ->where('mutation_type', 'in')
             ->first();
         $this->assertNotNull($mutation);
+        $this->assertEquals($this->destination->id, $mutation->warehouse_id);
         $this->assertEquals(40, $mutation->stock_before);
         $this->assertEquals(50, $mutation->stock_after);
     }

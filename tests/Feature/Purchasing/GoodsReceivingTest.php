@@ -141,6 +141,7 @@ class GoodsReceivingTest extends TestCase
         $this->assertEquals(4, $mutation->qty);
         $this->assertEquals(100, $mutation->stock_before);
         $this->assertEquals(104, $mutation->stock_after);
+        $this->assertEquals($this->warehouse->id, $mutation->warehouse_id);
     }
 
     public function test_receiving_rejects_draft_po(): void

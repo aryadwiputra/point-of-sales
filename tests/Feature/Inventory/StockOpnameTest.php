@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\StockOpname;
 use App\Models\StockOpnameItem;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -129,8 +130,16 @@ class StockOpnameTest extends TestCase
             'stock-opnames-finalize',
         ]);
         $product = $this->createProduct(12);
+        $warehouse = Warehouse::create([
+            'code' => 'OPN',
+            'name' => 'Gudang Opname',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
         $stockOpname = StockOpname::create([
             'code' => 'SO-TEST-003',
+            'warehouse_id' => $warehouse->id,
             'status' => 'draft',
             'created_by' => $user->id,
         ]);
@@ -162,9 +171,10 @@ class StockOpnameTest extends TestCase
             'reference_type' => 'stock_opname',
             'reference_id' => $stockOpname->id,
             'mutation_type' => 'adjustment',
-            'qty' => 4,
-            'stock_before' => 12,
+            'qty' => 8,
+            'stock_before' => 0,
             'stock_after' => 8,
+            'warehouse_id' => $warehouse->id,
         ]);
     }
 

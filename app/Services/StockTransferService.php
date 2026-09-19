@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ProductWarehouse;
-use App\Models\StockMutation;
 use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
 use App\Models\User;
@@ -17,7 +16,8 @@ class StockTransferService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        private readonly OutletAccessService $outletAccessService,
+        private readonly StockMutationService $stockMutationService
     ) {}
 
     public function generateDocumentNumber(): string
@@ -121,18 +121,18 @@ class StockTransferService
                 }
                 $item->product->decrement('stock', $item->qty);
 
-                StockMutation::create([
-                    'product_id' => $item->product_id,
-                    'warehouse_id' => $transfer->source_warehouse_id,
-                    'reference_type' => 'stock_transfer',
-                    'reference_id' => $transfer->id,
-                    'mutation_type' => 'out',
-                    'qty' => $item->qty,
-                    'stock_before' => $available,
-                    'stock_after' => $stockAfter,
-                    'notes' => 'Transfer ke '.$transfer->destinationWarehouse->code,
-                    'created_by' => $userId,
-                ]);
+                $this->stockMutationService->recordMutation(
+                    product: $item->product,
+                    warehouseId: $transfer->source_warehouse_id,
+                    referenceType: 'stock_transfer',
+                    referenceId: $transfer->id,
+                    mutationType: 'out',
+                    qty: $item->qty,
+                    stockBefore: $available,
+                    stockAfter: $stockAfter,
+                    notes: 'Transfer ke '.$transfer->destinationWarehouse->code,
+                    userId: $userId,
+                );
             }
 
             $transfer->update([
@@ -180,18 +180,18 @@ class StockTransferService
 
                 $product->increment('stock', $item->qty);
 
-                StockMutation::create([
-                    'product_id' => $product->id,
-                    'warehouse_id' => $transfer->destination_warehouse_id,
-                    'reference_type' => 'stock_transfer',
-                    'reference_id' => $transfer->id,
-                    'mutation_type' => 'in',
-                    'qty' => $item->qty,
-                    'stock_before' => $stockBefore,
-                    'stock_after' => (int) $product->stock,
-                    'notes' => 'Transfer dari '.$transfer->sourceWarehouse->code,
-                    'created_by' => $userId,
-                ]);
+                $this->stockMutationService->recordMutation(
+                    product: $product,
+                    warehouseId: $transfer->destination_warehouse_id,
+                    referenceType: 'stock_transfer',
+                    referenceId: $transfer->id,
+                    mutationType: 'in',
+                    qty: $item->qty,
+                    stockBefore: $stockBefore,
+                    stockAfter: (int) $product->stock,
+                    notes: 'Transfer dari '.$transfer->sourceWarehouse->code,
+                    userId: $userId,
+                );
             }
 
             $transfer->update([

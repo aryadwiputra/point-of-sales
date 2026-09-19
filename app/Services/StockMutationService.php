@@ -15,6 +15,32 @@ class StockMutationService
         private readonly AuditLogService $auditLogService
     ) {}
 
+    public function recordMutation(
+        Product $product,
+        ?int $warehouseId,
+        string $referenceType,
+        ?int $referenceId,
+        string $mutationType,
+        int $qty,
+        int $stockBefore,
+        int $stockAfter,
+        ?string $notes = null,
+        ?int $userId = null
+    ): StockMutation {
+        return StockMutation::create([
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouseId,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'mutation_type' => $mutationType,
+            'qty' => $qty,
+            'stock_before' => $stockBefore,
+            'stock_after' => $stockAfter,
+            'notes' => $notes,
+            'created_by' => $userId,
+        ]);
+    }
+
     public function recordInitialStock(Product $product, ?int $userId = null, ?int $warehouseId = null): ?StockMutation
     {
         $initialStock = (int) $product->stock;
@@ -23,18 +49,18 @@ class StockMutationService
             return null;
         }
 
-        $mutation = StockMutation::create([
-            'product_id' => $product->id,
-            'warehouse_id' => $warehouseId,
-            'reference_type' => 'product_create',
-            'reference_id' => $product->id,
-            'mutation_type' => 'in',
-            'qty' => $initialStock,
-            'stock_before' => 0,
-            'stock_after' => $initialStock,
-            'notes' => 'Initial stock saat produk dibuat.',
-            'created_by' => $userId,
-        ]);
+        $mutation = $this->recordMutation(
+            product: $product,
+            warehouseId: $warehouseId,
+            referenceType: 'product_create',
+            referenceId: $product->id,
+            mutationType: 'in',
+            qty: $initialStock,
+            stockBefore: 0,
+            stockAfter: $initialStock,
+            notes: 'Initial stock saat produk dibuat.',
+            userId: $userId,
+        );
 
         $this->auditLogService->log(
             event: 'stock.adjusted',
@@ -81,17 +107,18 @@ class StockMutationService
             return null;
         }
 
-        $mutation = StockMutation::create([
-            'product_id' => $product->id,
-            'reference_type' => 'stock_opname',
-            'reference_id' => $stockOpname->id,
-            'mutation_type' => 'adjustment',
-            'qty' => abs($stockAfter - $stockBefore),
-            'stock_before' => $stockBefore,
-            'stock_after' => $stockAfter,
-            'notes' => $reason ?: 'Adjustment dari stock opname.',
-            'created_by' => $userId,
-        ]);
+        $mutation = $this->recordMutation(
+            product: $product,
+            warehouseId: $stockOpname->warehouse_id,
+            referenceType: 'stock_opname',
+            referenceId: $stockOpname->id,
+            mutationType: 'adjustment',
+            qty: abs($stockAfter - $stockBefore),
+            stockBefore: $stockBefore,
+            stockAfter: $stockAfter,
+            notes: $reason ?: 'Adjustment dari stock opname.',
+            userId: $userId,
+        );
 
         $this->auditLogService->log(
             event: 'stock.adjusted',
@@ -138,17 +165,18 @@ class StockMutationService
             return null;
         }
 
-        $mutation = StockMutation::create([
-            'product_id' => $product->id,
-            'reference_type' => 'sales_return',
-            'reference_id' => $salesReturn->id,
-            'mutation_type' => 'in',
-            'qty' => abs($stockAfter - $stockBefore),
-            'stock_before' => $stockBefore,
-            'stock_after' => $stockAfter,
-            'notes' => $reason ?: 'Restock dari retur penjualan.',
-            'created_by' => $userId,
-        ]);
+        $mutation = $this->recordMutation(
+            product: $product,
+            warehouseId: $salesReturn->warehouse_id ?: $salesReturn->transaction?->warehouse_id,
+            referenceType: 'sales_return',
+            referenceId: $salesReturn->id,
+            mutationType: 'in',
+            qty: abs($stockAfter - $stockBefore),
+            stockBefore: $stockBefore,
+            stockAfter: $stockAfter,
+            notes: $reason ?: 'Restock dari retur penjualan.',
+            userId: $userId,
+        );
 
         $this->auditLogService->log(
             event: 'stock.adjusted',
@@ -192,17 +220,18 @@ class StockMutationService
         ?string $notes = null,
         ?int $userId = null
     ): StockMutation {
-        $mutation = StockMutation::create([
-            'product_id' => $product->id,
-            'reference_type' => 'goods_receiving',
-            'reference_id' => $goodsReceiving->id,
-            'mutation_type' => 'in',
-            'qty' => $qty,
-            'stock_before' => $stockBefore,
-            'stock_after' => $stockAfter,
-            'notes' => $notes ?: 'Stok masuk dari penerimaan barang.',
-            'created_by' => $userId,
-        ]);
+        $mutation = $this->recordMutation(
+            product: $product,
+            warehouseId: $goodsReceiving->warehouse_id,
+            referenceType: 'goods_receiving',
+            referenceId: $goodsReceiving->id,
+            mutationType: 'in',
+            qty: $qty,
+            stockBefore: $stockBefore,
+            stockAfter: $stockAfter,
+            notes: $notes ?: 'Stok masuk dari penerimaan barang.',
+            userId: $userId,
+        );
 
         $this->auditLogService->log(
             event: 'stock.adjusted',
@@ -244,17 +273,18 @@ class StockMutationService
         ?string $notes = null,
         ?int $userId = null
     ): StockMutation {
-        $mutation = StockMutation::create([
-            'product_id' => $product->id,
-            'reference_type' => 'supplier_return',
-            'reference_id' => $supplierReturn->id,
-            'mutation_type' => 'out',
-            'qty' => $qty,
-            'stock_before' => $stockBefore,
-            'stock_after' => $stockAfter,
-            'notes' => $notes ?: 'Retur barang ke supplier.',
-            'created_by' => $userId,
-        ]);
+        $mutation = $this->recordMutation(
+            product: $product,
+            warehouseId: $supplierReturn->warehouse_id,
+            referenceType: 'supplier_return',
+            referenceId: $supplierReturn->id,
+            mutationType: 'out',
+            qty: $qty,
+            stockBefore: $stockBefore,
+            stockAfter: $stockAfter,
+            notes: $notes ?: 'Retur barang ke supplier.',
+            userId: $userId,
+        );
 
         $this->auditLogService->log(
             event: 'stock.adjusted',

@@ -10,6 +10,7 @@ use App\Models\Receivable;
 use App\Models\SalesReturn;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
@@ -140,10 +141,19 @@ class SalesReturnTest extends TestCase
 
         [$transaction, $detail, $product] = $this->createTransaction($user, qty: 1, stock: 4);
         $shift = $this->openShiftFor($user);
+        $warehouse = Warehouse::create([
+            'code' => 'RET',
+            'name' => 'Gudang Retur',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $transaction->update(['warehouse_id' => $warehouse->id]);
 
         $salesReturn = SalesReturn::create([
             'code' => 'SR-TEST-002',
             'transaction_id' => $transaction->id,
+            'warehouse_id' => $warehouse->id,
             'customer_id' => $transaction->customer_id,
             'cashier_id' => $user->id,
             'status' => 'draft',
@@ -185,6 +195,7 @@ class SalesReturnTest extends TestCase
             'qty' => 1,
             'stock_before' => 4,
             'stock_after' => 5,
+            'warehouse_id' => $warehouse->id,
         ]);
         $this->assertDatabaseHas('profits', [
             'transaction_id' => $transaction->id,

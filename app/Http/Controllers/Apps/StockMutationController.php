@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Outlet;
 use App\Models\StockMutation;
 use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
@@ -35,7 +36,14 @@ class StockMutationController extends Controller
             ->when($filters['warehouse_id'], fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
             ->where(function ($query) use ($request) {
                 $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
-                $query->whereIn('warehouse_id', $warehouseIds)->orWhereNull('warehouse_id');
+                if ($warehouseIds->isEmpty()) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                    if (Outlet::active()->count() <= 1) {
+                        $query->orWhereNull('warehouse_id');
+                    }
+                }
             })
             ->latest()
             ->paginate($this->perPage())->withQueryString()
