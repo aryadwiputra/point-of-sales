@@ -20,7 +20,10 @@ import {
 import Notification from "@/Components/Dashboard/Notification";
 import { useTour } from "@/Hooks/useTour";
 import i18n from "@/i18n";
-import { getPendingCount } from "@/Utils/offlineDb";
+import {
+    getPendingCount,
+    pruneExpiredPendingTransactions,
+} from "@/Utils/offlineDb";
 
 export default function POSLayout({ children }) {
     const { auth, storeProfile, activeCashierShift, appVersion } = usePage().props;
@@ -28,6 +31,7 @@ export default function POSLayout({ children }) {
     const { start: startTour, isActive: tourActive } = useTour("pos");
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const isOnline = useOnlineStatus();
+    const offlineScopeKey = `${auth?.user?.id ?? "guest"}:${activeCashierShift?.warehouse_id ?? "none"}`;
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -57,7 +61,8 @@ export default function POSLayout({ children }) {
     // Pending offline transaction count (refresh on mount and on reconnect)
     useEffect(() => {
         const refresh = () =>
-            getPendingCount()
+            pruneExpiredPendingTransactions()
+                .then(() => getPendingCount(offlineScopeKey))
                 .then(setPendingSyncCount)
                 .catch(() => {});
 
@@ -69,7 +74,7 @@ export default function POSLayout({ children }) {
             window.removeEventListener("online", refresh);
             clearInterval(timer);
         };
-    }, []);
+    }, [offlineScopeKey]);
 
     const formatTime = (date) => {
         return date.toLocaleTimeString("id-ID", {

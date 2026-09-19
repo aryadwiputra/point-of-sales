@@ -19,7 +19,13 @@ import HeldTransactions, {
 import useBarcodeScanner from "@/Hooks/useBarcodeScanner";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 import { useAuthorization } from "@/Utils/authorization";
-import { queueTransaction, getPendingTransactions, getPendingCount, removePendingTransaction } from "@/Utils/offlineDb";
+import {
+    queueTransaction,
+    getPendingTransactions,
+    getPendingCount,
+    updatePendingTransaction,
+    removePendingTransaction,
+} from "@/Utils/offlineDb";
 import {
     IconUser,
     IconShoppingCart,
@@ -64,6 +70,7 @@ export default function Index({
         lowStockNotifications = [],
         activeCashierShift,
     } = usePage().props;
+    const offlineScopeKey = `${auth?.user?.id ?? "guest"}:${activeCashierShift?.warehouse_id ?? "none"}`;
     const { can } = useAuthorization();
     const canOpenShift = can("cashier-shifts-open");
 
@@ -99,6 +106,7 @@ export default function Index({
     const [openingCashInput, setOpeningCashInput] = useState("");
     const [shiftNotesInput, setShiftNotesInput] = useState("");
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
+    const flushPromiseRef = useRef(null);
     const normalizedSelectedCategory =
         selectedCategory === null ? null : Number(selectedCategory);
     const pricingItemsByCartId = useMemo(() => {
@@ -449,62 +457,121 @@ export default function Index({
     // Pending offline transactions
     const refreshPendingCount = useCallback(async () => {
         try {
-            setPendingSyncCount(await getPendingCount());
+            setPendingSyncCount(await getPendingCount(offlineScopeKey));
         } catch {
             // IndexedDB unavailable
         }
-    }, []);
+    }, [offlineScopeKey]);
 
     const flushPendingTransactions = useCallback(async () => {
         if (!navigator.onLine) return;
+        if (flushPromiseRef.current) return flushPromiseRef.current;
 
-        const pending = await getPendingTransactions();
-        if (pending.length === 0) return;
-
-        const { data } = await axios.post(
-            "/api/v1/pos/transactions/sync",
-            {
-                transactions: pending.map((row) => ({
-                    ...row.data,
-                    queue_id: row.id,
-                })),
-            },
-            { headers: { Accept: "application/json" } }
-        );
-
-        const results = data?.data?.results || [];
-        let synced = 0;
-        let failed = 0;
-
-        for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            const row = pending[i];
-
-            if (
-                ["synced", "pending_approval", "duplicate"].includes(
-                    result.status
-                )
-            ) {
-                await removePendingTransaction(row.id);
-                synced++;
-            } else {
-                failed++;
-                toast.error(
-                    `Sync gagal: ${result.reason || "kesalahan tidak diketahui"}`
-                );
-            }
-        }
-
-        if (synced > 0) {
-            toast.success(
-                `${synced} transaksi offline tersinkronisasi. Page akan dimuat ulang.`,
-                { duration: 2500 }
+        flushPromiseRef.current = (async () => {
+            const pending = await getPendingTransactions(offlineScopeKey);
+            // Conflicts require user intervention and must not be retried
+            // automatically. Failed rows are retryable; the API remains the
+            // source of truth for duplicate detection.
+            const sendable = pending.filter((row) =>
+                ["pending", "failed"].includes(row.status)
             );
-            router.reload({ only: ["carts", "carts_total"] });
-        }
+            if (sendable.length === 0) return;
 
-        await refreshPendingCount();
-    }, [refreshPendingCount]);
+            const attemptAt = new Date().toISOString();
+            await Promise.all(
+                sendable.map((row) =>
+                    updatePendingTransaction(row.id, {
+                        status: "syncing",
+                        attempts: (row.attempts ?? 0) + 1,
+                        last_attempt_at: attemptAt,
+                    })
+                )
+            );
+
+            let data;
+            try {
+                ({ data } = await axios.post(
+                    "/api/v1/pos/transactions/sync",
+                    {
+                        transactions: sendable.map((row) => ({
+                            ...row.data,
+                            queue_id: row.id,
+                        })),
+                    },
+                    { headers: { Accept: "application/json" } }
+                ));
+            } catch (error) {
+                const reason =
+                    error?.response?.data?.message ||
+                    "Server tidak tersedia. Transaksi akan dicoba lagi.";
+                await Promise.all(
+                    sendable.map((row) =>
+                        updatePendingTransaction(row.id, {
+                            status: "failed",
+                            last_error: reason,
+                            last_attempt_at: new Date().toISOString(),
+                        })
+                    )
+                );
+                await refreshPendingCount();
+                return;
+            }
+
+            const results = data?.data?.results || [];
+            let synced = 0;
+            let failed = 0;
+
+            for (let i = 0; i < sendable.length; i++) {
+                const result = results[i];
+                const row = sendable[i];
+
+                if (!result) {
+                    failed++;
+                    await updatePendingTransaction(row.id, {
+                        status: "failed",
+                        last_error: "Server mengembalikan hasil sync yang tidak lengkap.",
+                        last_attempt_at: new Date().toISOString(),
+                    });
+                    continue;
+                }
+
+                if (["synced", "pending_approval", "duplicate"].includes(result.status)) {
+                    await updatePendingTransaction(row.id, {
+                        status: result.status === "pending_approval" ? "synced" : result.status,
+                        synced_at: new Date().toISOString(),
+                        last_attempt_at: new Date().toISOString(),
+                        last_error: null,
+                    });
+                    await removePendingTransaction(row.id);
+                    synced++;
+                } else {
+                    failed++;
+                    await updatePendingTransaction(row.id, {
+                        status: result.status === "conflict" ? "conflict" : "failed",
+                        last_error: result.reason || "kesalahan tidak diketahui",
+                        last_attempt_at: new Date().toISOString(),
+                    });
+                    toast.error(
+                        `Sync gagal: ${result.reason || "kesalahan tidak diketahui"}`
+                    );
+                }
+            }
+
+            if (synced > 0) {
+                toast.success(
+                    `${synced} transaksi offline tersinkronisasi. Page akan dimuat ulang.`,
+                    { duration: 2500 }
+                );
+                router.reload({ only: ["carts", "carts_total"] });
+            }
+
+            await refreshPendingCount();
+        })().finally(() => {
+            flushPromiseRef.current = null;
+        });
+
+        return flushPromiseRef.current;
+    }, [offlineScopeKey, refreshPendingCount]);
 
     // Flush pending transactions on mount (if online)
     useEffect(() => {
@@ -674,7 +741,14 @@ export default function Index({
                 shipping_cost: shipping,
                 grand_total: payable,
                 cash: isCashPayment ? cash : payable,
-                payment_gateway: payLater ? null : isCashPayment ? null : paymentMethod,
+                payment_method: payLater
+                    ? "pay_later"
+                    : isCashPayment
+                      ? "cash"
+                      : isBankTransfer
+                        ? "bank_transfer"
+                        : paymentMethod,
+                payment_gateway: null,
                 pay_later: payLater,
                 due_date: payLater ? dueDate : null,
                 bank_account_id: isBankTransfer ? selectedBankAccount?.id : null,
@@ -686,7 +760,7 @@ export default function Index({
                     qty: Number(item.qty),
                 })),
             };
-            queueTransaction(payload).then(() => {
+            queueTransaction(payload, offlineScopeKey).then(() => {
                 refreshPendingCount();
                 setCarts([]);
                 setPricingPreview(initialPricingPreview);
