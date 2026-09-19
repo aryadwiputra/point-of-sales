@@ -24,6 +24,7 @@ class Transaction extends Model
         'customer_id',
         'invoice',
         'client_uuid',
+        'sync_fingerprint',
         'cash',
         'change',
         'discount',

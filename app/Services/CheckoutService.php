@@ -111,6 +111,8 @@ class CheckoutService
                 'tax_total' => data_get($checkoutPreview, 'summary.tax_total', 0),
                 'customer_npwp' => $ctx->customerNpwp,
                 'price_list_id' => $this->priceListService->getApplicablePriceList($ctx->customer, $ctx->outlet)?->id,
+                'client_uuid' => $ctx->clientUuid,
+                'sync_fingerprint' => $ctx->syncFingerprint,
             ]);
 
             if ($ctx->useTenders) {

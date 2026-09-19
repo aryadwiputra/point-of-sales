@@ -27,6 +27,8 @@ class CheckoutContext
         public readonly array $tenderInput,
         public readonly ?Outlet $outlet,
         public readonly ?int $bankAccountId,
+        public readonly ?string $clientUuid = null,
+        public readonly ?string $syncFingerprint = null,
     ) {}
 
     public function isSplit(): bool

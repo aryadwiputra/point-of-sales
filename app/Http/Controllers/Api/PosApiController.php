@@ -27,6 +27,7 @@ use App\Services\PricingService;
 use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
 use App\Support\Checkout\CheckoutContext;
+use App\Support\Checkout\CheckoutFingerprint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -545,6 +546,8 @@ class PosApiController extends Controller
             'tenders.*.amount' => ['required', 'integer', 'min:1'],
             'tenders.*.cash_received' => ['nullable', 'integer', 'min:0'],
             'tenders.*.bank_account_id' => ['nullable', 'integer', 'exists:bank_accounts,id'],
+            'client_uuid' => ['nullable', 'uuid'],
+            'sync_fingerprint' => ['nullable', 'string', 'max:64'],
         ]);
 
         $paymentMethod = $validated['payment_method'] ?? 'cash';
@@ -599,6 +602,8 @@ class PosApiController extends Controller
             tenderInput: $tenderInput,
             outlet: $outlet,
             bankAccountId: $validated['bank_account_id'] ?? null,
+            clientUuid: $validated['client_uuid'] ?? null,
+            syncFingerprint: $validated['sync_fingerprint'] ?? null,
         );
 
         try {
@@ -708,11 +713,17 @@ class PosApiController extends Controller
             'transactions' => ['required', 'array', 'max:50'],
             'transactions.*.client_uuid' => ['required', 'uuid'],
             'transactions.*.customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'transactions.*.customer_voucher_id' => ['nullable', 'integer', 'exists:customer_vouchers,id'],
             'transactions.*.discount' => ['nullable', 'integer', 'min:0'],
+            'transactions.*.shipping_cost' => ['nullable', 'integer', 'min:0'],
             'transactions.*.redeem_points' => ['nullable', 'integer', 'min:0'],
             'transactions.*.cash' => ['nullable', 'numeric', 'min:0'],
+            'transactions.*.payment_method' => ['nullable', 'in:cash,pay_later,bank_transfer'],
+            'transactions.*.bank_account_id' => ['nullable', 'integer', 'exists:bank_accounts,id'],
             'transactions.*.pay_later' => ['nullable', 'boolean'],
             'transactions.*.due_date' => ['nullable', 'date'],
+            'transactions.*.order_type' => ['nullable', 'in:in_store,takeaway,delivery'],
+            'transactions.*.note' => ['nullable', 'string', 'max:1000'],
             'transactions.*.items' => ['required', 'array', 'min:1'],
             'transactions.*.items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'transactions.*.items.*.qty' => ['required', 'numeric', 'min:0.01'],
@@ -723,20 +734,27 @@ class PosApiController extends Controller
 
         foreach ($validated['transactions'] as $index => $payload) {
             $uuid = $payload['client_uuid'];
+            $fingerprint = CheckoutFingerprint::fromSyncPayload($payload);
 
             // Idempotency: already synced?
             if ($existing = Transaction::where('client_uuid', $uuid)->first()) {
-                $results[] = [
+                $existingFingerprint = $existing->sync_fingerprint;
+
+                $results[] = array_merge([
                     'client_uuid' => $uuid,
-                    'status' => 'duplicate',
+                    'status' => ($existingFingerprint && $existingFingerprint !== $fingerprint)
+                        ? 'conflict'
+                        : 'duplicate',
                     'transaction_id' => $existing->id,
                     'invoice' => $existing->invoice,
-                ];
+                ], $existingFingerprint && $existingFingerprint !== $fingerprint ? [
+                    'reason' => 'UUID sudah dipakai dengan payload berbeda.',
+                ] : []);
 
                 continue;
             }
 
-            $response = $this->syncOne($request, $payload, $uuid);
+            $response = $this->syncOne($request, $payload, $uuid, $fingerprint);
 
             $results[] = array_merge(['client_uuid' => $uuid], $response);
         }
@@ -744,7 +762,7 @@ class PosApiController extends Controller
         return $this->ok(['results' => $results]);
     }
 
-    private function syncOne(Request $request, array $payload, string $uuid): array
+    private function syncOne(Request $request, array $payload, string $uuid, string $fingerprint): array
     {
         $isPayLater = (bool) ($payload['pay_later'] ?? false);
         $user = $request->user();
@@ -763,6 +781,24 @@ class PosApiController extends Controller
             }
 
             $createdCartIds = [];
+
+            // Offline contract: an explicitly selected voucher must be
+            // valid for this customer, otherwise fail before checkout so
+            // the record stays in the queue for cashier review.
+            if (! empty($payload['customer_voucher_id'])) {
+                $voucher = CustomerVoucher::find($payload['customer_voucher_id']);
+
+                $voucherValid = $voucher
+                    && (! $payload['customer_id'] || (int) $voucher->customer_id === (int) $payload['customer_id'])
+                    && $voucher->is_active
+                    && ! $voucher->is_used
+                    && (! $voucher->starts_at || $voucher->starts_at->lte(now()))
+                    && (! $voucher->expires_at || $voucher->expires_at->gte(now()));
+
+                if (! $voucherValid) {
+                    return ['status' => 'failed', 'reason' => 'Voucher tidak valid untuk transaksi ini.'];
+                }
+            }
 
             foreach ($payload['items'] as $item) {
                 $product = Product::find($item['product_id']);
@@ -805,29 +841,60 @@ class PosApiController extends Controller
                 $createdCartIds[] = $cart->id;
             }
 
-            // Reuse checkout() with a synthesized request.
+            // Reuse checkout() with a synthesized request. Offline supports
+            // cash, bank_transfer, and pay_later; interactive gateways
+            // (midtrans/xendit/qris) are validated against payment_method.
+            $isBankTransfer = ! $isPayLater
+                && ($payload['payment_method'] ?? 'cash') === 'bank_transfer';
+
             $checkoutRequest = new Request(array_filter([
                 'customer_id' => $payload['customer_id'] ?? null,
+                'customer_voucher_id' => $payload['customer_voucher_id'] ?? null,
                 'discount' => $payload['discount'] ?? 0,
+                'shipping_cost' => $payload['shipping_cost'] ?? 0,
                 'redeem_points' => $payload['redeem_points'] ?? 0,
                 'cash' => $payload['cash'] ?? null,
-                'payment_method' => $isPayLater ? 'pay_later' : 'cash',
+                'payment_method' => $isPayLater ? 'pay_later' : ($isBankTransfer ? 'bank_transfer' : 'cash'),
+                'bank_account_id' => $payload['bank_account_id'] ?? null,
                 'due_date' => $isPayLater ? ($payload['due_date'] ?? null) : null,
+                'order_type' => $payload['order_type'] ?? null,
+                'note' => $payload['note'] ?? null,
                 'client_uuid' => $uuid,
-            ]));
+                'sync_fingerprint' => $fingerprint,
+            ], fn ($value) => $value !== null));
 
             $checkoutRequest->setUserResolver(fn () => $user);
 
-            $response = $this->checkout($checkoutRequest, app(PaymentGatewayManager::class));
+            try {
+                $response = $this->checkout($checkoutRequest, app(PaymentGatewayManager::class));
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // Lost a race: another worker committed the same client_uuid
+                // between our pre-check and this checkout. Nothing was
+                // committed by us (the transaction rolled back atomically).
+                $existing = Transaction::where('client_uuid', $uuid)->first();
+
+                if (! $existing) {
+                    report($e);
+
+                    return ['status' => 'failed', 'reason' => 'Gagal sinkronisasi: transaksi tidak dapat diselesaikan.'];
+                }
+
+                return [
+                    'status' => ($existing->sync_fingerprint && $existing->sync_fingerprint !== $fingerprint)
+                        ? 'conflict'
+                        : 'duplicate',
+                    'transaction_id' => $existing->id,
+                    'invoice' => $existing->invoice,
+                ] + (($existing->sync_fingerprint && $existing->sync_fingerprint !== $fingerprint) ? [
+                    'reason' => 'UUID sudah dipakai dengan payload berbeda.',
+                ] : []);
+            }
 
             // checkout() succeeded (2xx) — carts were consumed by it.
             $json = json_decode($response->getContent(), true);
 
             if ($response->isSuccessful()) {
                 $transactionId = data_get($json, 'data.id');
-                if ($transactionId) {
-                    Transaction::whereKey($transactionId)->update(['client_uuid' => $uuid]);
-                }
 
                 return [
                     'status' => $response->getStatusCode() === 202 ? 'pending_approval' : 'synced',
