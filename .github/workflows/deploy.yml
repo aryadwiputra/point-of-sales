@@ -114,10 +114,21 @@ jobs:
 
             echo "==> Verify"
             sleep 3
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://dikasir.web.id/)
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Deploy OK (HTTP $HTTP_CODE)"
-            else
-              echo "❌ Deploy check failed (HTTP $HTTP_CODE)"
-              exit 1
-            fi
+            check_http() {
+              local url="$1"
+              local expected="$2"
+              local actual
+              actual=$(curl --silent --show-error --location --max-time 20 -o /dev/null -w "%{http_code}" "$url")
+              if [ "$actual" != "$expected" ]; then
+                echo "❌ Smoke check failed: $url returned HTTP $actual (expected $expected)"
+                exit 1
+              fi
+              echo "✅ Smoke check passed: $url (HTTP $actual)"
+            }
+
+            # Follow the install redirect, then verify the public shell and
+            # unauthenticated API boundary independently.
+            check_http https://dikasir.web.id/ 200
+            check_http https://dikasir.web.id/login 200
+            check_http https://dikasir.web.id/api/v1/products 401
+            echo "✅ Deploy smoke checks passed"
