@@ -4,6 +4,14 @@ const QRCode = require('qrcode');
 const app = express();
 app.use(express.json());
 
+const WA_SERVICE_KEY = process.env.WA_SERVICE_KEY;
+app.use((req, res, next) => {
+    if (!WA_SERVICE_KEY || req.get('x-api-key') !== WA_SERVICE_KEY) {
+        return res.status(401).json({ status: false, reason: 'unauthorized' });
+    }
+    next();
+});
+
 let client = null;
 let qrCodeData = null;
 let isConnected = false;
