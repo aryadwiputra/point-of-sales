@@ -598,4 +598,48 @@ class PosTransactionSyncTest extends TestCase
         $this->assertNotNull($transaction);
         $this->assertEquals(10000, $transaction->grand_total);
     }
+
+    public function test_sync_does_not_consume_live_cart(): void
+    {
+        Sanctum::actingAs($this->cashier, ['*']);
+
+        app(CashierShiftService::class)->openShift(
+            cashier: $this->cashier,
+            actor: $this->cashier,
+            openingCash: 100000,
+            notes: null,
+            warehouseId: $this->warehouse->id
+        );
+
+        // Live cart created directly (not part of the offline payload).
+        $liveCart = Cart::create([
+            'cashier_id' => $this->cashier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'unit_id' => null,
+            'conversion_factor' => 1,
+            'qty' => 1,
+            'price' => 10000,
+        ]);
+
+        $this->postJson('/api/v1/pos/transactions/sync', [
+            'transactions' => [$this->syncPayload([
+                'client_uuid' => '770e8400-e29b-41d4-a716-446655440010',
+            ])],
+        ])->assertOk()
+            ->assertJsonPath('data.results.0.status', 'synced');
+
+        // Synced transaction contains only the offline item (qty 2), not the live cart item.
+        $transaction = Transaction::where(
+            'client_uuid',
+            '770e8400-e29b-41d4-a716-446655440010'
+        )->first();
+        $this->assertNotNull($transaction);
+        $this->assertSame(1, $transaction->details()->count());
+        $this->assertEquals(2, $transaction->details()->first()->qty);
+        $this->assertEquals(20000, $transaction->grand_total);
+
+        // Live cart survives untouched.
+        $this->assertDatabaseHas('carts', ['id' => $liveCart->id, 'qty' => 1]);
+    }
 }

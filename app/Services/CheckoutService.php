@@ -39,6 +39,7 @@ class CheckoutService
             $carts = Cart::with('product')
                 ->where('cashier_id', $ctx->userId)
                 ->active()
+                ->when($ctx->onlyCartIds, fn ($q, $ids) => $q->whereIn('id', $ids))
                 ->get();
 
             if ($carts->isEmpty()) {
@@ -122,7 +123,10 @@ class CheckoutService
 
             $this->processCartItems($transaction, $carts, $pricingPreview, $ctx->outlet, $subtotalAfterPromo, $appliedManualDiscount, $activeShift->warehouse_id, $ctx->userId);
 
-            Cart::where('cashier_id', $ctx->userId)->active()->delete();
+            Cart::where('cashier_id', $ctx->userId)
+                ->active()
+                ->when($ctx->onlyCartIds, fn ($q, $ids) => $q->whereIn('id', $ids))
+                ->delete();
 
             $this->loyaltyService->finalizeTransaction($transaction, $ctx->customer, $checkoutPreview);
 
