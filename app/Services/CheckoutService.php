@@ -25,6 +25,7 @@ class CheckoutService
         private readonly PriceListService $priceListService,
         private readonly BatchService $batchService,
         private readonly TransactionTenderService $tenderService,
+        private readonly StockMutationService $stockMutationService,
     ) {}
 
     public function execute(CheckoutContext $ctx): CheckoutResult
@@ -119,7 +120,7 @@ class CheckoutService
                 $transaction->tenders()->createMany($tenders);
             }
 
-            $this->processCartItems($transaction, $carts, $pricingPreview, $ctx->outlet, $subtotalAfterPromo, $appliedManualDiscount, $activeShift->warehouse_id);
+            $this->processCartItems($transaction, $carts, $pricingPreview, $ctx->outlet, $subtotalAfterPromo, $appliedManualDiscount, $activeShift->warehouse_id, $ctx->userId);
 
             Cart::where('cashier_id', $ctx->userId)->active()->delete();
 
@@ -161,6 +162,7 @@ class CheckoutService
         int $subtotalAfterPromo,
         int $appliedManualDiscount,
         ?int $warehouseId,
+        int $userId,
     ): void {
         $pricingItems = collect($pricingPreview['items']);
 
@@ -188,7 +190,16 @@ class CheckoutService
                 'pricing_group_label' => data_get($pricingItem, 'pricing_group_label'),
             ]);
 
-            $totalBuyPrice = $cart->product->buy_price * $cart->qty;
+            $product = Product::find($cart->product_id);
+
+            // HPP follows base-unit cost: cart qty is in the selling unit, buy_price is per base unit.
+            if ($product->is_composite) {
+                $totalBuyPrice = $product->components->sum(
+                    fn ($component) => $component->buy_price * (float) $component->pivot->qty
+                ) * $cart->qty;
+            } else {
+                $totalBuyPrice = $product->buy_price * $cart->qty * (float) ($cart->conversion_factor ?? 1);
+            }
             $lineShare = $subtotalAfterPromo > 0 ? $lineTotal / $subtotalAfterPromo : 0;
             $allocatedManualDiscount = (int) round($appliedManualDiscount * $lineShare);
             $netSellPrice = max(0, $lineTotal - $allocatedManualDiscount);
@@ -198,8 +209,6 @@ class CheckoutService
                 'transaction_id' => $transaction->id,
                 'total' => $profits,
             ]);
-
-            $product = Product::find($cart->product_id);
 
             if ($product->is_composite) {
                 $product->load('components');
@@ -217,10 +226,24 @@ class CheckoutService
                             'stock' => "Stok komponen {$component->title} tidak mencukupi. Tersedia: {$available}.",
                         ]);
                     }
+                    $stockBefore = $available;
                     if ($pw) {
                         $pw->decrement('stock', $componentQty);
                     }
                     $component->decrement('stock', $componentQty);
+
+                    $this->stockMutationService->recordMutation(
+                        product: $component,
+                        warehouseId: $warehouseId,
+                        referenceType: 'transaction',
+                        referenceId: $transaction->id,
+                        mutationType: 'out',
+                        qty: $componentQty,
+                        stockBefore: $stockBefore,
+                        stockAfter: $stockBefore - $componentQty,
+                        notes: "Penjualan {$transaction->invoice} (komponen komposit {$product->title})",
+                        userId: $userId,
+                    );
                 }
             } else {
                 $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
@@ -237,10 +260,24 @@ class CheckoutService
                         'stock' => "Stok {$product->title} tidak mencukupi. Tersedia: {$available}.",
                     ]);
                 }
+                $stockBefore = $available;
                 if ($pw) {
                     $pw->decrement('stock', $baseQty);
                 }
                 $product->decrement('stock', $baseQty);
+
+                $this->stockMutationService->recordMutation(
+                    product: $product,
+                    warehouseId: $warehouseId,
+                    referenceType: 'transaction',
+                    referenceId: $transaction->id,
+                    mutationType: 'out',
+                    qty: $baseQty,
+                    stockBefore: $stockBefore,
+                    stockAfter: $stockBefore - $baseQty,
+                    notes: "Penjualan {$transaction->invoice}",
+                    userId: $userId,
+                );
 
                 if ($warehouseId) {
                     $batches = ProductBatch::where('product_id', $product->id)
