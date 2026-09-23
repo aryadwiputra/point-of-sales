@@ -62,6 +62,17 @@ class PaymentWebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Transaction not found'], 404);
             }
 
+            // Idempotency guard: ignore late/duplicate webhooks for terminal transactions
+            if (in_array($transaction->payment_status, ['paid', 'failed'])) {
+                Log::info('Midtrans Webhook: Transaction already terminal, ignoring', [
+                    'provider' => 'midtrans',
+                    'order_id' => $orderId,
+                    'payment_status' => $transaction->payment_status,
+                ]);
+
+                return response()->json(['status' => 'success']);
+            }
+
             // Map Midtrans status to our status
             $transactionStatus = $request->input('transaction_status');
             $fraudStatus = $request->input('fraud_status');
@@ -173,6 +184,17 @@ class PaymentWebhookController extends Controller
                 ]);
 
                 return response()->json(['status' => 'error', 'message' => 'Transaction not found'], 404);
+            }
+
+            // Idempotency guard: ignore late/duplicate webhooks for terminal transactions
+            if (in_array($transaction->payment_status, ['paid', 'failed'])) {
+                Log::info('Xendit Webhook: Transaction already terminal, ignoring', [
+                    'provider' => 'xendit',
+                    'external_id' => $externalId,
+                    'payment_status' => $transaction->payment_status,
+                ]);
+
+                return response()->json(['status' => 'success']);
             }
 
             // Map Xendit status to our status
