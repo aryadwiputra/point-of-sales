@@ -32,6 +32,12 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Install JS dependencies
+        run: PUPPETEER_SKIP_DOWNLOAD=true npm install --no-audit --no-fund
+
+      - name: Build frontend
+        run: npm run build
+
       - name: Run test suite
         run: |
           cp .env.example .env
@@ -40,12 +46,8 @@ jobs:
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
-
-      - name: Install JS dependencies
-        run: PUPPETEER_SKIP_DOWNLOAD=true npm ci --no-audit --no-fund
-
-      - name: Build frontend
-        run: npm run build
+          SESSION_DRIVER: array
+          CACHE_STORE: array
 
   deploy:
     name: Deploy to VPS
