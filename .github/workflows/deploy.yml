@@ -34,6 +34,7 @@ jobs:
 
       - name: Run test suite
         run: |
+          cp .env.example .env
           php artisan key:generate --force
           php artisan test --compact
         env:
