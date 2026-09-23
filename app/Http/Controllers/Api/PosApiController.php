@@ -28,6 +28,7 @@ use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
 use App\Support\Checkout\CheckoutContext;
 use App\Support\Checkout\CheckoutFingerprint;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -604,6 +605,8 @@ class PosApiController extends Controller
             bankAccountId: $validated['bank_account_id'] ?? null,
             clientUuid: $validated['client_uuid'] ?? null,
             syncFingerprint: $validated['sync_fingerprint'] ?? null,
+            // Internal only: set by syncOne() so offline flush never consumes live carts.
+            onlyCartIds: array_map('intval', (array) $request->input('only_cart_ids', [])) ?: null,
         );
 
         try {
@@ -861,13 +864,14 @@ class PosApiController extends Controller
                 'note' => $payload['note'] ?? null,
                 'client_uuid' => $uuid,
                 'sync_fingerprint' => $fingerprint,
+                'only_cart_ids' => $createdCartIds,
             ], fn ($value) => $value !== null));
 
             $checkoutRequest->setUserResolver(fn () => $user);
 
             try {
                 $response = $this->checkout($checkoutRequest, app(PaymentGatewayManager::class));
-            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            } catch (UniqueConstraintViolationException $e) {
                 // Lost a race: another worker committed the same client_uuid
                 // between our pre-check and this checkout. Nothing was
                 // committed by us (the transaction rolled back atomically).
