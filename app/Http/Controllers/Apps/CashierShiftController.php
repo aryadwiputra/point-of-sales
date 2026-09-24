@@ -7,6 +7,7 @@ use App\Http\Requests\CloseCashierShiftRequest;
 use App\Http\Requests\ConfirmPasswordForForceCloseRequest;
 use App\Http\Requests\StoreCashierShiftRequest;
 use App\Models\CashierShift;
+use App\Models\Outlet;
 use App\Models\ShiftCashMovement;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -51,9 +52,7 @@ class CashierShiftController extends Controller
         $shifts->through(fn (CashierShift $shift) => $this->transformShift($shift));
 
         $activeShift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
-        $cashiers = $request->user()->isSuperAdmin() || $request->user()->can('cashier-shifts-force-close')
-            ? User::query()->orderBy('name')->get(['id', 'name'])
-            : collect([$request->user()->only(['id', 'name'])]);
+        $cashiers = $this->visibleCashiers($request);
 
         $warehouses = $this->outletAccessService->salesWarehousesFor($request->user());
 
@@ -215,6 +214,35 @@ class CashierShiftController extends Controller
         $query = $this->cashierShiftService->visibleToUser($query, $request->user());
 
         return $query->firstOrFail();
+    }
+
+    private function visibleCashiers(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->isSuperAdmin()) {
+            return User::query()->orderBy('name')->get(['id', 'name']);
+        }
+
+        if (! $user->can('cashier-shifts-force-close')) {
+            return collect([$user->only(['id', 'name'])]);
+        }
+
+        if (Outlet::active()->count() <= 1) {
+            return User::query()->orderBy('name')->get(['id', 'name']);
+        }
+
+        $outletIds = $this->outletAccessService->accessibleOutlets($user)->pluck('id')->all();
+
+        return User::query()
+            ->where(function (Builder $query) use ($user, $outletIds) {
+                $query->whereKey($user->id);
+                if ($outletIds !== []) {
+                    $query->orWhereHas('outlets', fn (Builder $outlets) => $outlets->whereIn('outlets.id', $outletIds));
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     private function transformShift(CashierShift $shift): array
