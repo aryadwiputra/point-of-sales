@@ -153,6 +153,7 @@ class StockOpnameController extends Controller
 
     public function storeItem(StoreStockOpnameItemRequest $request, StockOpname $stockOpname): RedirectResponse
     {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
         $this->ensureDraft($stockOpname);
 
         $product = Product::findOrFail($request->validated('product_id'));
