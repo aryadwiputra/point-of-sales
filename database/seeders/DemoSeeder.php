@@ -23,7 +23,8 @@ class DemoSeeder extends Seeder
         Setting::set('app_setup_completed', true);
 
         $this->command?->info('Demo data seeder completed.');
-        $this->command?->info('Admin: arya@gmail.com / password');
-        $this->command?->info('Kasir: cashier@gmail.com / password');
+        $this->command?->info('Admin   : arya@gmail.com / password (super-admin, semua outlet)');
+        $this->command?->info('Manager : manager@gmail.com / password (outlet MAL + TKB)');
+        $this->command?->info('Kasir   : cashier@gmail.com / password (outlet MAL)');
     }
 }

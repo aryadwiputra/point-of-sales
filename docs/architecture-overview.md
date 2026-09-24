@@ -40,7 +40,7 @@ dan `FeatureDemoSeeder` bersifat opt-in untuk demo atau pengujian.
 
 ## Alur Request Umum
 
-1. Route dashboard diproteksi `auth` + `verified` + `permission`
+1. Route dashboard diproteksi `auth` + `permission` (email verification dinonaktifkan)
 2. Controller menyiapkan data dari Model/Service
 3. Inertia merender page React di `resources/js/Pages/Dashboard/**/*.jsx`
 4. Permission user dishare ke frontend via `HandleInertiaRequests.php`

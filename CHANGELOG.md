@@ -3,6 +3,20 @@
 All notable application releases are listed here. Git tags using the same
 `vMAJOR.MINOR.PATCH` version are the authoritative release identifiers.
 
+## [Unreleased]
+
+### Added
+
+- `manager` role and `manager@gmail.com` demo account (scoped to outlets MAL + TKB) to demonstrate multi-outlet RBAC without super-admin privileges.
+- `docs/demo-data.md` — single reference for the demo dataset, credentials, reset steps, and production-safety guidance. Linked from `README.md`, `docs/README.md`, and `docs/getting-started.md`.
+- Demo seeder now seeds the full settings surface: store NPWP/NIB, default tax rate, printer, WhatsApp, discount-approval thresholds, and loyalty earn/redeem + tier thresholds.
+
+### Changed
+
+- **Email verification disabled**: `User` no longer implements `MustVerifyEmail`; the `verified` middleware, verification routes/controllers, and `Auth/VerifyEmail` page are removed. The setup wizard and public registration now land users directly on the dashboard. `markEmailAsVerified()` remains available via the retained trait for seeders/tests.
+- `DineInSettingsSeeder` now sets `dine_in_pay_online_enabled = 0` to match the enforced behavior (only `pay_at_counter` is accepted).
+- `seed:demo` and `DemoSeeder` output now lists all three demo accounts with role and outlet scope.
+
 ## [v3.0.2] - 2026-09-18
 
 ### Changed

@@ -6,6 +6,7 @@ Dokumentasi ini ditujukan untuk developer yang ingin setup, memahami alur modul,
 
 ### Onboarding
 - `docs/getting-started.md` — setup dari awal
+- `docs/demo-data.md` — seeder demo lengkap + akun demo
 - `docs/configuration.md` — environment, payment, tax, printer
 
 ### Arsitektur

@@ -27,7 +27,10 @@ class SeedDemoCommand extends Command
         $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
 
         $this->newLine();
-        $this->info('Demo data regenerated! Login: arya@gmail.com / cashier@gmail.com (password: "password")');
+        $this->info('Demo data regenerated! Login (password: "password"):');
+        $this->line('  - arya@gmail.com     (super-admin, semua outlet)');
+        $this->line('  - manager@gmail.com  (manager, outlet MAL + TKB)');
+        $this->line('  - cashier@gmail.com  (kasir, outlet MAL)');
 
         return self::SUCCESS;
     }

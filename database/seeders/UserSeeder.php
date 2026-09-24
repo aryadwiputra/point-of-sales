@@ -35,7 +35,6 @@ class UserSeeder extends Seeder
         }
 
         $admin->syncPermissions($permissions);
-        // Demo accounts skip email verification (dashboard is guarded by 'verified' middleware).
         $admin->markEmailAsVerified();
 
         $outlets = Outlet::whereIn('code', ['MAL', 'TKB', 'PUT'])->get();
@@ -43,6 +42,29 @@ class UserSeeder extends Seeder
             $admin->outlets()->sync($outlets->mapWithKeys(fn (Outlet $outlet) => [
                 $outlet->id => ['is_default' => $outlet->code === 'MAL'],
             ])->all());
+        }
+
+        $manager = User::updateOrCreate(
+            ['email' => 'manager@gmail.com'],
+            [
+                'name' => 'Manager Cabang',
+                'password' => Hash::make('password'),
+            ]
+        );
+
+        $managerRole = Role::where('name', 'manager')->first();
+        $manager->markEmailAsVerified();
+
+        $managerOutlets = $outlets->whereIn('code', ['MAL', 'TKB'])->values();
+        if ($managerOutlets->isNotEmpty()) {
+            $manager->outlets()->sync($managerOutlets->mapWithKeys(fn (Outlet $outlet) => [
+                $outlet->id => ['is_default' => $outlet->code === 'MAL'],
+            ])->all());
+        }
+
+        if ($managerRole) {
+            $manager->syncRoles([$managerRole->name]);
+            $manager->syncPermissions([]);
         }
 
         $cashier = User::updateOrCreate(
