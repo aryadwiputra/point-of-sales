@@ -49,6 +49,13 @@ class SeedDemoCommandTest extends TestCase
         $this->assertNotNull($cashier);
         $this->assertNotNull($cashier->email_verified_at);
 
+        $manager = User::where('email', 'manager@gmail.com')->first();
+
+        $this->assertNotNull($manager);
+        $this->assertTrue($manager->hasRole('manager'));
+        $this->assertFalse($manager->hasRole('super-admin'));
+        $this->assertSame(2, $manager->outlets()->count());
+
         $this->assertGreaterThan(0, Product::count());
         $this->assertSame(4, Outlet::count());
         $this->assertSame(4, Warehouse::count());
