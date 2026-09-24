@@ -14,6 +14,7 @@ class DineOrderItem extends Model
         'dine_order_id',
         'product_id',
         'unit_id',
+        'conversion_factor',
         'qty',
         'price',
         'note',
@@ -24,7 +25,16 @@ class DineOrderItem extends Model
         return [
             'qty' => 'integer',
             'price' => 'integer',
+            'conversion_factor' => 'decimal:4',
         ];
+    }
+
+    /**
+     * Base-unit quantity consumed by this line: selling qty x conversion factor.
+     */
+    public function baseQuantity(): int
+    {
+        return (int) round($this->qty * (float) ($this->conversion_factor ?? 1));
     }
 
     public function order(): BelongsTo
