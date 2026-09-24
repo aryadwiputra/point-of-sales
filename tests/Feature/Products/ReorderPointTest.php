@@ -100,4 +100,31 @@ class ReorderPointTest extends TestCase
 
         $this->assertNull(PurchaseOrder::latest('id')->first());
     }
+
+    public function test_generate_creates_per_warehouse_po_using_pivot_stock(): void
+    {
+        $otherWarehouse = Warehouse::create([
+            'code' => 'CABANG-PB',
+            'name' => 'Gudang Cabang PB',
+            'type' => 'branch',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        $product = $this->createProduct(['min_stock' => 50, 'max_stock' => 200, 'stock' => 0]);
+        // override pivot stock: low in PUSAT, healthy in CABANG
+        $product->warehouses()->sync([
+            $this->warehouse->id => ['stock' => 40],
+            $otherWarehouse->id => ['stock' => 300],
+        ]);
+
+        $this->artisan('reorder:generate')->assertSuccessful();
+
+        $orders = PurchaseOrder::with('items')->get();
+        $this->assertCount(1, $orders);
+
+        $order = $orders->first();
+        $this->assertEquals($this->warehouse->id, $order->warehouse_id);
+        $this->assertEquals(160, $order->items->first()->qty_ordered); // max 200 - pivot 40
+    }
 }
