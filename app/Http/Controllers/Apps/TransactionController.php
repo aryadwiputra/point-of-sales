@@ -106,7 +106,7 @@ class TransactionController extends Controller
             })
             ->orderBy('title')
             ->get();
-        $pricingBadges = $this->pricingService->previewProducts($products, null);
+        $pricingBadges = $this->pricingService->previewProducts($products, null, null, $outlet);
         $products = $products->map(function (Product $product) use ($pricingBadges) {
             $pricing = $pricingBadges->get($product->id);
 

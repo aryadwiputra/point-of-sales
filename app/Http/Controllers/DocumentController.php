@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Outlet;
 use App\Models\Payable;
 use App\Models\Receivable;
 use App\Models\Setting;
@@ -32,9 +33,9 @@ class DocumentController extends Controller
         }
     }
 
-    private function storeProfile(): array
+    private function storeProfile(?Outlet $outlet = null): array
     {
-        $logo = Setting::get('store_logo');
+        $logo = Setting::getForOutlet('store_logo', $outlet);
         if ($logo && ! str_starts_with($logo, 'http') && ! str_starts_with($logo, '/storage')) {
             $logo = asset('storage/'.ltrim($logo, '/'));
         }
@@ -54,13 +55,13 @@ class DocumentController extends Controller
         }
 
         return [
-            'name' => Setting::get('store_name', 'Toko Anda'),
+            'name' => Setting::getForOutlet('store_name', $outlet, 'Toko Anda'),
             'logo' => $logo,
             'logo_data' => $logoData,
-            'address' => Setting::get('store_address', ''),
-            'phone' => Setting::get('store_phone', ''),
-            'email' => Setting::get('store_email', ''),
-            'website' => Setting::get('store_website', ''),
+            'address' => Setting::getForOutlet('store_address', $outlet, ''),
+            'phone' => Setting::getForOutlet('store_phone', $outlet, ''),
+            'email' => Setting::getForOutlet('store_email', $outlet, ''),
+            'website' => Setting::getForOutlet('store_website', $outlet, ''),
         ];
     }
 
@@ -76,14 +77,14 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
+        $transaction = Transaction::with(['details.product', 'cashier', 'customer', 'warehouse.outlet'])
             ->where('invoice', $invoice)
             ->firstOrFail();
         $this->ensureWarehouseAccess($transaction->warehouse);
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'transaction' => $transaction,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($transaction->warehouse?->outlet),
             'barcode' => $this->barcode($transaction->invoice),
         ])->setPaper('a4');
 
@@ -97,14 +98,14 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
+        $transaction = Transaction::with(['details.product', 'cashier', 'customer', 'warehouse.outlet'])
             ->where('invoice', $invoice)
             ->where('access_token', $request->query('token'))
             ->firstOrFail();
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'transaction' => $transaction,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($transaction->warehouse?->outlet),
             'barcode' => $this->barcode($transaction->invoice),
         ])->setPaper('a4');
 
@@ -115,7 +116,7 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $transaction = Transaction::with(['details.product', 'cashier', 'customer'])
+        $transaction = Transaction::with(['details.product', 'cashier', 'customer', 'warehouse.outlet'])
             ->where('invoice', $invoice)
             ->firstOrFail();
         $this->ensureWarehouseAccess($transaction->warehouse);
@@ -124,7 +125,7 @@ class DocumentController extends Controller
         $width = $size === '58' ? 164.4 : 226.8; // points (mm*2.8346)
         $pdf = Pdf::loadView($template, [
             'transaction' => $transaction,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($transaction->warehouse?->outlet),
             'barcode' => $this->barcode($transaction->invoice),
         ])->setPaper([0, 0, $width, 800], 'portrait');
 
@@ -135,14 +136,14 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $transaction = Transaction::with(['details.product', 'customer', 'cashier'])
+        $transaction = Transaction::with(['details.product', 'customer', 'cashier', 'warehouse.outlet'])
             ->where('invoice', $invoice)
             ->firstOrFail();
         $this->ensureWarehouseAccess($transaction->warehouse);
 
         $pdf = Pdf::loadView('pdf.shipping_label', [
             'transaction' => $transaction,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($transaction->warehouse?->outlet),
             'barcode' => $this->barcode($transaction->invoice),
         ]);
 
@@ -170,12 +171,12 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $receivable->load(['customer', 'payments.bankAccount', 'payments.user']);
+        $receivable->load(['customer', 'payments.bankAccount', 'payments.user', 'transaction.warehouse.outlet']);
         $this->ensureWarehouseAccess($receivable->transaction?->warehouse);
 
         $pdf = Pdf::loadView('pdf.receivable', [
             'receivable' => $receivable,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($receivable->transaction?->warehouse?->outlet),
             'barcode' => $this->barcode($receivable->invoice),
         ])->setPaper('a5', 'portrait');
 
@@ -186,12 +187,12 @@ class DocumentController extends Controller
     {
         $this->ensureFontDirectory();
 
-        $payable->load(['supplier', 'payments.bankAccount', 'payments.user']);
+        $payable->load(['supplier', 'payments.bankAccount', 'payments.user', 'purchaseOrder.warehouse.outlet']);
         $this->ensureWarehouseAccess($payable->purchaseOrder?->warehouse);
 
         $pdf = Pdf::loadView('pdf.payable', [
             'payable' => $payable,
-            'store' => $this->storeProfile(),
+            'store' => $this->storeProfile($payable->purchaseOrder?->warehouse?->outlet),
             'barcode' => $this->barcode($payable->document_number),
         ])->setPaper('a5', 'portrait');
 

@@ -207,6 +207,7 @@ class LoyaltyService
 
         // Calculate tax
         $taxService = app(TaxService::class);
+        $defaultTaxRate = $taxService->getDefaultRate($outlet);
         $items = data_get($pricingPreview, 'items', []);
         $productIds = collect($items)->pluck('product_id')->filter()->unique()->values();
         $productTaxes = Product::whereIn('id', $productIds)->pluck('tax_rate', 'id');
@@ -220,7 +221,7 @@ class LoyaltyService
             $pid = $item['product_id'] ?? null;
             $lineTotal = (int) ($item['line_total'] ?? 0);
             if ($pid && $lineTotal > 0) {
-                $rate = (float) ($productTaxes[$pid] ?? 11.00);
+                $rate = (float) ($productTaxes[$pid] ?? $defaultTaxRate);
                 $type = $productTaxTypes[$pid] ?? 'exclusive';
                 $taxResult = $taxService->calculateLineItem($lineTotal, $type, $rate);
                 $taxTotal += $taxResult['tax_amount'];

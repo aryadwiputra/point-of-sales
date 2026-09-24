@@ -246,7 +246,7 @@ class PricingRuleController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $this->pricingService->previewCartWithRules($sampleCarts, $customer, collect([$rule])),
+            'data' => $this->pricingService->previewCartWithRules($sampleCarts, $customer, collect([$rule]), $this->outletAccess->activeOutlet($request)),
         ]);
     }
 

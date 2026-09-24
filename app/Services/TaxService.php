@@ -2,20 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Outlet;
 use App\Models\Setting;
 
 class TaxService
 {
-    private float $defaultRate;
-
-    public function __construct()
+    public function getDefaultRate(?Outlet $outlet = null): float
     {
-        $this->defaultRate = (float) (Setting::get('tax_default_rate', '11.00'));
-    }
-
-    public function getDefaultRate(): float
-    {
-        return $this->defaultRate;
+        return (float) Setting::getForOutlet('tax_default_rate', $outlet, '11.00');
     }
 
     public function calculateLineItem(int $lineTotal, string $taxType = 'exclusive', float $taxRate = 0): array

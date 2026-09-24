@@ -131,13 +131,17 @@ class Product extends Model
         return $stock <= $this->min_stock;
     }
 
-    public function suggestedOrderQty(): int
+    public function suggestedOrderQty(?int $warehouseId = null): int
     {
         if ($this->max_stock <= 0 || $this->min_stock <= 0) {
             return 0;
         }
 
-        return max(0, $this->max_stock - $this->stockTotal());
+        $stock = $warehouseId
+            ? (int) ($this->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+            : $this->stockTotal();
+
+        return max(0, $this->max_stock - $stock);
     }
 
     protected function image(): Attribute
