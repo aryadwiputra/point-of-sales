@@ -24,12 +24,12 @@ class ReorderService
         return $query->orderBy('stock')->limit(20)->get();
     }
 
-    public function createDraftPurchaseOrder(Collection $products, int $userId): ?PurchaseOrder
+    public function createDraftPurchaseOrder(Collection $products, int $userId, ?int $warehouseId = null): ?PurchaseOrder
     {
-        $items = $products->filter(fn ($p) => $p->suggestedOrderQty() > 0)
+        $items = $products->filter(fn ($p) => $p->suggestedOrderQty($warehouseId) > 0)
             ->map(fn ($p) => [
                 'product_id' => $p->id,
-                'qty_ordered' => $p->suggestedOrderQty(),
+                'qty_ordered' => $p->suggestedOrderQty($warehouseId),
                 'unit_price' => $p->buy_price,
             ])->values()->toArray();
 
@@ -37,10 +37,11 @@ class ReorderService
             return null;
         }
 
-        return app(PurchaseOrderService::class)->createOrder(
-            ['notes' => 'Auto-generated from restock suggestion'],
-            $items,
-            $userId
-        );
+        $data = ['notes' => 'Auto-generated from restock suggestion'];
+        if ($warehouseId) {
+            $data['warehouse_id'] = $warehouseId;
+        }
+
+        return app(PurchaseOrderService::class)->createOrder($data, $items, $userId);
     }
 }
