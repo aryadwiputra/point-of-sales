@@ -216,6 +216,7 @@ class PricingRuleController extends Controller
 
     public function destroy(PricingRule $pricingRule)
     {
+        abort_unless($this->canUseRule($pricingRule), 404);
         $before = $this->auditPayload($pricingRule->load(['qtyBreaks', 'bundleItems', 'buyGetItems']));
         $pricingRule->delete();
 

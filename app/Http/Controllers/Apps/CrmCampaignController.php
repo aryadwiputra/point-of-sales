@@ -145,6 +145,8 @@ class CrmCampaignController extends Controller
 
     public function markLogSent(CustomerCampaignLog $log)
     {
+        abort_unless($this->canUseCampaign($log->campaign), 404);
+
         $this->crmAutomationService->markLog($log, CustomerCampaignLog::STATUS_SENT);
 
         return back()->with('success', 'Log campaign ditandai sebagai terkirim.');
@@ -152,6 +154,8 @@ class CrmCampaignController extends Controller
 
     public function markLogSkipped(CustomerCampaignLog $log)
     {
+        abort_unless($this->canUseCampaign($log->campaign), 404);
+
         $this->crmAutomationService->markLog($log, CustomerCampaignLog::STATUS_SKIPPED);
 
         return back()->with('success', 'Log campaign dilewati.');
@@ -159,6 +163,11 @@ class CrmCampaignController extends Controller
 
     public function shareTransaction(Transaction $transaction, Request $request)
     {
+        abort_unless(
+            $this->outletAccessService->canUseWarehouse($request->user(), $transaction->warehouse),
+            404
+        );
+
         $campaign = $this->crmAutomationService->createInvoiceShareCampaignForTransaction($transaction, $request->user()->id);
 
         return redirect()
@@ -168,6 +177,11 @@ class CrmCampaignController extends Controller
 
     public function shareReceivable(Receivable $receivable, Request $request)
     {
+        abort_unless(
+            $this->outletAccessService->canUseWarehouse($request->user(), $receivable->transaction?->warehouse),
+            404
+        );
+
         $campaign = $this->crmAutomationService->createInvoiceShareCampaignForReceivable($receivable, $request->user()->id);
 
         return redirect()
@@ -199,10 +213,24 @@ class CrmCampaignController extends Controller
         ]);
     }
 
-    private function canUseCampaign(CustomerCampaign $campaign): bool
+    private function canUseCampaign(?CustomerCampaign $campaign): bool
     {
-        $outlet = $this->outletAccessService->activeOutlet(request());
+        if (! $campaign) {
+            return false;
+        }
 
-        return $campaign->outlet_id === null || ($outlet && (int) $campaign->outlet_id === (int) $outlet->id);
+        if ($campaign->outlet_id === null) {
+            return true;
+        }
+
+        $user = request()->user();
+
+        if ($user?->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->outletAccessService->accessibleOutlets($user)
+            ->pluck('id')
+            ->contains((int) $campaign->outlet_id);
     }
 }

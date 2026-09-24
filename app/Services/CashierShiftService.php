@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CashierShift;
+use App\Models\Outlet;
 use App\Models\SalesReturn;
 use App\Models\ShiftCashMovement;
 use App\Models\Transaction;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class CashierShiftService
 {
+    public function __construct(private readonly OutletAccessService $outletAccessService) {}
+
     public function getActiveShiftForUser(int $userId): ?CashierShift
     {
         return CashierShift::query()
@@ -242,8 +245,23 @@ class CashierShiftService
 
     public function visibleToUser(Builder $query, User $user): Builder
     {
-        if ($user->isSuperAdmin() || $user->can('cashier-shifts-force-close')) {
+        if ($user->isSuperAdmin()) {
             return $query;
+        }
+
+        if ($user->can('cashier-shifts-force-close')) {
+            if (Outlet::active()->count() <= 1) {
+                return $query;
+            }
+
+            $warehouseIds = $this->outletAccessService->warehousesFor($user)->pluck('id')->all();
+
+            return $query->where(function (Builder $query) use ($user, $warehouseIds) {
+                $query->where('user_id', $user->id);
+                if ($warehouseIds !== []) {
+                    $query->orWhereIn('warehouse_id', $warehouseIds);
+                }
+            });
         }
 
         return $query->where('user_id', $user->id);

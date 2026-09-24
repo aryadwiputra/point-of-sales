@@ -41,9 +41,13 @@ class BankAccount extends Model
 
     public function scopeForOutlet(Builder $query, ?Outlet $outlet): Builder
     {
-        return $query->when($outlet, fn (Builder $query) => $query->where(function (Builder $query) use ($outlet) {
+        if (! $outlet) {
+            return $query->whereNull('outlet_id');
+        }
+
+        return $query->where(function (Builder $query) use ($outlet) {
             $query->whereNull('outlet_id')->orWhere('outlet_id', $outlet->id);
-        }));
+        });
     }
 
     /**
