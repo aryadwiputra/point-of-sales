@@ -63,6 +63,16 @@ php artisan db:seed --class=DemoSeeder --force
 
 `DemoSeeder` membuat outlet demo `MAL`, `TKB`, dan `PUT`, user demo, produk, transaksi, shift, purchasing, inventory, pricing, dine-in, dan feature coverage. Transaksi penjualan hanya dibuat pada gudang outlet penjualan; tidak ada panggilan gateway pembayaran nyata.
 
+Akun demo yang dibuat:
+
+| Email | Password | Role | Outlet |
+|-------|----------|------|--------|
+| `arya@gmail.com` | `password` | super-admin | Semua |
+| `manager@gmail.com` | `password` | manager | MAL + TKB |
+| `cashier@gmail.com` | `password` | cashier | MAL |
+
+Rincian lengkap dataset demo ada di `docs/demo-data.md`.
+
 Alias kompatibilitas berikut juga tersedia:
 
 ```bash

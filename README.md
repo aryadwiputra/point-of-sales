@@ -108,13 +108,14 @@ npm install && npm start
 ```
 
 Tidak ada akun default. Setelah `migrate --seed`, buka root aplikasi (`http://localhost:8000`); pada instalasi pertama aplikasi otomatis mengarahkan ke `/setup` untuk membuat akun admin dan profil toko.
-Seeder demo bersifat opt-in: `UserSeeder` lalu `SampleDataSeeder`.
+Ingin langsung mencoba dengan data contoh? Jalankan `php artisan seed:demo --force`. Seeder ini membuat dataset demo lengkap (outlet `MAL`/`TKB`/`PUT`, produk, transaksi, purchasing, CRM, dine-in) beserta tiga akun siap pakai — lihat `docs/demo-data.md`.
 
 ## Dokumentasi Detail
 
 | Dokumen | Isi |
 |---------|-----|
 | `docs/getting-started.md` | Setup lengkap |
+| `docs/demo-data.md` | Seeder demo lengkap + akun demo |
 | `docs/configuration.md` | Konfigurasi environment, payment, pajak, printer, WhatsApp |
 | `docs/architecture-overview.md` | Arsitektur, middleware, service layer, Node service |
 | `docs/feature-index.md` | Indeks semua modul (44 fitur) |
