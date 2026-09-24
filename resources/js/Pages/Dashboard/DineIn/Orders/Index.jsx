@@ -24,7 +24,6 @@ const STATUS_CONFIG = {
 
 const PAY_CONFIG = {
     pay_at_counter: { label: "Bayar di Kasir", color: "text-slate-600 dark:text-slate-400" },
-    pay_online: { label: "Bayar Online", color: "text-primary-600 dark:text-primary-400" },
 };
 
 export default function Index({ orders }) {

@@ -6,7 +6,7 @@ import { useForm, usePage } from '@inertiajs/react';
 import { Transition } from '@headlessui/react';
 import { useEffect, useState } from 'react';
 
-export default function UpdateProfileInformation({ status, className = '' }) {
+export default function UpdateProfileInformation({ className = '' }) {
     const user = usePage().props.auth.user;
 
     const { data, setData, patch, errors, processing, recentlySuccessful, reset } = useForm({

@@ -24,8 +24,6 @@ class DineOrder extends Model
 
     public const PAY_AT_COUNTER = 'pay_at_counter';
 
-    public const PAY_ONLINE = 'pay_online';
-
     protected $fillable = [
         'dine_table_id',
         'customer_id',

@@ -168,7 +168,7 @@ class FeatureCoverageSeeder extends Seeder
             'store_nib' => ['value' => '1234567890123', 'description' => 'NIB toko'],
             'tax_default_rate' => ['value' => '11.00', 'description' => 'Tarif PPN default (%)'],
             'printer_auto_print' => ['value' => '1', 'description' => 'Cetak struk otomatis setelah transaksi'],
-            'printer_paper_size' => ['value' => '80', 'description' => 'Ukuran kertas printer (58/80mm)'],
+            'printer_paper_size' => ['value' => '80mm', 'description' => 'Ukuran kertas printer (58/80mm)'],
             'wa_service_url' => ['value' => 'http://localhost:3001', 'description' => 'URL layanan WhatsApp'],
             'wa_enabled' => ['value' => '0', 'description' => 'Aktifkan integrasi WhatsApp'],
             'wa_auto_reminder' => ['value' => '1', 'description' => 'Kirim pengingat otomatis via WhatsApp'],
