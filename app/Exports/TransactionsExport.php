@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -13,17 +14,51 @@ class TransactionsExport implements FromCollection, ShouldAutoSize, WithHeadings
 {
     protected Request $request;
 
-    public function __construct(Request $request)
+    /**
+     * Warehouse ids the operator is allowed to export. Null means unrestricted.
+     *
+     * @var array<int>|null
+     */
+    protected ?array $warehouseIds;
+
+    protected bool $includeLegacy;
+
+    /**
+     * @param  array<int>|null  $warehouseIds
+     */
+    public function __construct(Request $request, ?array $warehouseIds = null, bool $includeLegacy = false)
     {
         $this->request = $request;
+        $this->warehouseIds = $warehouseIds;
+        $this->includeLegacy = $includeLegacy;
     }
 
-    public function collection()
+    public function collection(): Collection
     {
+        $requestedWarehouse = $this->request->warehouse_id;
+
         return Transaction::with(['customer:id,name', 'cashier:id,name', 'tenders:id,transaction_id,method,amount'])
+            ->when($this->warehouseIds !== null, function ($query) {
+                $query->where(function ($query) {
+                    if ($this->warehouseIds === []) {
+                        if ($this->includeLegacy) {
+                            $query->whereNull('warehouse_id');
+                        } else {
+                            $query->whereRaw('1 = 0');
+                        }
+
+                        return;
+                    }
+
+                    $query->whereIn('warehouse_id', $this->warehouseIds);
+                    if ($this->includeLegacy) {
+                        $query->orWhereNull('warehouse_id');
+                    }
+                });
+            })
+            ->when($requestedWarehouse, fn ($q, $id) => $q->where('warehouse_id', $id))
             ->when($this->request->start_date, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
             ->when($this->request->end_date, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))
-            ->when($this->request->warehouse_id, fn ($q, $id) => $q->where('warehouse_id', $id))
             ->orderByDesc('created_at')
             ->get();
     }

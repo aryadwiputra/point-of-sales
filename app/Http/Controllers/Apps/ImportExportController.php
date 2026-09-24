@@ -8,6 +8,8 @@ use App\Exports\TransactionsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\CustomersImport;
 use App\Imports\ProductsImport;
+use App\Models\Outlet;
+use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -15,6 +17,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ImportExportController extends Controller
 {
+    public function __construct(private readonly OutletAccessService $outletAccessService) {}
+
     public function exportProducts()
     {
         return Excel::download(new ProductsExport, 'produk.xlsx');
@@ -27,7 +31,12 @@ class ImportExportController extends Controller
 
     public function exportTransactions(Request $request)
     {
-        return Excel::download(new TransactionsExport($request), 'transaksi.xlsx');
+        $warehouseIds = $request->user()->isSuperAdmin()
+            ? null
+            : $this->outletAccessService->warehousesFor($request->user())->pluck('id')->all();
+        $includeLegacy = Outlet::active()->count() <= 1;
+
+        return Excel::download(new TransactionsExport($request, $warehouseIds, $includeLegacy), 'transaksi.xlsx');
     }
 
     public function importProducts(Request $request)

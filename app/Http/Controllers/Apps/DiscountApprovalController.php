@@ -14,12 +14,13 @@ use Inertia\Inertia;
 class DiscountApprovalController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly OutletAccessService $outletAccessService
     ) {}
 
     public function pending()
     {
-        $warehouseIds = app(OutletAccessService::class)->warehousesFor(request()->user())->pluck('id');
+        $warehouseIds = $this->outletAccessService->warehousesFor(request()->user())->pluck('id');
         $includeLegacy = Outlet::active()->count() <= 1;
 
         $pending = Transaction::where('discount_approval_status', 'pending')
@@ -54,6 +55,7 @@ class DiscountApprovalController extends Controller
     public function approve(Transaction $transaction)
     {
         abort_if($transaction->discount_approval_status !== 'pending', 404);
+        $this->ensureOutletAccess($transaction);
 
         $this->logAndUpdate($transaction, 'approved');
 
@@ -63,10 +65,19 @@ class DiscountApprovalController extends Controller
     public function deny(Request $request, Transaction $transaction)
     {
         abort_if($transaction->discount_approval_status !== 'pending', 404);
+        $this->ensureOutletAccess($transaction);
 
         $this->logAndUpdate($transaction, 'denied', $request->notes);
 
         return back()->with('success', 'Diskon ditolak.');
+    }
+
+    private function ensureOutletAccess(Transaction $transaction): void
+    {
+        abort_unless(
+            $this->outletAccessService->canUseWarehouse(request()->user(), $transaction->warehouse),
+            404
+        );
     }
 
     private function logAndUpdate(Transaction $transaction, string $status, ?string $notes = null): void
