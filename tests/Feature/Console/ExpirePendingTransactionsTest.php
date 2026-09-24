@@ -69,7 +69,7 @@ class ExpirePendingTransactionsTest extends TestCase
         $this->warehouse->products()->attach($this->product->id, ['stock' => 0]);
     }
 
-    private function makePendingTransaction(string $invoice, $createdAt): Transaction
+    private function makePendingTransaction(string $invoice, $createdAt, int $conversionFactor = 1): Transaction
     {
         $transaction = new Transaction([
             'cashier_id' => $this->cashier->id,
@@ -89,6 +89,7 @@ class ExpirePendingTransactionsTest extends TestCase
             'transaction_id' => $transaction->id,
             'product_id' => $this->product->id,
             'qty' => 2,
+            'conversion_factor' => $conversionFactor,
             'base_unit_price' => 10000,
             'unit_price' => 10000,
             'price' => 10000,
@@ -105,7 +106,7 @@ class ExpirePendingTransactionsTest extends TestCase
         TransactionDetailBatchAllocation::create([
             'transaction_detail_id' => $detail->id,
             'product_batch_id' => $batch->id,
-            'qty' => 2,
+            'qty' => 2 * $conversionFactor,
         ]);
 
         return $transaction;
@@ -134,6 +135,32 @@ class ExpirePendingTransactionsTest extends TestCase
             'reference_id' => $transaction->id,
             'mutation_type' => 'in',
             'qty' => 2,
+        ]);
+    }
+
+    public function test_expires_multi_unit_transaction_and_restocks_base_units(): void
+    {
+        $transaction = $this->makePendingTransaction('INV-EXPIRE-MU', now()->subHours(30), conversionFactor: 12);
+
+        \Artisan::call('transactions:expire');
+        $transaction->refresh();
+
+        $this->assertEquals('failed', $transaction->payment_status);
+
+        // qty 2 x factor 12 = 24 base units restored to pivot, global, and batch
+        $this->assertDatabaseHas('product_warehouse', [
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'stock' => 24,
+        ]);
+        $this->assertEquals(24, $this->product->fresh()->stock);
+        $this->assertEquals(24, $transaction->details->first()->batchAllocations->first()->productBatch->stock);
+
+        $this->assertDatabaseHas(StockMutation::class, [
+            'reference_type' => 'transaction_expire',
+            'reference_id' => $transaction->id,
+            'mutation_type' => 'in',
+            'qty' => 24,
         ]);
     }
 

@@ -52,10 +52,16 @@ class DineOrderController extends Controller
                 continue;
             }
 
+            $unitId = $item['unit_id'] ?? null;
+            $conversionFactor = $unitId
+                ? ($product->units()->where('unit_id', $unitId)->first()?->pivot->conversion_factor ?? 1)
+                : 1;
+            $baseQty = (int) round($item['qty'] * (float) $conversionFactor);
+
             // Public orders are routed to the outlet's warehouse when accepted.
             $available = $this->availableStock($product, $outlet);
 
-            if ($available < $item['qty']) {
+            if ($available < $baseQty) {
                 return back()->with('error', "Stok {$product->title} tidak mencukupi (tersedia: {$available}).");
             }
 
@@ -64,7 +70,8 @@ class DineOrderController extends Controller
             $subtotal += $price * $item['qty'];
             $orderItems[] = [
                 'product_id' => $item['product_id'],
-                'unit_id' => $item['unit_id'] ?? null,
+                'unit_id' => $unitId,
+                'conversion_factor' => $conversionFactor,
                 'qty' => $item['qty'],
                 'price' => $price,
                 'note' => $item['note'] ?? null,
