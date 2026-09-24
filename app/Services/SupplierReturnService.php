@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class SupplierReturnService
 {
@@ -94,22 +95,43 @@ class SupplierReturnService
             $return->load('items');
 
             foreach ($return->items as $item) {
-                $product = $item->product;
+                $product = $item->product()->lockForUpdate()->first();
+
+                if (! $product) {
+                    continue;
+                }
+
+                $qtyReturned = (int) $item->qty_returned;
+
+                if ((int) $product->stock < $qtyReturned) {
+                    throw ValidationException::withMessages([
+                        'items' => "Stok {$product->title} tidak mencukupi untuk diretur ke supplier (tersedia: {$product->stock}).",
+                    ]);
+                }
+
                 $stockBefore = (int) $product->stock;
-                $product->decrement('stock', $item->qty_returned);
+                $product->decrement('stock', $qtyReturned);
 
                 // Decrement pivot warehouse stock
                 if ($return->warehouse_id) {
-                    ProductWarehouse::where([
+                    $pivot = ProductWarehouse::where([
                         'product_id' => $product->id,
                         'warehouse_id' => $return->warehouse_id,
-                    ])->decrement('stock', $item->qty_returned);
+                    ])->lockForUpdate()->first();
+
+                    if ($pivot && (int) $pivot->stock < $qtyReturned) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stok gudang {$product->title} tidak mencukupi untuk diretur ke supplier (tersedia: {$pivot->stock}).",
+                        ]);
+                    }
+
+                    $pivot?->decrement('stock', $qtyReturned);
                 }
 
                 $this->stockMutationService->recordSupplierReturnOut(
                     product: $product,
                     supplierReturn: $return,
-                    qty: $item->qty_returned,
+                    qty: $qtyReturned,
                     stockBefore: $stockBefore,
                     stockAfter: (int) $product->stock,
                     notes: $item->reason ?? 'Retur barang ke supplier',
