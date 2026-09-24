@@ -39,7 +39,7 @@ class RegistrationTest extends TestCase
         ] + $this->botGuardPayload());
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertRedirect(route('dashboard.access', absolute: false));
     }
 
     public function test_register_request_is_throttled_when_public_registration_is_enabled(): void

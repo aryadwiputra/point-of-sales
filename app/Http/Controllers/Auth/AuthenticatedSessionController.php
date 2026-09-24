@@ -56,10 +56,6 @@ class AuthenticatedSessionController extends Controller
             ],
         );
 
-        if ($user && method_exists($user, 'hasVerifiedEmail') && ! $user->hasVerifiedEmail()) {
-            return redirect()->route('verification.notice');
-        }
-
         $routePriority = [
             'transactions-access' => 'transactions.index',
             'receivables-access' => 'receivables.index',

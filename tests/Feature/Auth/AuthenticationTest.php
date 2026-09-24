@@ -32,7 +32,7 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('dashboard.access', absolute: false));
     }
 
-    public function test_unverified_users_are_redirected_to_verification_notice_after_login(): void
+    public function test_unverified_users_can_still_authenticate(): void
     {
         $user = User::factory()->unverified()->create();
 
@@ -42,7 +42,7 @@ class AuthenticationTest extends TestCase
         ] + $this->botGuardPayload());
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertRedirect(route('dashboard.access', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void
@@ -97,13 +97,13 @@ class AuthenticationTest extends TestCase
         );
     }
 
-    public function test_unverified_user_cannot_access_dashboard_route(): void
+    public function test_unverified_user_can_access_dashboard_route(): void
     {
         $user = User::factory()->unverified()->create();
 
         $response = $this->actingAs($user)->get('/dashboard/access');
 
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertOk();
     }
 
     public function test_production_security_warnings_are_shared_to_dashboard(): void

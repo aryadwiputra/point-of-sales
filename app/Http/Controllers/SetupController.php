@@ -107,6 +107,7 @@ class SetupController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
             $user->assignRole('super-admin');
+            $user->markEmailAsVerified();
 
             $pusat = Outlet::firstOrCreate(
                 ['code' => 'PUSAT'],
