@@ -67,7 +67,10 @@ class ExpirePendingTransactionsCommand extends Command
 
                         $warehouseId = $locked->warehouse_id;
 
-                        $this->restock($product, $warehouseId, (int) $detail->qty);
+                        // Stock effect is in base units: selling qty x conversion factor.
+                        $baseQty = $detail->baseQuantity();
+
+                        $this->restock($product, $warehouseId, $baseQty);
 
                         foreach ($detail->batchAllocations as $allocation) {
                             DB::table('product_batches')
@@ -81,8 +84,8 @@ class ExpirePendingTransactionsCommand extends Command
                             referenceType: 'transaction_expire',
                             referenceId: $locked->id,
                             mutationType: 'in',
-                            qty: (int) $detail->qty,
-                            stockBefore: $this->stockAfterBefore($product, $warehouseId, (int) $detail->qty),
+                            qty: $baseQty,
+                            stockBefore: $this->stockAfterBefore($product, $warehouseId, $baseQty),
                             stockAfter: $this->stockAfterBefore($product, $warehouseId, 0),
                             notes: "Auto-expire pembayaran {$locked->invoice}",
                             userId: null,

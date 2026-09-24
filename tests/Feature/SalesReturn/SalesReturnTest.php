@@ -345,6 +345,77 @@ class SalesReturnTest extends TestCase
         $response->assertInvalid(['sales_return']);
     }
 
+    public function test_complete_sales_return_restocks_base_units_for_multi_unit_product(): void
+    {
+        $user = $this->createUserWithPermissions([
+            'transactions-access',
+            'sales-returns-access',
+            'sales-returns-create',
+            'sales-returns-complete',
+        ]);
+
+        // One box = 12 base units; stock currently 4 base units.
+        [$transaction, $detail, $product] = $this->createTransaction($user, qty: 1, stock: 4, conversionFactor: 12);
+        $this->openShiftFor($user);
+        $warehouse = Warehouse::create([
+            'code' => 'RET-MU',
+            'name' => 'Gudang Retur Multi',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $transaction->update(['warehouse_id' => $warehouse->id]);
+
+        $salesReturn = SalesReturn::create([
+            'code' => 'SR-TEST-MU',
+            'transaction_id' => $transaction->id,
+            'warehouse_id' => $warehouse->id,
+            'customer_id' => $transaction->customer_id,
+            'cashier_id' => $user->id,
+            'status' => 'draft',
+            'return_type' => 'refund_cash',
+            'refund_amount' => 720000,
+            'credited_amount' => 0,
+            'total_return_amount' => 720000,
+        ]);
+
+        $salesReturn->items()->create([
+            'transaction_detail_id' => $detail->id,
+            'product_id' => $product->id,
+            'qty_sold' => 1,
+            'qty_returned_before' => 0,
+            'qty_return' => 1,
+            'unit_price' => 720000,
+            'subtotal' => 720000,
+            'return_reason' => 'Barang dikembalikan',
+            'restock_to_inventory' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('sales-returns.complete', $salesReturn))
+            ->assertSessionDoesntHaveErrors();
+
+        // 4 + (1 box x 12) = 16
+        $this->assertSame(16, $product->fresh()->stock);
+
+        $this->assertDatabaseHas('stock_mutations', [
+            'product_id' => $product->id,
+            'reference_type' => 'sales_return',
+            'reference_id' => $salesReturn->id,
+            'mutation_type' => 'in',
+            'qty' => 12,
+            'stock_before' => 4,
+            'stock_after' => 16,
+        ]);
+
+        // Margin reversal: (720000 - 45000*12) x 1 = 180000
+        $this->assertDatabaseHas('profits', [
+            'transaction_id' => $transaction->id,
+            'total' => -180000,
+        ]);
+    }
+
     private function createUserWithPermissions(array $permissions): User
     {
         $user = User::factory()->create();
@@ -360,7 +431,8 @@ class SalesReturnTest extends TestCase
         bool $withCustomer = true,
         string $paymentMethod = 'cash',
         string $paymentStatus = 'paid',
-        bool $withReceivable = false
+        bool $withReceivable = false,
+        int $conversionFactor = 1
     ): array {
         $category = Category::create([
             'name' => 'Kategori '.Str::upper(Str::random(5)),
@@ -409,7 +481,8 @@ class SalesReturnTest extends TestCase
         $detail = $transaction->details()->create([
             'product_id' => $product->id,
             'qty' => $qty,
-            'price' => 60000,
+            'conversion_factor' => $conversionFactor,
+            'price' => 60000 * $conversionFactor,
         ]);
 
         $transaction->profits()->create([

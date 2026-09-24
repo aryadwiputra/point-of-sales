@@ -43,6 +43,14 @@ class TransactionDetail extends Model
         'conversion_factor' => 'decimal:4',
     ];
 
+    /**
+     * Base-unit quantity consumed/returned by this line: selling qty x conversion factor.
+     */
+    public function baseQuantity(): int
+    {
+        return (int) round($this->qty * (float) ($this->conversion_factor ?? 1));
+    }
+
     public function transaction()
     {
         return $this->belongsTo(Transaction::class);

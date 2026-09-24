@@ -228,12 +228,17 @@ class SalesReturnController extends Controller
             }
 
             foreach ($salesReturn->items as $item) {
+                $detail = $item->transactionDetail;
+
+                // Stock effect is in base units: selling qty x conversion factor.
+                $baseQty = (int) round((int) $item->qty_return * (float) ($detail->conversion_factor ?? 1));
+
                 if ($item->restock_to_inventory && $item->product) {
                     $product = $item->product()->lockForUpdate()->first();
 
                     if ($product) {
                         $stockBefore = (int) $product->stock;
-                        $stockAfter = $stockBefore + (int) $item->qty_return;
+                        $stockAfter = $stockBefore + $baseQty;
 
                         $product->update([
                             'stock' => $stockAfter,
@@ -245,7 +250,7 @@ class SalesReturnController extends Controller
                             ProductWarehouse::where([
                                 'product_id' => $product->id,
                                 'warehouse_id' => $transactionWarehouseId,
-                            ])->increment('stock', (int) $item->qty_return);
+                            ])->increment('stock', $baseQty);
                         }
 
                         $this->stockMutationService->recordSalesReturnRestock(
@@ -259,9 +264,11 @@ class SalesReturnController extends Controller
                     }
                 }
 
-                $detail = $item->transactionDetail;
+                // Reverse margin proportionally: (unit sell - unit cost) x returned qty.
                 $buyPrice = (int) ($item->product?->buy_price ?? 0);
-                $margin = ((int) $detail->price - $buyPrice) * (int) $item->qty_return;
+                $unitSellPrice = (int) round((int) $detail->price / max(1, (int) $detail->qty));
+                $unitCost = (int) round($buyPrice * (float) ($detail->conversion_factor ?? 1));
+                $margin = ($unitSellPrice - $unitCost) * (int) $item->qty_return;
 
                 Profit::create([
                     'transaction_id' => $salesReturn->transaction_id,
