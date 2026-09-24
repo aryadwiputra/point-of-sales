@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Apps;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\OutletAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AuditLogController extends Controller
 {
+    public function __construct(private readonly OutletAccessService $outletAccessService) {}
+
     public function index(Request $request): Response
     {
         $filters = [
@@ -23,8 +27,11 @@ class AuditLogController extends Controller
             'search' => $request->input('search'),
         ];
 
+        $visibleUserIds = $this->visibleUserIds($request->user());
+
         $auditLogs = AuditLog::query()
             ->with('user:id,name,email')
+            ->when($visibleUserIds !== null, fn (Builder $query) => $query->whereIn('user_id', $visibleUserIds))
             ->when($filters['user_id'], fn (Builder $query, $userId) => $query->where('user_id', $userId))
             ->when($filters['module'], fn (Builder $query, $module) => $query->where('module', $module))
             ->when($filters['event'], fn (Builder $query, $event) => $query->where('event', $event))
@@ -46,14 +53,23 @@ class AuditLogController extends Controller
         return Inertia::render('Dashboard/AuditLogs/Index', [
             'auditLogs' => $auditLogs,
             'filters' => $filters,
-            'users' => User::query()->select('id', 'name')->orderBy('name')->get(),
-            'modules' => AuditLog::query()->select('module')->distinct()->orderBy('module')->pluck('module'),
-            'events' => AuditLog::query()->select('event')->distinct()->orderBy('event')->pluck('event'),
+            'users' => User::query()
+                ->when($visibleUserIds !== null, fn (Builder $query) => $query->whereIn('id', $visibleUserIds))
+                ->select('id', 'name')->orderBy('name')->get(),
+            'modules' => AuditLog::query()
+                ->when($visibleUserIds !== null, fn (Builder $query) => $query->whereIn('user_id', $visibleUserIds))
+                ->select('module')->distinct()->orderBy('module')->pluck('module'),
+            'events' => AuditLog::query()
+                ->when($visibleUserIds !== null, fn (Builder $query) => $query->whereIn('user_id', $visibleUserIds))
+                ->select('event')->distinct()->orderBy('event')->pluck('event'),
         ]);
     }
 
     public function show(AuditLog $auditLog): Response
     {
+        $visibleUserIds = $this->visibleUserIds(request()->user());
+        abort_if($visibleUserIds !== null && ! in_array($auditLog->user_id, $visibleUserIds, true), 404);
+
         $auditLog->load('user:id,name,email');
 
         return Inertia::render('Dashboard/AuditLogs/Show', [
@@ -68,6 +84,24 @@ class AuditLogController extends Controller
                 'user_agent' => $auditLog->user_agent,
             ],
         ]);
+    }
+
+    /**
+     * @return array<int>|null Null means unrestricted (super-admin).
+     */
+    private function visibleUserIds(User $user): ?array
+    {
+        if ($user->isSuperAdmin()) {
+            return null;
+        }
+
+        $outletIds = $this->outletAccessService->accessibleOutlets($user)->pluck('id')->all();
+
+        $userIds = $outletIds === []
+            ? collect()
+            : DB::table('user_outlets')->whereIn('outlet_id', $outletIds)->pluck('user_id');
+
+        return $userIds->push($user->id)->unique()->values()->all();
     }
 
     private function transformSummary(AuditLog $log): array
