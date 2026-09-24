@@ -20,6 +20,15 @@ Kembali ke indeks dokumentasi: `docs/README.md`
  Versi runtime yang ditampilkan aplikasi berasal dari `APP_VERSION`. Nilainya harus disamakan
  dengan Git tag rilis, misalnya `v2.10.4`.
 
+## Autentikasi
+
+- **Email verification dinonaktifkan.** `User` tidak lagi mengimplementasikan `MustVerifyEmail`,
+  route dashboard tidak memakai middleware `verified`, dan route/controller/halaman verifikasi
+  sudah dihapus. Setup wizard dan registrasi publik langsung mengarahkan user ke dashboard.
+- `AUTH_PUBLIC_REGISTRATION` mengatur apakah registrasi publik diizinkan (default `false`).
+  Saat nonaktif, akun dibuat lewat setup wizard atau menu Users oleh admin.
+- `markEmailAsVerified()` tetap tersedia (dipakai seeder dan test).
+
 ## APP_URL
 
 `APP_URL` harus public (bukan `localhost`) jika menggunakan:
