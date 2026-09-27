@@ -77,11 +77,11 @@ class ProductController extends Controller
          * validate
          */
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'barcode' => 'required|unique:products,barcode',
             'sku' => 'required|unique:products,sku',
             'title' => 'required',
-            'description' => 'required',
+            'description' => 'nullable|string',
             'category_id' => 'required',
             'buy_price' => 'required',
             'sell_price' => 'required',
@@ -96,11 +96,11 @@ class ProductController extends Controller
         ]);
         // upload image
         $image = $request->file('image');
-        $image->storeAs('public/products', $image->hashName());
+        $image?->storeAs('public/products', $image->hashName());
 
         // create product
         $product = Product::create([
-            'image' => $image->hashName(),
+            'image' => $image?->hashName(),
             'barcode' => $request->barcode,
             'sku' => $request->sku,
             'title' => $request->title,
@@ -192,7 +192,7 @@ class ProductController extends Controller
             'barcode' => 'required|unique:products,barcode,'.$product->id,
             'sku' => 'required|unique:products,sku,'.$product->id,
             'title' => 'required',
-            'description' => 'required',
+            'description' => 'nullable|string',
             'category_id' => 'required',
             'buy_price' => 'required',
             'sell_price' => 'required',

@@ -31,7 +31,7 @@ Open-source POS system (200+ stars). Laravel 13 + Inertia 3.0 + React 19.
 
 ## CI / Deploy
 
-- **CI is build-only** — `.github/workflows/deploy.yml` validates composer + `npm run build` (PHP 8.4, Node 22). It does **NOT run tests**. Run `php artisan test` locally before every PR.
+- **CI validates and tests** — `.github/workflows/deploy.yml` validates Composer, runs `npm run build`, and executes `php artisan test --compact` with PHP 8.4, Node 22, and SQLite. Run `php artisan test` locally before every PR.
 - **Push to `main` auto-deploys to production** (`dikasir.web.id` via SSH). Never push directly to `main` — use the release process below.
 - Deploy VPS uses Node 24.15 + PHP 8.4 (`php8.4 artisan migrate --force`).
 - npm is the package manager of record (`package-lock.json` committed, `bun.lock` gitignored). CI/deploy run `npm ci`. Don't switch to bun/yarn lockfiles.

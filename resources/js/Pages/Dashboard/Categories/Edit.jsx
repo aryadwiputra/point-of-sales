@@ -102,7 +102,7 @@ export default function Edit({ category }) {
                                     value={data.name}
                                 />
                                 <Textarea
-                                    label="Deskripsi"
+                                    label="Deskripsi (opsional)"
                                     placeholder="Deskripsi kategori"
                                     errors={errors.description}
                                     onChange={(e) =>

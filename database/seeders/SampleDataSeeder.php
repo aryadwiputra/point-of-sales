@@ -314,7 +314,7 @@ class SampleDataSeeder extends Seeder
             return Category::create([
                 'name' => $category['name'],
                 'description' => $category['description'],
-                'image' => $image ?? 'default.jpg',
+                'image' => $image,
             ]);
         })->keyBy('name');
     }
@@ -382,7 +382,7 @@ class SampleDataSeeder extends Seeder
 
             return Product::create([
                 'category_id' => $category?->id,
-                'image' => $image ?? 'default.jpg',
+                'image' => $image,
                 'barcode' => $product['barcode'],
                 'title' => $product['title'],
                 'description' => $product['description'],
