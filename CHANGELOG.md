@@ -17,6 +17,18 @@ All notable application releases are listed here. Git tags using the same
 - `DineInSettingsSeeder` now sets `dine_in_pay_online_enabled = 0` to match the enforced behavior (only `pay_at_counter` is accepted).
 - `seed:demo` and `DemoSeeder` output now lists all three demo accounts with role and outlet scope.
 
+## [v3.0.3] - 2026-09-27
+
+### Security
+
+- **API token expiry fixed**: `config/sanctum.php` declared `expiration` twice, so the `null` value silently won and API tokens never expired. Tokens now honor `SANCTUM_TOKEN_EXPIRATION` (default 1440 minutes).
+- **API authorization**: `/api/v1/pos/*` now requires the `pos-access` ability. Newly registered API tokens (which only carry `user:read`) can no longer reach POS endpoints. Existing mobile tokens must re-login to receive `pos-access`.
+- **Privilege guards**: users can no longer delete their own account or remove the last super-admin, and the built-in `super-admin` role can no longer be edited or deleted.
+- **Webhook verification**: Midtrans signature is now compared with `hash_equals` (constant-time).
+- **Public endpoints**: portal routes are rate-limited and portal/invoice responses send `Cache-Control: no-store`; the WhatsApp service now requires `X-Service-Token` and binds to `127.0.0.1` by default.
+- **Headers**: added production-only HSTS and a `Content-Security-Policy-Report-Only` baseline. `SECURITY.md` corrected to reflect actual header behavior (CSP is report-only, not enforced).
+- **Configurable outlet fallback**: the legacy single-outlet authorization bypass is now gated behind `SECURITY_LEGACY_SINGLE_OUTLET_BYPASS` (default `true` to preserve behavior).
+
 ## [v3.0.2] - 2026-09-18
 
 ### Changed
