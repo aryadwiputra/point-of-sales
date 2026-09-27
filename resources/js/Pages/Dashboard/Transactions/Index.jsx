@@ -61,6 +61,7 @@ export default function Index({
     paymentGateways = [],
     defaultPaymentGateway = "cash",
     bankAccounts = [],
+    warehouses = [],
     loyaltyTierOptions = [],
 }) {
     const {
@@ -105,6 +106,9 @@ export default function Index({
     const [selectedVoucherId, setSelectedVoucherId] = useState("");
     const [openingCashInput, setOpeningCashInput] = useState("");
     const [shiftNotesInput, setShiftNotesInput] = useState("");
+    const [shiftWarehouseId, setShiftWarehouseId] = useState(
+        warehouses.length > 0 ? warehouses[0].id : ""
+    );
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
     const flushPromiseRef = useRef(null);
     const normalizedSelectedCategory =
@@ -358,6 +362,7 @@ export default function Index({
         router.post(route("cashier-shifts.store"), {
             opening_cash: Number(openingCashInput || 0),
             notes: shiftNotesInput,
+            warehouse_id: shiftWarehouseId || undefined,
             redirect_to: "transactions",
         });
     };
@@ -902,6 +907,32 @@ export default function Index({
                                 />
                             </div>
                         </div>
+
+                        {warehouses.length > 1 && (
+                            <div className="mt-4">
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    Gudang
+                                </label>
+                                <select
+                                    value={shiftWarehouseId}
+                                    onChange={(event) =>
+                                        setShiftWarehouseId(event.target.value)
+                                    }
+                                    className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                >
+                                    {warehouses.map((warehouse) => (
+                                        <option key={warehouse.id} value={warehouse.id}>
+                                            {warehouse.code} — {warehouse.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors?.warehouse_id && (
+                                    <p className="mt-2 text-xs text-rose-500">
+                                        {errors.warehouse_id}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                             {canOpenShift && (

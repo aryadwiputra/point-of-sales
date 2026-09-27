@@ -5,11 +5,13 @@ namespace Tests\Feature\CashierShifts;
 use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\SalesReturn;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -315,6 +317,106 @@ class CashierShiftTest extends TestCase
                 'actual_cash' => 80000,
             ])
             ->assertRedirect(route('password.confirm'));
+    }
+
+    public function test_open_shift_without_warehouse_falls_back_to_sales_warehouse(): void
+    {
+        $outletPusat = Outlet::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'is_active' => true,
+            'is_sales_enabled' => false,
+        ]);
+        $outletMal = Outlet::create([
+            'code' => 'MAL',
+            'name' => 'Outlet Malabar',
+            'is_active' => true,
+            'is_sales_enabled' => true,
+        ]);
+
+        $pusat = Warehouse::create([
+            'outlet_id' => $outletPusat->id,
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $mal = Warehouse::create([
+            'outlet_id' => $outletMal->id,
+            'code' => 'WH-MAL',
+            'name' => 'Gudang Malabar',
+            'type' => 'branch',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        $cashier = $this->createUserWithPermissions([
+            'cashier-shifts-access',
+            'cashier-shifts-open',
+        ]);
+        $cashier->outlets()->attach($outletMal->id, ['is_default' => true]);
+
+        $response = $this
+            ->actingAs($cashier)
+            ->post(route('cashier-shifts.store'), [
+                'opening_cash' => 100000,
+                'redirect_to' => 'transactions',
+            ]);
+
+        $shift = CashierShift::first();
+
+        $response->assertRedirect(route('transactions.index'));
+        $this->assertNotNull($shift);
+        $this->assertSame($mal->id, $shift->warehouse_id);
+        $this->assertNotSame($pusat->id, $shift->warehouse_id);
+    }
+
+    public function test_transaction_page_receives_sales_warehouses_prop(): void
+    {
+        $outletPusat = Outlet::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'is_active' => true,
+            'is_sales_enabled' => false,
+        ]);
+        $outletMal = Outlet::create([
+            'code' => 'MAL',
+            'name' => 'Outlet Malabar',
+            'is_active' => true,
+            'is_sales_enabled' => true,
+        ]);
+
+        Warehouse::create([
+            'outlet_id' => $outletPusat->id,
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'type' => 'main',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+        $mal = Warehouse::create([
+            'outlet_id' => $outletMal->id,
+            'code' => 'WH-MAL',
+            'name' => 'Gudang Malabar',
+            'type' => 'branch',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        $cashier = $this->createUserWithPermissions([
+            'transactions-access',
+            'cashier-shifts-access',
+        ]);
+        $cashier->outlets()->attach($outletMal->id, ['is_default' => true]);
+
+        $this->actingAs($cashier)
+            ->get(route('transactions.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Transactions/Index')
+                ->has('warehouses', 1)
+                ->where('warehouses.0.id', $mal->id)
+                ->where('warehouses.0.code', 'WH-MAL'));
     }
 
     private function createUserWithPermissions(array $permissions): User

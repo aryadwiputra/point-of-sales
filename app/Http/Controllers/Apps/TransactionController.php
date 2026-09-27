@@ -165,6 +165,7 @@ class TransactionController extends Controller
             'paymentGateways' => $paymentSetting?->enabledGateways($outlet) ?? [],
             'defaultPaymentGateway' => $defaultGateway,
             'bankAccounts' => $bankAccounts,
+            'warehouses' => $this->outletAccessService->salesWarehousesFor(auth()->user())->values(),
             'shiftSummary' => $this->cashierShiftService->summarizeForDisplay($activeShift),
             'loyaltyTierOptions' => $this->loyaltyService->tierOptions(),
         ]);

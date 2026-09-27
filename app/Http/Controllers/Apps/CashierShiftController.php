@@ -80,7 +80,7 @@ class CashierShiftController extends Controller
     {
         $warehouse = $request->validated('warehouse_id')
             ? Warehouse::find($request->validated('warehouse_id'))
-            : Warehouse::active()->orderBy('code')->first();
+            : $this->outletAccessService->salesWarehousesFor($request->user())->first();
 
         abort_unless($this->outletAccessService->canSellAtWarehouse($request->user(), $warehouse), 403);
 
