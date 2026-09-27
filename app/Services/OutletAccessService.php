@@ -64,7 +64,7 @@ class OutletAccessService
             }
         }
 
-        return $query->with('outlet:id,is_sales_enabled')->get(['id', 'code', 'name', 'outlet_id']);
+        return $query->with('outlet:id,is_sales_enabled')->get(['id', 'code', 'name', 'outlet_id', 'is_active']);
     }
 
     public function defaultOutlet(User $user): ?Outlet
