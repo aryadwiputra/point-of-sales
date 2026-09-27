@@ -82,44 +82,41 @@ export async function requestPrinter() {
     const device = await navigator.usb.requestDevice({
         filters: [],
     });
+    try {
+        await configurePrinter(device);
+        getPrinter.cached = device;
+        return device;
+    } catch (error) {
+        if (device.opened) await device.close();
+        throw error;
+    }
+}
+
+async function configurePrinter(device) {
     await device.open();
     if (device.configuration === null) {
         await device.selectConfiguration(1);
     }
-    // Find the first printer-class interface + its OUT endpoint
+
     let interfaceNumber = null;
     let endpointNumber = null;
-    for (const config of device.configurations) {
-        for (const iface of config.interfaces) {
-            for (const alt of iface.alternates) {
-                if (alt.interfaceClass === 7) {
-                    // USB printer class
-                    interfaceNumber = iface.interfaceNumber;
-                    endpointNumber = alt.endpoints.find((e) => e.direction === "out")?.endpointNumber ?? null;
-                }
-            }
-        }
+    const interfaces = device.configuration?.interfaces ?? [];
+    const candidates = interfaces.flatMap((iface) =>
+        iface.alternates.map((alt) => ({ iface, alt }))
+    );
+    const candidate =
+        candidates.find(({ alt }) => alt.interfaceClass === 7) ||
+        candidates.find(({ alt }) => alt.endpoints.some((e) => e.direction === "out"));
+    const endpoint = candidate?.alt.endpoints.find((e) => e.direction === "out");
+    if (candidate && endpoint) {
+        interfaceNumber = candidate.iface.interfaceNumber;
+        endpointNumber = endpoint.endpointNumber;
     }
-    if (interfaceNumber === null) {
-        // ponytail: some clones skip class 7 — use first interface with an OUT endpoint
-        for (const config of device.configurations) {
-            for (const iface of config.interfaces) {
-                for (const alt of iface.alternates) {
-                    const out = alt.endpoints.find((e) => e.direction === "out");
-                    if (out && interfaceNumber === null) {
-                        interfaceNumber = iface.interfaceNumber;
-                        endpointNumber = out.endpointNumber;
-                    }
-                }
-            }
-        }
-    }
-    if (interfaceNumber === null) {
-        await device.close();
-        throw new Error("Tidak ditemukan interface printer pada perangkat ini.");
+    if (interfaceNumber === null || endpointNumber === null) {
+        throw new Error("Tidak ditemukan interface output printer pada perangkat ini.");
     }
     await device.claimInterface(interfaceNumber);
-    return device;
+    device._endpoint = endpointNumber;
 }
 
 async function getPrinter() {
@@ -131,34 +128,28 @@ async function getPrinter() {
     const devices = await navigator.usb.getDevices();
     if (devices.length === 0) return null;
     const device = devices[0];
-    await device.open();
-    if (device.configuration === null) {
-        await device.selectConfiguration(1);
+    try {
+        await configurePrinter(device);
+        getPrinter.cached = device;
+        return device;
+    } catch (error) {
+        if (device.opened) await device.close();
+        throw error;
     }
-    let interfaceNumber = null;
-    let endpointNumber = null;
-    for (const iface of device.configuration.interfaces) {
-        for (const alt of iface.alternates) {
-            const out = alt.endpoints.find((e) => e.direction === "out");
-            if (out) {
-                interfaceNumber = iface.interfaceNumber;
-                endpointNumber = out.endpointNumber;
-            }
-        }
-    }
-    if (interfaceNumber === null) {
-        throw new Error("Tidak ditemukan interface printer.");
-    }
-    await device.claimInterface(interfaceNumber);
-    getPrinter.cached = device;
-    getPrinter.cached._endpoint = endpointNumber;
-    return device;
 }
 
 export async function printBytes(bytes) {
     const device = await getPrinter();
     if (!device) throw new Error("Printer belum terhubung.");
-    await device.transferOut(device._endpoint ?? 1, bytes);
+    if (!device.opened || !device._endpoint) {
+        throw new Error("Printer tidak siap menerima data. Hubungkan ulang printer.");
+    }
+    try {
+        await device.transferOut(device._endpoint, bytes);
+    } catch {
+        getPrinter.cached = undefined;
+        throw new Error("Gagal mengirim data ke printer. Periksa koneksi printer.");
+    }
 }
 
 export async function printReceipt(data, paperSize) {

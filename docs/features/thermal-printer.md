@@ -16,7 +16,7 @@ Cetak receipt ke printer thermal (ESC/POS protocol) langsung dari browser via We
 
 ### Thermal Print Route
 - `GET /dashboard/documents/transactions/{invoice}/print/thermal` — HTML receipt
-- Dapat dibuka di tab baru untuk print via browser
+- Dipakai sebagai fallback browser-print jika printer ESC/POS tidak tersedia atau gagal
 
 ### Printer Settings
 - Paper size: 80mm / 58mm
@@ -29,9 +29,11 @@ Cetak langsung byte ESC/POS ke printer via WebUSB (tanpa dialog print browser):
 - Generator byte: `resources/js/Utils/escpos.js` — `buildReceiptBytes(data, paperSize)` (58mm/80mm, auto cut `GS V`), `drawerKickBytes(pin)` (ESC p untuk buka cash drawer)
 - Connector: `requestPrinter()` / `getPrinter()` / `printBytes()` — WebUSB, filter device printer class 7
 - Tombol di **Settings > Printer**: Hubungkan Printer, Test Print, Buka Laci (Kick), Putuskan
+- Tombol **Thermal** pada halaman struk mencoba ESC/POS terlebih dahulu, lalu membuka dialog print browser jika gagal
 - **Auto-print** setelah checkout non-QRIS (jika setting auto-print aktif + printer sudah terhubung + status bukan pending) + drawer kick otomatis untuk pembayaran tunai (`Print.jsx`)
+- Perangkat dan endpoint USB disimpan setelah koneksi berhasil agar Test Print dan halaman struk memakai printer yang sama
 
-> **Catatan:** WebUSB hanya tersedia di browser Chromium (Chrome/Edge/Opera) dan butuh gesture pengguna (klik tombol "Hubungkan Printer"). Browser lain tetap bisa cetak via `window.print()`.
+> **Catatan:** WebUSB hanya tersedia di browser Chromium (Chrome/Edge/Opera) dan butuh gesture pengguna (klik tombol "Hubungkan Printer"). Browser lain, printer yang tidak kompatibel, atau printer yang terputus akan memakai fallback `window.print()` dari tombol Thermal. Auto-print tidak membuka dialog browser secara otomatis.
 
 ## Route
 

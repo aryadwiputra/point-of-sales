@@ -162,12 +162,7 @@ export default function Print({ transaction }) {
     const isNonCash = paymentMethodKey !== "cash";
     const showPaymentLink = isNonCash && transaction.payment_url;
 
-    // ponytail: auto-print silently skips if no WebUSB printer is cached; browser print stays manual
-    useEffect(() => {
-        if (!printerSettings?.autoPrint) return;
-        if (!hasCachedPrinter()) return;
-        if (!transaction?.details?.length) return;
-        if (showQris) return; // wait for payment confirmation first
+    const receiptData = useMemo(() => {
         const orderTypeLabels = {
             in_store: "Di Tempat",
             takeaway: "Bawa Pulang",
@@ -178,7 +173,8 @@ export default function Print({ transaction }) {
             promoDiscountTotal +
             loyaltyDiscountTotal +
             voucherDiscountTotal;
-        const data = {
+
+        return {
             store_name: store.name,
             store_address: store.address,
             store_phone: store.phone,
@@ -205,19 +201,84 @@ export default function Print({ transaction }) {
             note: transaction.note,
             footer: "Terima kasih!",
         };
+    }, [
+        store,
+        transaction,
+        items,
+        baseSubtotal,
+        promoDiscountTotal,
+        loyaltyDiscountTotal,
+        voucherDiscountTotal,
+        paymentMethodLabel,
+        isNonCash,
+    ]);
+
+    const openThermalFallback = async (popup) => {
+        const target = popup || window.open("", "_blank", "width=400,height=600");
+        if (!target) {
+            throw new Error("Popup print diblokir. Izinkan popup untuk mencetak struk.");
+        }
+
+        try {
+            const response = await fetch(
+                route("pdf.transactions.thermal", transaction.invoice)
+            );
+            if (!response.ok) throw new Error("Preview thermal tidak tersedia.");
+            target.document.open();
+            target.document.write(await response.text());
+            target.document.close();
+            target.focus();
+            window.setTimeout(() => target.print(), 150);
+        } catch (error) {
+            target.close();
+            throw error;
+        }
+    };
+
+    const handleThermalPrint = async () => {
+        const paperSize = printMode === "thermal58" ? "58mm" : "80mm";
+        const fallbackWindow = window.open("", "_blank", "width=400,height=600");
+
+        try {
+            await printReceipt(receiptData, paperSize);
+            fallbackWindow?.close();
+            toast.success("Struk tercetak langsung ke printer thermal.");
+            if (!isNonCash) {
+                await kickDrawer().catch((error) => {
+                    toast.error(`Struk tercetak, tetapi laci gagal dibuka: ${error.message}`);
+                });
+            }
+        } catch (error) {
+            toast.error(`${error.message} Membuka dialog print browser.`);
+            try {
+                await openThermalFallback(fallbackWindow);
+            } catch (fallbackError) {
+                toast.error(fallbackError.message || "Gagal membuka preview thermal.");
+            }
+        }
+    };
+
+    // Auto-print uses ESC/POS only; fallback must stay user-triggered to avoid surprise dialogs.
+    useEffect(() => {
+        if (!printerSettings?.autoPrint) return;
+        if (!hasCachedPrinter()) return;
+        if (!transaction?.details?.length) return;
+        if (showQris) return; // wait for payment confirmation first
         (async () => {
             try {
-                await printReceipt(data, printerSettings.paperSize);
+                await printReceipt(receiptData, printerSettings.paperSize);
                 toast.success("Struk tercetak otomatis.");
                 if (!isNonCash) {
-                    await kickDrawer().catch(() => {});
+                    await kickDrawer().catch((error) => {
+                        toast.error(`Struk tercetak, tetapi laci gagal dibuka: ${error.message}`);
+                    });
                 }
-            } catch {
-                // printer busy/disconnected — manual print still available
+            } catch (error) {
+                toast.error(`Cetak otomatis gagal: ${error.message}`);
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [transaction?.id, printerSettings?.autoPrint]);
+    }, [transaction?.id, printerSettings?.autoPrint, receiptData]);
 
     const handlePrint = () => {
         window.print();
@@ -327,17 +388,7 @@ export default function Print({ transaction }) {
 
                             <button
                                 type="button"
-                                onClick={async () => {
-                                    try {
-                                        const res = await fetch(route("pdf.transactions.thermal", transaction.invoice));
-                                        const html = await res.text();
-                                        const blob = new Blob([html], { type: "text/html" });
-                                        const url = URL.createObjectURL(blob);
-                                        window.open(url, "_blank", "width=400,height=600");
-                                    } catch (e) {
-                                        alert("Gagal cetak thermal: " + e.message);
-                                    }
-                                }}
+                                onClick={handleThermalPrint}
                                 className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
                             >
                                 <IconPrinter size={18} />
