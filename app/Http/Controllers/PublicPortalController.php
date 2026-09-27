@@ -47,7 +47,7 @@ class PublicPortalController extends Controller
                 ] : null,
             ],
             'token' => $request->token,
-        ]);
+        ])->toResponse($request)->header('Cache-Control', 'no-store, max-age=0');
     }
 
     public function payReceivable(Request $request, Receivable $receivable)

@@ -77,6 +77,9 @@ class PermissionSeeder extends Seeder
         $create('transactions-access');
         $create('transactions-confirm-payment');
 
+        // mobile POS API access (Sanctum ability for /api/v1/pos/*)
+        $create('pos-access');
+
         // permission receivables & payables
         $create('receivables-access');
         $create('receivables-pay');

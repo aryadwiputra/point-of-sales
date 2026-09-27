@@ -69,6 +69,7 @@ class RoleSeeder extends Seeder
         $cashierPermissions = Permission::whereIn('name', [
             'dashboard-access',
             'transactions-access',
+            'pos-access',
             'cashier-shifts-access',
             'cashier-shifts-open',
             'cashier-shifts-close',

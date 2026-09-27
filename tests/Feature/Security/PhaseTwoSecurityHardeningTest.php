@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\Outlet;
 use App\Models\PaymentSetting;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\OutletAccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -77,5 +80,44 @@ class PhaseTwoSecurityHardeningTest extends TestCase
         $this->assertSame('env-xendit-secret', $setting->xenditConfig()['secret_key']);
         $this->assertSame('env-callback-token', $setting->xenditConfig()['callback_token']);
         $this->assertSame('env', $setting->paymentSettingSources()['midtrans_server_key']['source']);
+    }
+
+    public function test_sanctum_token_expiration_is_configured(): void
+    {
+        $this->assertNotNull(config('sanctum.expiration'));
+        $this->assertGreaterThan(0, config('sanctum.expiration'));
+    }
+
+    public function test_secure_headers_are_present_on_web_response(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('Content-Security-Policy-Report-Only');
+    }
+
+    public function test_hsts_header_is_not_sent_outside_production(): void
+    {
+        $response = $this->get('/');
+
+        $this->assertNull($response->headers->get('Strict-Transport-Security'));
+    }
+
+    public function test_legacy_single_outlet_bypass_can_be_disabled(): void
+    {
+        config()->set('security.outlet.legacy_single_outlet_bypass', false);
+
+        $outlet = Outlet::create(['code' => 'PUSAT', 'name' => 'Pusat']);
+        $warehouse = Warehouse::create([
+            'code' => 'PUSAT', 'name' => 'Gudang Pusat', 'type' => 'main',
+            'is_active' => true, 'sort_order' => 0, 'outlet_id' => $outlet->id,
+        ]);
+
+        $this->assertFalse(
+            app(OutletAccessService::class)
+                ->canUseWarehouse(User::factory()->create(), $warehouse)
+        );
     }
 }

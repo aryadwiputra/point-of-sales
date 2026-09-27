@@ -17,7 +17,7 @@ class OutletAccessService
     {
         if (! $warehouse) {
             // Legacy installs allowed shifts without a warehouse assignment.
-            return Outlet::active()->count() <= 1;
+            return $this->legacySingleOutletBypass();
         }
 
         if (! $warehouse->is_active) {
@@ -32,7 +32,7 @@ class OutletAccessService
 
         // Backward compatibility: old single-outlet installs have no assignments yet.
         if ($outletIds->isEmpty()) {
-            return Outlet::active()->count() <= 1;
+            return $this->legacySingleOutletBypass();
         }
 
         return (bool) ($warehouse->outlet_id && $outletIds->contains($warehouse->outlet_id));
@@ -41,7 +41,7 @@ class OutletAccessService
     public function canSellAtWarehouse(User $user, ?Warehouse $warehouse): bool
     {
         return $this->canUseWarehouse($user, $warehouse)
-            && (! $warehouse?->outlet_id && Outlet::active()->count() <= 1
+            && (! $warehouse?->outlet_id && $this->legacySingleOutletBypass()
                 || (bool) ($warehouse?->outlet ?? Outlet::find($warehouse?->outlet_id))?->is_sales_enabled);
     }
 
@@ -49,7 +49,7 @@ class OutletAccessService
     {
         return $this->warehousesFor($user)
             ->filter(fn (Warehouse $warehouse) => ! $warehouse->outlet_id
-                ? Outlet::active()->count() <= 1
+                ? $this->legacySingleOutletBypass()
                 : (bool) $warehouse->outlet?->is_sales_enabled)
             ->values();
     }
@@ -160,5 +160,11 @@ class OutletAccessService
                 ->where('warehouse_id', $warehouse->id)
                 ->where('status', 'open')
                 ->exists();
+    }
+
+    private function legacySingleOutletBypass(): bool
+    {
+        return config('security.outlet.legacy_single_outlet_bypass', true)
+            && Outlet::active()->count() <= 1;
     }
 }

@@ -36,7 +36,7 @@ class PaymentWebhookController extends Controller
             $signatureKey = $request->input('signature_key');
             $expectedSignature = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
 
-            if ($signatureKey !== $expectedSignature) {
+            if (! is_string($signatureKey) || ! hash_equals($expectedSignature, $signatureKey)) {
                 Log::warning('Midtrans Webhook: Invalid signature', [
                     'provider' => 'midtrans',
                     'order_id' => $orderId,

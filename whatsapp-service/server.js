@@ -1,8 +1,33 @@
 const express = require('express');
+const crypto = require('crypto');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const QRCode = require('qrcode');
 const app = express();
 app.use(express.json());
+
+const SERVICE_TOKEN = process.env.WA_SERVICE_TOKEN || '';
+
+function timingSafeEqual(a, b) {
+    const bufA = Buffer.from(String(a));
+    const bufB = Buffer.from(String(b));
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function requireServiceToken(req, res, next) {
+    if (!SERVICE_TOKEN) {
+        return res.status(503).json({ status: false, reason: 'service token not configured' });
+    }
+
+    const provided = req.header('X-Service-Token') || '';
+    if (!timingSafeEqual(provided, SERVICE_TOKEN)) {
+        return res.status(401).json({ status: false, reason: 'unauthorized' });
+    }
+
+    return next();
+}
+
+app.use(requireServiceToken);
 
 let client = null;
 let qrCodeData = null;
@@ -94,4 +119,5 @@ app.post('/disconnect', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`WA service running on port ${PORT}`));
+const HOST = process.env.HOST || '127.0.0.1';
+app.listen(PORT, HOST, () => console.log(`WA service running on ${HOST}:${PORT}`));

@@ -92,8 +92,12 @@ Route::get('/share/transactions/{invoice}', [DocumentController::class, 'publicI
     ->name('transactions.public');
 
 // Customer portal routes (no login, token-based)
-Route::get('/portal/transactions/{invoice}', [PublicPortalController::class, 'showTransaction'])->name('portal.transaction');
-Route::post('/portal/receivables/{receivable}/pay', [PublicPortalController::class, 'payReceivable'])->name('portal.receivable.pay');
+Route::get('/portal/transactions/{invoice}', [PublicPortalController::class, 'showTransaction'])
+    ->middleware('throttle:10,1')
+    ->name('portal.transaction');
+Route::post('/portal/receivables/{receivable}/pay', [PublicPortalController::class, 'payReceivable'])
+    ->middleware('throttle:5,1')
+    ->name('portal.receivable.pay');
 
 // Language switch
 Route::post('/language/switch', [LanguageController::class, 'switch'])->name('language.switch');

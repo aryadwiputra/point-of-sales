@@ -106,8 +106,8 @@ Route::prefix('v1')->group(function () {
                 'destroy' => 'api.suppliers.destroy',
             ]);
 
-        // POS (mobile kasir)
-        Route::prefix('pos')->group(function () {
+        // POS (mobile kasir) — requires the pos-access ability
+        Route::prefix('pos')->middleware('abilities:pos-access')->group(function () {
             // Shift
             Route::get('/shift', [PosApiController::class, 'currentShift'])->name('api.pos.shift');
             Route::post('/shift/open', [PosApiController::class, 'openShift'])->name('api.pos.shift.open');
