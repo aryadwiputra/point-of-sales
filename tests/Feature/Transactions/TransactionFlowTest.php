@@ -6,10 +6,12 @@ use App\Models\Cart;
 use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Outlet;
 use App\Models\PaymentSetting;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -288,6 +290,100 @@ class TransactionFlowTest extends TestCase
         $response->assertRedirect(route('transactions.index'));
         $response->assertSessionHas('error', 'Shift kasir belum dibuka.');
         $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_transaction_history_includes_legacy_null_warehouse_in_single_outlet_install(): void
+    {
+        $cashier = $this->createCashier();
+        $warehouse = Warehouse::create([
+            'code' => 'PUSAT',
+            'name' => 'Gudang Pusat',
+            'type' => 'main',
+            'is_active' => true,
+        ]);
+
+        foreach ([
+            ['invoice' => 'TRX-WAREHOUSE', 'warehouse_id' => $warehouse->id],
+            ['invoice' => 'TRX-LEGACY', 'warehouse_id' => null],
+        ] as $attributes) {
+            Transaction::create([
+                'cashier_id' => $cashier->id,
+                ...$attributes,
+                'cash' => 10000,
+                'change' => 0,
+                'discount' => 0,
+                'grand_total' => 10000,
+                'payment_method' => 'cash',
+                'payment_status' => 'paid',
+            ]);
+        }
+
+        $response = $this->actingAs($cashier)->get(route('transactions.history'));
+
+        $response->assertInertia(function (Assert $page) {
+            $invoices = collect($page->toArray()['props']['transactions']['data'])
+                ->pluck('invoice');
+
+            $this->assertTrue($invoices->contains('TRX-WAREHOUSE'));
+            $this->assertTrue($invoices->contains('TRX-LEGACY'));
+        });
+    }
+
+    public function test_transaction_history_excludes_legacy_null_warehouse_in_multi_outlet_install(): void
+    {
+        $outletA = Outlet::create([
+            'code' => 'MAL',
+            'name' => 'Outlet Malabar',
+            'is_active' => true,
+            'is_sales_enabled' => true,
+        ]);
+        $outletB = Outlet::create([
+            'code' => 'TKB',
+            'name' => 'Outlet Taman Kencana',
+            'is_active' => true,
+            'is_sales_enabled' => true,
+        ]);
+        $warehouse = Warehouse::create([
+            'outlet_id' => $outletA->id,
+            'code' => 'WH-MAL',
+            'name' => 'Gudang Malabar',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+        Warehouse::create([
+            'outlet_id' => $outletB->id,
+            'code' => 'WH-TKB',
+            'name' => 'Gudang Taman Kencana',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+        $cashier = $this->createCashier();
+
+        foreach ([
+            ['invoice' => 'TRX-OUTLET', 'warehouse_id' => $warehouse->id],
+            ['invoice' => 'TRX-LEGACY', 'warehouse_id' => null],
+        ] as $attributes) {
+            Transaction::create([
+                'cashier_id' => $cashier->id,
+                ...$attributes,
+                'cash' => 10000,
+                'change' => 0,
+                'discount' => 0,
+                'grand_total' => 10000,
+                'payment_method' => 'cash',
+                'payment_status' => 'paid',
+            ]);
+        }
+
+        $response = $this->actingAs($cashier)->get(route('transactions.history'));
+
+        $response->assertInertia(function (Assert $page) {
+            $invoices = collect($page->toArray()['props']['transactions']['data'])
+                ->pluck('invoice');
+
+            $this->assertTrue($invoices->contains('TRX-OUTLET'));
+            $this->assertFalse($invoices->contains('TRX-LEGACY'));
+        });
     }
 
     protected function openShiftFor(User $cashier)

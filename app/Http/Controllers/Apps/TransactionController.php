@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
 use App\Models\DiscountApprovalLog;
+use App\Models\Outlet;
 use App\Models\PaymentSetting;
 use App\Models\Product;
 use App\Models\Transaction;
@@ -795,7 +796,13 @@ class TransactionController extends Controller
             ->orderByDesc('created_at');
 
         $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
-        $query->whereIn('warehouse_id', $warehouseIds);
+        $query->where(function (Builder $builder) use ($warehouseIds) {
+            $builder->whereIn('warehouse_id', $warehouseIds);
+
+            if (Outlet::active()->count() <= 1) {
+                $builder->orWhereNull('warehouse_id');
+            }
+        });
 
         if ($salesReturnTablesReady) {
             $query->with('details.salesReturnItems.salesReturn:id,status');
