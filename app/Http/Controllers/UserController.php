@@ -7,6 +7,7 @@ use App\Models\Outlet;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -186,20 +187,68 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        $ids = explode(',', $id);
-        $users = User::query()->with('roles')->whereIn('id', $ids)->get();
+        $ids = collect(explode(',', (string) $id))
+            ->map(fn ($value) => (int) trim($value))
+            ->filter()
+            ->unique()
+            ->values();
 
-        foreach ($users as $user) {
-            $this->auditLogService->log(
-                event: 'user.deleted',
-                module: 'users',
-                auditable: $user,
-                description: 'Pengguna dihapus.',
-                before: $this->userPayload($user, $user->roles->pluck('name')->all(), false),
-            );
+        if ($ids->isEmpty()) {
+            return back()->with('error', 'Tidak ada pengguna yang dipilih untuk dihapus.');
         }
 
-        User::whereIn('id', $ids)->delete();
+        // Prevent deleting your own account (avoids accidental self lockout).
+        if ($ids->contains(auth()->id())) {
+            $this->auditLogService->log(
+                event: 'user.delete_blocked',
+                module: 'users',
+                auditable: null,
+                description: 'Penghapusan akun sendiri diblokir.',
+                meta: ['severity' => 'warning', 'ids' => $ids->all()],
+            );
+
+            return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        $users = User::query()->with('roles')->whereIn('id', $ids)->get();
+
+        // Prevent removing the last remaining super-admin (avoids system lockout).
+        $superAdminIds = $users
+            ->filter(fn (User $user) => $user->hasRole('super-admin'))
+            ->pluck('id');
+
+        if ($superAdminIds->isNotEmpty()) {
+            $remainingSuperAdmins = User::query()
+                ->role('super-admin')
+                ->whereNotIn('id', $superAdminIds)
+                ->count();
+
+            if ($remainingSuperAdmins === 0) {
+                $this->auditLogService->log(
+                    event: 'user.delete_blocked',
+                    module: 'users',
+                    auditable: null,
+                    description: 'Penghapusan super-admin terakhir diblokir.',
+                    meta: ['severity' => 'critical', 'ids' => $superAdminIds->all()],
+                );
+
+                return back()->with('error', 'Super-admin terakhir tidak dapat dihapus.');
+            }
+        }
+
+        DB::transaction(function () use ($users) {
+            foreach ($users as $user) {
+                $this->auditLogService->log(
+                    event: 'user.deleted',
+                    module: 'users',
+                    auditable: $user,
+                    description: 'Pengguna dihapus.',
+                    before: $this->userPayload($user, $user->roles->pluck('name')->all(), false),
+                );
+            }
+
+            User::whereIn('id', $users->pluck('id'))->delete();
+        });
 
         // render view
         return back();

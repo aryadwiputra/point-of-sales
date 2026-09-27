@@ -39,8 +39,6 @@ return [
 
     'guard' => ['web'],
 
-    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 60 * 24),
-
     /*
     |--------------------------------------------------------------------------
     | Expiration Minutes
@@ -52,7 +50,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 60 * 24),
 
     /*
     |--------------------------------------------------------------------------
