@@ -7,6 +7,10 @@
 export function getImageUrl(image, folder = "products") {
     if (!image) return null;
 
+    if (image === "default.jpg" || image.endsWith("/default.jpg")) {
+        return "/images/product-placeholder.svg";
+    }
+
     // If already a full URL, return as-is
     if (
         image.startsWith("http://") ||
@@ -26,5 +30,5 @@ export function getImageUrl(image, folder = "products") {
  * @returns {string|null}
  */
 export function getProductImageUrl(image) {
-    return getImageUrl(image, "products");
+    return getImageUrl(image, "products") || "/images/product-placeholder.svg";
 }

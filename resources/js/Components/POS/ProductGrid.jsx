@@ -1,10 +1,5 @@
 import React from "react";
-import {
-    IconShoppingBag,
-    IconPhoto,
-    IconMinus,
-    IconPlus,
-} from "@tabler/icons-react";
+import { IconShoppingBag, IconMinus, IconPlus } from "@tabler/icons-react";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 
 const formatPrice = (value = 0) =>
@@ -59,21 +54,16 @@ function ProductCard({ product, onAddToCart, isAdding }) {
             >
             {/* Product Image */}
             <div className="relative aspect-square bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                {product.image ? (
-                    <img
-                        src={getProductImageUrl(product.image)}
-                        alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                        <IconPhoto
-                            size={32}
-                            className="text-slate-300 dark:text-slate-600"
-                        />
-                    </div>
-                )}
+                <img
+                    src={getProductImageUrl(product.image)}
+                    alt={product.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = "/images/product-placeholder.svg";
+                    }}
+                />
 
                 {/* Stock Badge */}
                 {lowStock && (

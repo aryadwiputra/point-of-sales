@@ -207,7 +207,7 @@ export default function Create({ categories, products, units = [] }) {
                             </div>
                             <Input
                                 type="file"
-                                label="Upload Gambar"
+                                label="Upload Gambar (opsional)"
                                 onChange={handleImageChange}
                                 errors={errors.image}
                                 accept="image/*"

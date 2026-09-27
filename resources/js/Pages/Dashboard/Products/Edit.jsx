@@ -285,7 +285,7 @@ export default function Edit({ categories, product, products = [], units = [] })
                                 <div className="md:col-span-2">
                                     <Textarea
                                         label="Deskripsi"
-                                        placeholder="Deskripsi produk"
+                                        placeholder="Deskripsi produk (opsional)"
                                         errors={errors.description}
                                         onChange={(e) =>
                                             setData(

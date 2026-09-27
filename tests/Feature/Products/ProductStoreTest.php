@@ -151,12 +151,18 @@ class ProductStoreTest extends TestCase
         $this->assertEquals(250, $product->max_stock);
     }
 
-    public function test_store_requires_image(): void
+    public function test_store_allows_missing_image_and_description(): void
     {
         $payload = $this->validPayload();
         unset($payload['image']);
+        unset($payload['description']);
 
         $this->post(route('products.store'), $payload)
-            ->assertSessionHasErrors('image');
+            ->assertRedirect(route('products.index'));
+
+        $product = Product::latest('id')->first();
+
+        $this->assertNull($product->image);
+        $this->assertNull($product->description);
     }
 }
