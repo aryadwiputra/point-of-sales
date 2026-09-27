@@ -73,6 +73,10 @@ class RoleController extends Controller
      */
     public function update(RoleRequest $request, Role $role)
     {
+        if ($role->name === 'super-admin') {
+            abort(403, 'Role super-admin tidak dapat diubah.');
+        }
+
         $beforePermissions = $role->permissions()->pluck('name')->all();
         $before = [
             'name' => $role->name,
@@ -119,6 +123,10 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
+        if ($role->name === 'super-admin') {
+            abort(403, 'Role super-admin tidak dapat dihapus.');
+        }
+
         $before = [
             'name' => $role->name,
             'permissions' => $role->permissions()->pluck('name')->all(),

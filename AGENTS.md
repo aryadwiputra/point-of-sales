@@ -103,7 +103,7 @@ Production must trigger `php artisan schedule:run` every minute for the schedule
 | `active_shift` | EnsureActiveCashierShift | All POS transaction actions (cart CRUD, hold/resume, checkout) |
 | `bot.guard` | EnsureBotGuard | Login/register/forgot-password (honeypot + timer) |
 | `registration.enabled` | EnsurePublicRegistrationEnabled | Register route (default: off) |
-| `abilities` | CheckAbilities (Sanctum) | API master-data resources only; `/pos/*` and `/auth/*` are auth-only |
+| `abilities` | CheckAbilities (Sanctum) | API master-data resources (`{module}-*`) and `/pos/*` (`pos-access`); `/auth/*` is auth-only |
 
 ## Seeder Chain & First-Install Setup
 
@@ -190,8 +190,9 @@ Master-data API routes (`/api/v1/products`, `/customers`, `/categories`, `/wareh
 | update | `{module}-edit` (products/customers/categories) or `{module}-update` (warehouses) |
 | destroy | `{module}-delete` |
 | suppliers (all verbs) | `suppliers-access` |
+| `/api/v1/pos/*` (all verbs) | `pos-access` |
 
-`/api/v1/auth/*` and `/api/v1/pos/*` are auth-only (no abilities). Token abilities are stamped at login from Spatie permissions + `'user:read'`. Public registration creates a token with only `'user:read'`.
+`/api/v1/auth/*` is auth-only (no abilities). Token abilities are stamped at login from Spatie permissions + `'user:read'`. Public registration creates a token with only `'user:read'` (so it cannot reach `/pos/*`). The `pos-access` permission is granted to `cashier`, `manager`, and `super-admin` roles by the seeders. Existing mobile tokens must re-login after this change to receive `pos-access`.
 
 API tests must use `Sanctum::actingAs($user, ['*'])` or real tokens via `$user->createToken('test', $abilities)->plainTextToken`.
 

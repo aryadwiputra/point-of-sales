@@ -109,7 +109,9 @@ class DocumentController extends Controller
             'barcode' => $this->barcode($transaction->invoice),
         ])->setPaper('a4');
 
-        return $pdf->stream("invoice-{$transaction->invoice}.pdf");
+        return $pdf->stream("invoice-{$transaction->invoice}.pdf", [
+            'Cache-Control' => 'no-store, max-age=0',
+        ]);
     }
 
     public function receipt(string $invoice, string $size = '80')

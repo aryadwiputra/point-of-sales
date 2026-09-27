@@ -35,6 +35,7 @@ return [
 
     'whatsapp' => [
         'service_url' => env('WA_SERVICE_URL', 'http://localhost:3001'),
+        'service_token' => env('WA_SERVICE_TOKEN'),
     ],
 
     'midtrans' => [

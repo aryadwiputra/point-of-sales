@@ -90,11 +90,10 @@ class OrderTypeNoteTest extends TestCase
     public function test_api_checkout_stores_order_type_and_note(): void
     {
         [$cashier, $product] = $this->prepareCheckout();
-        $cashier->createToken('test', ['*']);
-        $this->actingAs($cashier, 'sanctum');
+        $token = $cashier->createToken('test', ['*'])->plainTextToken;
 
         $this
-            ->withHeader('Authorization', 'Bearer '.$cashier->tokens->first()->plainTextToken)
+            ->withToken($token)
             ->postJson('/api/v1/pos/checkout', [
                 'cash' => 100000,
                 'payment_method' => 'cash',

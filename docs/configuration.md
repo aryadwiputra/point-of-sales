@@ -15,7 +15,11 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 | `XENDIT_PUBLIC_KEY` | Public key Xendit |
 | `XENDIT_CALLBACK_TOKEN` | Callback token verifikasi webhook Xendit |
 | `AUTH_PUBLIC_REGISTRATION` | Aktifkan registrasi publik (`true`/`false`, default: `false`) |
+| `SANCTUM_STATEFUL_DOMAINS` | Domain yang diizinkan untuk autentikasi cookie Sanctum. **Wajib diisi domain produksi** (jangan biarkan `localhost` di produksi) |
+| `SANCTUM_TOKEN_EXPIRATION` | Masa berlaku token API dalam menit (default `1440` = 24 jam) |
+| `SESSION_SECURE_COOKIE` | Set `true` di produksi (HTTPS) agar cookie sesi hanya dikirim via HTTPS |
  | `WA_SERVICE_URL` | Alamat Node.js WhatsApp service (default: `http://localhost:3001`) |
+ | `WA_SERVICE_TOKEN` | Token bersama untuk autentikasi request ke WhatsApp service (produksi wajib) |
 
  Versi runtime yang ditampilkan aplikasi berasal dari `APP_VERSION`. Nilainya harus disamakan
  dengan Git tag rilis, misalnya `v2.10.4`.

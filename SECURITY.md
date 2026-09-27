@@ -36,10 +36,26 @@ Sertakan dalam laporan:
 | CSRF | Laravel CSRF protection on all routes |
 | Auth | Rate limiting, honeypot + timer (bot.guard middleware) |
 | RBAC | Spatie Permission + step_up middleware for sensitive actions |
+| API tokens | Sanctum; expiring tokens (`SANCTUM_TOKEN_EXPIRATION`), per-module abilities |
 | Payment secrets | Encrypted at rest (Xendit/Midtrans keys) |
-| Webhook | Signature verification for Midtrans & Xendit |
-| Headers | SecureHeaders middleware (CSP, HSTS, X-Frame-Options) |
+| Webhook | Constant-time signature verification for Midtrans & Xendit |
+| Headers | `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy`. HSTS dikirim hanya di production via HTTPS. CSP dikirim sebagai `Content-Security-Policy-Report-Only` (belum enforce) |
+| WhatsApp service | Internal `X-Service-Token` header, binds `127.0.0.1` by default |
 | User data | Input validation on all requests |
+
+### Catatan Headers
+
+`SecureHeaders` middleware memasang:
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `X-Frame-Options: DENY`
+- `Permissions-Policy` (camera, microphone, geolocation, payment, usb, accelerometer, gyroscope dinonaktifkan)
+- `Strict-Transport-Security` — **hanya** saat production + request HTTPS
+- `Content-Security-Policy-Report-Only` — **report-only**, belum di-enforce; tujuannya mengumpulkan violation report sebelum enforcement
+
+### API Abilities
+
+Master-data API (`products`, `customers`, `categories`, `warehouses`, `suppliers`) memakai ability per-modul. Endpoint POS (`/api/v1/pos/*`) memerlukan ability `pos-access`. Token hasil login memuat seluruh permission user + `user:read`; token dari registrasi publik hanya `user:read` sehingga tidak bisa mengakses POS.
 
 ## Supported Versions
 

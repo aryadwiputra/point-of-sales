@@ -89,4 +89,25 @@ class ApiAuthorizationTest extends TestCase
             'sell_price' => 7500,
         ])->assertCreated();
     }
+
+    public function test_token_without_pos_access_cannot_reach_pos_endpoints(): void
+    {
+        $this->actingWithAbilities($this->makeUser(), ['user:read']);
+
+        $this->getJson('/api/v1/pos/shift')->assertStatus(403);
+    }
+
+    public function test_register_style_token_cannot_checkout(): void
+    {
+        $this->actingWithAbilities($this->makeUser(), ['user:read']);
+
+        $this->postJson('/api/v1/pos/checkout')->assertStatus(403);
+    }
+
+    public function test_token_with_pos_access_passes_ability_gate(): void
+    {
+        $this->actingWithAbilities($this->makeUser(), ['user:read', 'pos-access']);
+
+        $this->getJson('/api/v1/pos/shift')->assertStatus(200);
+    }
 }

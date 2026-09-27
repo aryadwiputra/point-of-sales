@@ -20,4 +20,11 @@ return [
     'step_up' => [
         'recent_password_timeout' => (int) env('AUTH_PASSWORD_TIMEOUT', 900),
     ],
+    'outlet' => [
+        // Legacy single-outlet installs have no user/outlet assignments. When true,
+        // an unassigned user may access warehouses while exactly one active outlet
+        // exists (backward compatibility). Set false on multi-outlet installs to
+        // enforce explicit outlet assignment.
+        'legacy_single_outlet_bypass' => env('SECURITY_LEGACY_SINGLE_OUTLET_BYPASS', true),
+    ],
 ];
