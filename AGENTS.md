@@ -196,6 +196,21 @@ Master-data API routes (`/api/v1/products`, `/customers`, `/categories`, `/wareh
 
 API tests must use `Sanctum::actingAs($user, ['*'])` or real tokens via `$user->createToken('test', $abilities)->plainTextToken`.
 
+## Skills Integration
+
+**LOAD SKILL BEFORE EXECUTING** — do not skip skill loading:
+
+| Trigger | Skill | Action |
+|---------|-------|--------|
+| Before creating features, components, adding functionality | `skill:brainstorming` | Classify request → present design → get approval |
+| Multi-step task after approved design | `skill:writing-plans` | Create implementation plan → execute via `skill:executing-plans` |
+| Code review for over-engineering | `skill:ponytail-review` | Check diff for unnecessary complexity, unused abstractions |
+| E2E browser testing | `skill:webapp-testing` | Use Playwright with `scripts/with_server.py` |
+
+**Default Mode: Ponytail** (`skill:ponytail` active) — stdlib first, YAGNI ruthless, native features before libraries.
+
+**Session Tracking:** After session ends, invoke `skill:obsidian-cli` to export session note to Obsidian vault.
+
 ## Route Naming Gotchas
 
 - Price list sidebar link: `price-lists.index` (NOT `settings.price-lists.index`)
