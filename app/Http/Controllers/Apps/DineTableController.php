@@ -30,8 +30,10 @@ class DineTableController extends Controller
             $query->where('dine_area_id', $request->area_id);
         }
 
-        if ($request->boolean('is_active')) {
+        if ($request->input('is_active') === 'active') {
             $query->where('is_active', true);
+        } elseif ($request->input('is_active') === 'inactive') {
+            $query->where('is_active', false);
         }
 
         $tables = $query->orderBy('dine_area_id')->orderBy('sort_order')->get();
@@ -44,7 +46,7 @@ class DineTableController extends Controller
             'areas' => $areas,
             'filters' => [
                 'area_id' => $request->area_id,
-                'is_active' => $request->boolean('is_active'),
+                'is_active' => $request->input('is_active', 'all'),
             ],
         ]);
     }
@@ -55,6 +57,8 @@ class DineTableController extends Controller
             'dine_area_id' => ['nullable', 'exists:dine_areas,id'],
             'name' => ['required', 'string', 'max:100'],
             'capacity' => ['integer', 'min:0'],
+            'pos_x' => ['integer', 'min:0', 'max:24'],
+            'pos_y' => ['integer', 'min:0', 'max:14'],
             'shape' => [Rule::in(['circle', 'square'])],
             'sort_order' => ['integer', 'min:0'],
             'is_active' => ['boolean'],
@@ -75,8 +79,8 @@ class DineTableController extends Controller
             'dine_area_id' => ['nullable', 'exists:dine_areas,id'],
             'name' => ['required', 'string', 'max:100'],
             'capacity' => ['integer', 'min:0'],
-            'pos_x' => ['integer', 'min:0'],
-            'pos_y' => ['integer', 'min:0'],
+            'pos_x' => ['integer', 'min:0', 'max:24'],
+            'pos_y' => ['integer', 'min:0', 'max:14'],
             'shape' => [Rule::in(['circle', 'square'])],
             'sort_order' => ['integer', 'min:0'],
             'is_active' => ['boolean'],

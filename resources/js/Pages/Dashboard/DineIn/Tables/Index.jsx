@@ -9,6 +9,7 @@ import {
     IconTrash,
     IconDownload,
     IconPlus,
+    IconQrcode,
 } from "@tabler/icons-react";
 import Table from "@/Components/Dashboard/Table";
 import Modal from "@/Components/Dashboard/Modal";
@@ -19,7 +20,7 @@ import toast from "react-hot-toast";
 const GRID_SIZE = 40;
 
 function TableShape({ table, onDragStart, isSelected, onClick }) {
-    const { shape, name, capacity, is_active } = table;
+    const { shape, name, is_active } = table;
     const colorClass = is_active
         ? isSelected
             ? "fill-primary-500"
@@ -36,8 +37,18 @@ function TableShape({ table, onDragStart, isSelected, onClick }) {
     return (
         <g
             {...dragProps}
+            role="button"
+            tabIndex={0}
+            aria-label={`${name}, ${is_active ? "aktif" : "nonaktif"}`}
+            aria-pressed={isSelected}
             onClick={() => onClick && onClick(table)}
-            className="cursor-pointer"
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClick?.(table);
+                }
+            }}
+            className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
             {shape === "circle" ? (
                 <circle
@@ -81,6 +92,7 @@ export default function Index({ tables, areas, filters }) {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingTable, setEditingTable] = useState(null);
     const [filterArea, setFilterArea] = useState(filters?.area_id || "");
+    const [filterStatus, setFilterStatus] = useState(filters?.is_active || "all");
     const [activeView, setActiveView] = useState("grid");
     const dragItem = useRef(null);
     const svgRef = useRef(null);
@@ -129,13 +141,23 @@ export default function Index({ tables, areas, filters }) {
 
     const openCreate = () => {
         setEditingTable(null);
+        const occupiedPositions = new Set(tables.map((table) => `${table.pos_x},${table.pos_y}`));
+        let position = { pos_x: 0, pos_y: 0 };
+        for (let y = 0; y < gridHeight; y += 1) {
+            const x = Array.from({ length: gridWidth }, (_, index) => index).find(
+                (column) => !occupiedPositions.has(`${column},${y}`)
+            );
+            if (x !== undefined) {
+                position = { pos_x: x, pos_y: y };
+                break;
+            }
+        }
         reset({
             dine_area_id: filterArea || (areas[0]?.id ?? ""),
             name: "",
             capacity: 4,
             shape: "square",
-            pos_x: 0,
-            pos_y: 0,
+            ...position,
             sort_order: tables.length,
             is_active: true,
         });
@@ -180,14 +202,22 @@ export default function Index({ tables, areas, filters }) {
         });
     };
 
-    const handleFilterArea = (areaId) => {
+    const applyFilters = (areaId, status) => {
         setFilterArea(areaId);
+        setFilterStatus(status);
+        setSelectedTable(null);
         router.get(
             route("dine-tables.index"),
-            areaId ? { area_id: areaId } : {},
-            { preserveScroll: true }
+            {
+                ...(areaId ? { area_id: areaId } : {}),
+                ...(status !== "all" ? { is_active: status } : {}),
+            },
+            { preserveScroll: true, preserveState: true }
         );
     };
+
+    const handleFilterArea = (areaId) => applyFilters(areaId, filterStatus);
+    const handleFilterStatus = (status) => applyFilters(filterArea, status);
 
     const downloadQr = (table) => {
         window.open(route("dine-tables.qr", table.id), "_blank");
@@ -206,15 +236,15 @@ export default function Index({ tables, areas, filters }) {
 
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
+                    <div className="min-w-0">
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                             Meja Dine-In
                         </h1>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {tables.length} meja terdaftar
+                            {tables.length} meja ditampilkan
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex w-full sm:w-auto flex-wrap gap-2">
                         <Button
                             type={"button"}
                             label={activeView === "grid" ? "Daftar" : "Peta"}
@@ -239,35 +269,79 @@ export default function Index({ tables, areas, filters }) {
             </div>
 
             {canAccess && (
-                <div className="mb-4 flex gap-2 flex-wrap">
-                    <button
-                        onClick={() => handleFilterArea("")}
-                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                            !filterArea
-                                ? "bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400"
-                                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                        }`}
-                    >
-                        Semua
-                    </button>
-                    {areas.map((area) => (
+                <div className="mb-4 flex flex-col gap-3">
+                    <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter area meja">
                         <button
-                            key={area.id}
-                            onClick={() => handleFilterArea(area.id)}
-                            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                filterArea == area.id
+                            type="button"
+                            aria-pressed={!filterArea}
+                            onClick={() => handleFilterArea("")}
+                            className={`min-h-11 px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                !filterArea
                                     ? "bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400"
                                     : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                             }`}
                         >
-                            {area.name}
+                            Semua
                         </button>
-                    ))}
+                        {areas.map((area) => (
+                            <button
+                                key={area.id}
+                                type="button"
+                                aria-pressed={filterArea == area.id}
+                                onClick={() => handleFilterArea(area.id)}
+                                className={`min-h-11 px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                    filterArea == area.id
+                                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                            >
+                                {area.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter status meja">
+                        {[['all', 'Semua status'], ['active', 'Aktif'], ['inactive', 'Nonaktif']].map(([status, label]) => (
+                            <button
+                                key={status}
+                                type="button"
+                                aria-pressed={filterStatus === status}
+                                onClick={() => handleFilterStatus(status)}
+                                className={`min-h-11 px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                    filterStatus === status
+                                        ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
+                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 
-            {activeView === "grid" ? (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-auto">
+            {tables.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                        <IconDatabaseOff size={32} className="text-slate-400" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-1">
+                        {filterArea || filterStatus !== "all" ? "Tidak Ada Meja yang Cocok" : "Belum Ada Meja"}
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center px-4">
+                        {filterArea || filterStatus !== "all" ? "Coba ubah filter area atau status." : "Tambahkan meja dine-in pertama Anda."}
+                    </p>
+                    {canCreate && !filterArea && filterStatus === "all" && (
+                        <Button
+                            type={"link"}
+                            icon={<IconCirclePlus size={18} />}
+                            className={"bg-primary-500 hover:bg-primary-600 text-white"}
+                            label={"Tambah Meja"}
+                            onClick={openCreate}
+                        />
+                    )}
+                </div>
+            ) : activeView === "grid" ? (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 sm:p-4 overflow-x-auto">
                     <svg
                         ref={svgRef}
                         viewBox={`0 0 ${gridWidth * GRID_SIZE} ${gridHeight * GRID_SIZE}`}
@@ -296,11 +370,27 @@ export default function Index({ tables, areas, filters }) {
                                 isSelected={selectedTable?.id === table.id}
                                 onClick={(t) => {
                                     setSelectedTable(t);
-                                    openEdit(t);
                                 }}
                             />
                         ))}
                     </svg>
+                    {selectedTable && (
+                        <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 p-3" aria-live="polite">
+                            <div>
+                                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedTable.name}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{selectedTable.area?.name ?? "Tanpa area"} · {selectedTable.capacity} orang · {selectedTable.is_active ? "Aktif" : "Nonaktif"}</p>
+                            </div>
+                            <div className="flex gap-2">
+                                {canAccess && (
+                                    <Button type={"button"} icon={<IconQrcode size={16} />} label="QR Meja" onClick={() => downloadQr(selectedTable)} className="min-h-11 border bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" />
+                                )}
+                                {canUpdate && (
+                                    <Button type={"button"} icon={<IconPencilCog size={16} />} label="Edit" onClick={() => openEdit(selectedTable)} className="min-h-11 border bg-warning-100 border-warning-200 text-warning-700 dark:bg-warning-900/50 dark:border-warning-800 dark:text-warning-300" />
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {canUpdate && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Pilih meja untuk melihat aksi. Seret meja untuk memindahkan atau atur posisi melalui Edit.</p>}
                 </div>
             ) : tables.length > 0 ? (
                 <Table.Card title={"Daftar Meja"}>
@@ -355,6 +445,7 @@ export default function Index({ tables, areas, filters }) {
                                                 <Button
                                                     type={"button"}
                                                     icon={<IconDownload size={16} strokeWidth={1.5} />}
+                                                    aria-label={`Buka QR ${table.name}`}
                                                     onClick={() => downloadQr(table)}
                                                     className={
                                                         "border bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
@@ -363,8 +454,9 @@ export default function Index({ tables, areas, filters }) {
                                             )}
                                             {canUpdate && (
                                                 <Button
-                                                    type={"edit"}
+                                                    type={"button"}
                                                     icon={<IconPencilCog size={16} strokeWidth={1.5} />}
+                                                    aria-label={`Edit ${table.name}`}
                                                     className={
                                                         "border bg-warning-100 border-warning-200 text-warning-600 hover:bg-warning-200 dark:bg-warning-900/50 dark:border-warning-800 dark:text-warning-400"
                                                     }
@@ -373,8 +465,9 @@ export default function Index({ tables, areas, filters }) {
                                             )}
                                             {canDelete && (
                                                 <Button
-                                                    type={"delete"}
+                                                    type={"button"}
                                                     icon={<IconTrash size={16} strokeWidth={1.5} />}
+                                                    aria-label={`Hapus ${table.name}`}
                                                     className={
                                                         "border bg-danger-100 border-danger-200 text-danger-600 hover:bg-danger-200 dark:bg-danger-900/50 dark:border-danger-800 dark:text-danger-400"
                                                     }
