@@ -132,9 +132,11 @@ Dikontrol via `Setting` table:
 
 ### Floor Plan Editor (SVG Grid)
 - Tampilan grid SVG 25x15 cell (40px/cell)
-- Drag-and-drop meja untuk reposisi
-- Mode daftar sebagai alternatif
-- Filter per area
+- Drag-and-drop meja untuk reposisi bagi pengguna yang memiliki izin update
+- Posisi meja dapat diatur dari form; posisi awal otomatis memilih cell kosong dan validasi membatasi grid ke X 0-24 dan Y 0-14
+- Klik atau fokus meja untuk melihat detail dan aksi yang tersedia sesuai izin
+- Mode daftar sebagai alternatif, dengan aksi QR tersedia di kedua tampilan
+- Filter berdasarkan area dan status aktif/nonaktif; kombinasi filter dipertahankan saat filter lain diubah
 
 ### QR Code Generation
 - QR berisi URL: `{APP_URL}/dine/{token}`
