@@ -6,7 +6,7 @@
         "laravel",
         "framework"
     ],
-    "license": "MIT",
+    "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.3",
         "barryvdh/laravel-dompdf": "^3.1",

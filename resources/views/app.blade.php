@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#4f46e5">
-    <meta name="description" content="Dikasir — sistem kasir (POS) open source untuk UMKM Indonesia. Multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode. Gratis, MIT License.">
+    <meta name="description" content="Dikasir — sistem kasir (POS) open source untuk UMKM Indonesia. Multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode. Gratis, GNU AGPL-3.0.">
     <meta property="og:site_name" content="Dikasir">
     <meta property="og:title" content="Dikasir — Sistem Kasir Open Source untuk UMKM">
     <meta property="og:description" content="POS gratis & open source: multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode. Laravel 13 + React 19.">
