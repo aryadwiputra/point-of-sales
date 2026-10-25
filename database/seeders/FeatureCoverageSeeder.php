@@ -186,7 +186,7 @@ class FeatureCoverageSeeder extends Seeder
         ];
 
         foreach ($settings as $key => $payload) {
-            Setting::updateOrCreate(
+            Setting::firstOrCreate(
                 ['key' => $key],
                 [
                     'value' => $payload['value'],
@@ -230,8 +230,6 @@ class FeatureCoverageSeeder extends Seeder
     private function configurePaymentSettings(): void
     {
         PaymentSetting::firstOrCreate([], [
-            'default_gateway' => 'cash',
-        ])->update([
             'default_gateway' => 'cash',
             'bank_transfer_enabled' => true,
             'midtrans_enabled' => false,

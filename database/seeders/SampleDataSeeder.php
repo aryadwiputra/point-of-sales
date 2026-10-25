@@ -2,35 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\Cart;
-use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\CustomerCredit;
 use App\Models\CustomerVoucher;
-use App\Models\DiscountApprovalLog;
-use App\Models\LoyaltyPointHistory;
 use App\Models\Payable;
 use App\Models\PayablePayment;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
-use App\Models\Profit;
 use App\Models\Receivable;
 use App\Models\ReceivablePayment;
-use App\Models\SalesReturn;
-use App\Models\SalesReturnItem;
-use App\Models\StockMutation;
 use App\Models\Supplier;
 use App\Models\Transaction;
-use App\Models\TransactionDetail;
-use App\Models\TransactionTender;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -41,59 +28,6 @@ class SampleDataSeeder extends Seeder
      */
     public function run(): void
     {
-        Schema::disableForeignKeyConstraints();
-
-        Cart::truncate();
-        LoyaltyPointHistory::truncate();
-        CustomerVoucher::truncate();
-        CustomerCredit::truncate();
-        SalesReturnItem::truncate();
-        SalesReturn::truncate();
-        DiscountApprovalLog::truncate();
-        CashierShift::truncate();
-        StockMutation::truncate();
-        ReceivablePayment::truncate();
-        PayablePayment::truncate();
-        Receivable::truncate();
-        Payable::truncate();
-        if (Schema::hasTable('transaction_tenders')) {
-            TransactionTender::truncate();
-        }
-        if (Schema::hasTable('product_batches')) {
-            DB::table('product_batches')->truncate();
-        }
-        if (Schema::hasTable('product_warehouse')) {
-            DB::table('product_warehouse')->truncate();
-        }
-        foreach ([
-            'composite_product_items',
-            'product_units',
-            'product_batches',
-            'stock_mutations',
-            'stock_opname_items',
-            'purchase_order_items',
-            'goods_receiving_items',
-            'supplier_return_items',
-            'dine_order_items',
-            'product_notification_reads',
-            'transaction_detail_batch_allocations',
-            'stock_transfer_items',
-        ] as $table) {
-            if (Schema::hasTable($table)) {
-                DB::table($table)->truncate();
-            }
-        }
-        TransactionDetail::truncate();
-        Profit::truncate();
-        Transaction::truncate();
-        Product::truncate();
-        Category::truncate();
-        Customer::truncate();
-        Supplier::truncate();
-
-        Schema::enableForeignKeyConstraints();
-
-        // Ensure storage directories exist
         Storage::disk('public')->makeDirectory('category');
         Storage::disk('public')->makeDirectory('products');
 
