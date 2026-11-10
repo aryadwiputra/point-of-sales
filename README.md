@@ -2,7 +2,7 @@
 
 Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inventory audit, purchasing, finance, CRM, loyalty, dan observability operasional — dengan dukungan multi-warehouse, PPN, dan offline mode.
 
-> 200+ GitHub stars • Open-source • GNU AGPL-3.0
+> 200+ GitHub stars • Open-source • GNU AGPL-3.0 License
 
 ---
 
@@ -187,4 +187,4 @@ Pastikan `php artisan test` lulus sebelum PR.
 
 ## Lisensi
 
-GNU Affero General Public License v3.0 (AGPL-3.0-only). See [LICENSE](LICENSE) for the full license text.
+GNU Affero General Public License v3.0 (AGPL-3.0)
