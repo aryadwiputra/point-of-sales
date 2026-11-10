@@ -19,7 +19,7 @@ use Inertia\Inertia;
 class PayableController extends Controller
 {
     public function __construct(
-        private readonly OutletAccessService $outletAccessService,
+        protected readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -130,7 +130,7 @@ class PayableController extends Controller
                 $item->status = 'overdue';
             }
             $daysOverdue = $item->status === 'overdue' && $item->due_date
-                ? now()->diffInDays($item->due_date)
+                ? now()->diffInDays($item->due_date, true)
                 : 0;
 
             $item->aging_bucket = match (true) {
@@ -218,7 +218,7 @@ class PayableController extends Controller
             ->with('success', 'Pembayaran hutang berhasil dicatat.');
     }
 
-    private function scopeQuery($query, Collection $warehouseIds)
+    protected function scopeQuery($query, Collection $warehouseIds)
     {
         return $query->where(function ($builder) use ($warehouseIds) {
             $builder->whereHas('purchaseOrder', fn ($purchaseOrder) => $purchaseOrder->whereIn('warehouse_id', $warehouseIds));
@@ -231,7 +231,7 @@ class PayableController extends Controller
         });
     }
 
-    private function ensureAccess(Payable $payable): void
+    protected function ensureAccess(Payable $payable): void
     {
         abort_unless(
             $this->outletAccessService->canUseWarehouse(request()->user(), $payable->purchaseOrder?->warehouse),

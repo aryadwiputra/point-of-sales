@@ -15,7 +15,7 @@ use Spatie\Permission\Models\Role;
 class UserController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        protected readonly AuditLogService $auditLogService
     ) {}
 
     /**
@@ -254,7 +254,7 @@ class UserController extends Controller
         return back();
     }
 
-    private function userPayload(User $user, array $roles, bool $avatarChanged): array
+    protected function userPayload(User $user, array $roles, bool $avatarChanged): array
     {
         return [
             'name' => $user->name,
@@ -264,7 +264,7 @@ class UserController extends Controller
         ];
     }
 
-    private function outletAssignments(UserRequest $request): array
+    protected function outletAssignments(UserRequest $request): array
     {
         $ids = collect($request->input('outlet_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $default = (int) $request->input('default_outlet_id');

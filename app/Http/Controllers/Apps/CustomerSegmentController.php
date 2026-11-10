@@ -14,7 +14,7 @@ use Inertia\Inertia;
 class CustomerSegmentController extends Controller
 {
     public function __construct(
-        private readonly CustomerSegmentationService $segmentationService
+        protected readonly CustomerSegmentationService $segmentationService
     ) {}
 
     public function index(Request $request)
@@ -162,7 +162,7 @@ class CustomerSegmentController extends Controller
         return back()->with('success', 'Customer dihapus dari segment manual.');
     }
 
-    private function validateSegment(Request $request, ?CustomerSegment $segment = null): array
+    protected function validateSegment(Request $request, ?CustomerSegment $segment = null): array
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],

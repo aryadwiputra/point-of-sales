@@ -13,8 +13,8 @@ use Inertia\Inertia;
 class PaymentSettingController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function edit()
@@ -216,7 +216,7 @@ class PaymentSettingController extends Controller
             ->with('success', 'Konfigurasi payment gateway berhasil disimpan.');
     }
 
-    private function isLocalAppUrl(string $appUrl): bool
+    protected function isLocalAppUrl(string $appUrl): bool
     {
         $host = parse_url($appUrl, PHP_URL_HOST);
 
@@ -224,7 +224,7 @@ class PaymentSettingController extends Controller
             || str_ends_with((string) $host, '.test');
     }
 
-    private function setting(): PaymentSetting
+    protected function setting(): PaymentSetting
     {
         $outlet = $this->outletAccessService->activeOutlet(request());
 

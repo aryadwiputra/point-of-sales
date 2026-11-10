@@ -15,8 +15,8 @@ use Inertia\Inertia;
 class CustomerVoucherController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -148,7 +148,7 @@ class CustomerVoucherController extends Controller
         return back()->with('success', 'Voucher customer berhasil dihapus.');
     }
 
-    private function validateVoucher(Request $request, ?CustomerVoucher $voucher = null): array
+    protected function validateVoucher(Request $request, ?CustomerVoucher $voucher = null): array
     {
         $validated = $request->validate([
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
@@ -186,7 +186,7 @@ class CustomerVoucherController extends Controller
         return $validated;
     }
 
-    private function auditPayload(CustomerVoucher $voucher): array
+    protected function auditPayload(CustomerVoucher $voucher): array
     {
         return [
             'customer_id' => $voucher->customer_id,
@@ -203,7 +203,7 @@ class CustomerVoucherController extends Controller
         ];
     }
 
-    private function generateVoucherCode(): string
+    protected function generateVoucherCode(): string
     {
         do {
             $code = 'VCR-'.Str::upper(Str::random(8));
@@ -212,7 +212,7 @@ class CustomerVoucherController extends Controller
         return $code;
     }
 
-    private function canUseVoucher(CustomerVoucher $voucher): bool
+    protected function canUseVoucher(CustomerVoucher $voucher): bool
     {
         $outlet = $this->outletAccessService->activeOutlet(request());
 

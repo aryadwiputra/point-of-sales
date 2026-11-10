@@ -12,7 +12,7 @@ use Inertia\Inertia;
 
 class PriceListController extends Controller
 {
-    public function __construct(private readonly OutletAccessService $outletAccess) {}
+    public function __construct(protected readonly OutletAccessService $outletAccess) {}
 
     public function index()
     {
@@ -108,7 +108,7 @@ class PriceListController extends Controller
         return back()->with('success', 'Item dihapus dari price list.');
     }
 
-    private function canUseList(PriceList $priceList): bool
+    protected function canUseList(PriceList $priceList): bool
     {
         $outlet = $this->outletAccess->activeOutlet(request());
 

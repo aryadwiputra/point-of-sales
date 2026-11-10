@@ -14,8 +14,8 @@ use Inertia\Inertia;
 class PurchaseOrderController extends Controller
 {
     public function __construct(
-        private readonly PurchaseOrderService $purchaseOrderService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly PurchaseOrderService $purchaseOrderService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -130,7 +130,7 @@ class PurchaseOrderController extends Controller
             ->with('success', 'Purchase order dibatalkan.');
     }
 
-    private function ensureOrderAccess(Request $request, PurchaseOrder $order): void
+    protected function ensureOrderAccess(Request $request, PurchaseOrder $order): void
     {
         $warehouse = $order->warehouse_id ? $order->warehouse : null;
         abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);

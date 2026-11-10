@@ -24,9 +24,9 @@ use Inertia\Response;
 class CashierShiftController extends Controller
 {
     public function __construct(
-        private readonly CashierShiftService $cashierShiftService,
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly CashierShiftService $cashierShiftService,
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response
@@ -205,7 +205,7 @@ class CashierShiftController extends Controller
         return response($html)->header('Content-Type', 'text/html; charset=utf-8');
     }
 
-    private function resolveVisibleShift(Request $request, CashierShift $cashierShift): CashierShift
+    protected function resolveVisibleShift(Request $request, CashierShift $cashierShift): CashierShift
     {
         $query = CashierShift::query()
             ->with(['user:id,name', 'openedBy:id,name', 'closedBy:id,name', 'warehouse:id,code,name'])
@@ -216,7 +216,7 @@ class CashierShiftController extends Controller
         return $query->firstOrFail();
     }
 
-    private function visibleCashiers(Request $request)
+    protected function visibleCashiers(Request $request)
     {
         $user = $request->user();
 
@@ -245,7 +245,7 @@ class CashierShiftController extends Controller
             ->get(['id', 'name']);
     }
 
-    private function transformShift(CashierShift $shift): array
+    protected function transformShift(CashierShift $shift): array
     {
         $summary = $this->cashierShiftService->calculateSummary($shift);
 
@@ -304,7 +304,7 @@ class CashierShiftController extends Controller
         ];
     }
 
-    private function shiftAuditPayload(CashierShift $shift): array
+    protected function shiftAuditPayload(CashierShift $shift): array
     {
         return [
             'status' => $shift->status,

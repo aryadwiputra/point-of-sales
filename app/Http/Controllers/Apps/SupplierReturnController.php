@@ -15,8 +15,8 @@ use Inertia\Inertia;
 class SupplierReturnController extends Controller
 {
     public function __construct(
-        private readonly SupplierReturnService $supplierReturnService,
-        private readonly OutletAccessService $outletAccessService,
+        protected readonly SupplierReturnService $supplierReturnService,
+        protected readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -149,7 +149,7 @@ class SupplierReturnController extends Controller
             ->with('success', 'Retur supplier dibatalkan.');
     }
 
-    private function ensureAccess(Request $request, SupplierReturn $supplierReturn): void
+    protected function ensureAccess(Request $request, SupplierReturn $supplierReturn): void
     {
         $warehouse = $supplierReturn->warehouse_id
             ? $supplierReturn->warehouse()->first()

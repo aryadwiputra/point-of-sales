@@ -17,7 +17,7 @@ use Inertia\Response;
 
 class OutletController extends Controller
 {
-    public function __construct(private readonly OutletAccessService $outletAccessService) {}
+    public function __construct(protected readonly OutletAccessService $outletAccessService) {}
 
     public function index(): Response
     {
@@ -104,12 +104,12 @@ class OutletController extends Controller
         return back()->with('success', 'Outlet berhasil dihapus.');
     }
 
-    private function ensureAccess(User $user, Outlet $outlet): void
+    protected function ensureAccess(User $user, Outlet $outlet): void
     {
         abort_unless($user->isSuperAdmin() || $user->outlets()->whereKey($outlet->id)->exists(), 404);
     }
 
-    private function hasOperationalHistory(Outlet $outlet): bool
+    protected function hasOperationalHistory(Outlet $outlet): bool
     {
         $warehouseIds = $outlet->warehouses()->pluck('id');
         if ($warehouseIds->isEmpty()) {
@@ -132,7 +132,7 @@ class OutletController extends Controller
         );
     }
 
-    private function hasOpenShift(Outlet $outlet): bool
+    protected function hasOpenShift(Outlet $outlet): bool
     {
         return DB::table('cashier_shifts')
             ->whereIn('warehouse_id', $outlet->warehouses()->pluck('id'))

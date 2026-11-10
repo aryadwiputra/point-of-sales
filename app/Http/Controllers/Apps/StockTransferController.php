@@ -15,8 +15,8 @@ use Inertia\Response;
 class StockTransferController extends Controller
 {
     public function __construct(
-        private readonly StockTransferService $stockTransferService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly StockTransferService $stockTransferService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(): Response

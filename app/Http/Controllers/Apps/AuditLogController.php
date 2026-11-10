@@ -89,7 +89,7 @@ class AuditLogController extends Controller
     /**
      * @return array<int>|null Null means unrestricted (super-admin).
      */
-    private function visibleUserIds(User $user): ?array
+    protected function visibleUserIds(User $user): ?array
     {
         if ($user->isSuperAdmin()) {
             return null;
@@ -104,7 +104,7 @@ class AuditLogController extends Controller
         return $userIds->push($user->id)->unique()->values()->all();
     }
 
-    private function transformSummary(AuditLog $log): array
+    protected function transformSummary(AuditLog $log): array
     {
         return [
             'id' => $log->id,

@@ -24,9 +24,9 @@ use Inertia\Inertia;
 class PricingRuleController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly LoyaltyService $loyaltyService,
-        private readonly PricingService $pricingService, private readonly OutletAccessService $outletAccess
+        protected readonly AuditLogService $auditLogService,
+        protected readonly LoyaltyService $loyaltyService,
+        protected readonly PricingService $pricingService, protected readonly OutletAccessService $outletAccess
     ) {}
 
     public function index(Request $request)
@@ -207,7 +207,7 @@ class PricingRuleController extends Controller
             ->with('success', 'Rule promo berhasil diperbarui.');
     }
 
-    private function canUseRule(PricingRule $rule): bool
+    protected function canUseRule(PricingRule $rule): bool
     {
         $outlet = $this->outletAccess->activeOutlet(request());
 
@@ -250,7 +250,7 @@ class PricingRuleController extends Controller
         ]);
     }
 
-    private function formPayload(): array
+    protected function formPayload(): array
     {
         return [
             'products' => Product::orderBy('title')->get(['id', 'title', 'sell_price', 'category_id']),
@@ -265,7 +265,7 @@ class PricingRuleController extends Controller
         ];
     }
 
-    private function validateRule(Request $request): array
+    protected function validateRule(Request $request): array
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -439,7 +439,7 @@ class PricingRuleController extends Controller
         ];
     }
 
-    private function syncRuleRelations(PricingRule $rule, array $relations): void
+    protected function syncRuleRelations(PricingRule $rule, array $relations): void
     {
         $rule->qtyBreaks()->delete();
         foreach ($relations['qty_breaks'] as $payload) {
@@ -457,7 +457,7 @@ class PricingRuleController extends Controller
         }
     }
 
-    private function auditPayload(PricingRule $rule): array
+    protected function auditPayload(PricingRule $rule): array
     {
         return [
             'name' => $rule->name,
@@ -481,7 +481,7 @@ class PricingRuleController extends Controller
         ];
     }
 
-    private function buildPreviewCarts(PricingRule $rule): Collection
+    protected function buildPreviewCarts(PricingRule $rule): Collection
     {
         $products = match ($rule->kind) {
             PricingRule::KIND_BUNDLE_PRICE => Product::query()
@@ -517,7 +517,7 @@ class PricingRuleController extends Controller
             });
     }
 
-    private function previewQuantityForRule(PricingRule $rule, Product $product): int
+    protected function previewQuantityForRule(PricingRule $rule, Product $product): int
     {
         if ($rule->kind === PricingRule::KIND_QTY_BREAK) {
             return max(1, (int) ($rule->preview_quantity_multiplier ?: $rule->qtyBreaks->max('min_qty') ?: 1));

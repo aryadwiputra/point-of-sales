@@ -39,15 +39,15 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class TransactionController extends Controller
 {
     public function __construct(
-        private readonly CashierShiftService $cashierShiftService,
-        private readonly AuditLogService $auditLogService,
-        private readonly PricingService $pricingService,
-        private readonly LoyaltyService $loyaltyService,
-        private readonly PriceListService $priceListService,
-        private readonly BatchService $batchService,
-        private readonly TransactionTenderService $tenderService,
-        private readonly OutletAccessService $outletAccessService,
-        private readonly CheckoutService $checkoutService,
+        protected readonly CashierShiftService $cashierShiftService,
+        protected readonly AuditLogService $auditLogService,
+        protected readonly PricingService $pricingService,
+        protected readonly LoyaltyService $loyaltyService,
+        protected readonly PriceListService $priceListService,
+        protected readonly BatchService $batchService,
+        protected readonly TransactionTenderService $tenderService,
+        protected readonly OutletAccessService $outletAccessService,
+        protected readonly CheckoutService $checkoutService,
     ) {}
 
     /**
@@ -925,7 +925,7 @@ class TransactionController extends Controller
             ->with('success', "Pembayaran untuk invoice {$transaction->invoice} berhasil dikonfirmasi.");
     }
 
-    private function ensureTransactionAccess(Request $request, Transaction $transaction): void
+    protected function ensureTransactionAccess(Request $request, Transaction $transaction): void
     {
         $warehouse = $transaction->warehouse_id ? $transaction->warehouse : null;
         abort_unless($this->outletAccessService->canUseWarehouse($request->user(), $warehouse), 404);

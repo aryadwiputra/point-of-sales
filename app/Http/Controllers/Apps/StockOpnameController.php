@@ -26,9 +26,9 @@ use Inertia\Response;
 class StockOpnameController extends Controller
 {
     public function __construct(
-        private readonly StockMutationService $stockMutationService,
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly StockMutationService $stockMutationService,
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response
@@ -309,7 +309,7 @@ class StockOpnameController extends Controller
         return back()->with('success', 'Stock opname berhasil difinalisasi.');
     }
 
-    private function ensureDraft(StockOpname $stockOpname): void
+    protected function ensureDraft(StockOpname $stockOpname): void
     {
         if (! $stockOpname->isDraft()) {
             throw ValidationException::withMessages([
@@ -318,20 +318,20 @@ class StockOpnameController extends Controller
         }
     }
 
-    private function ensureWarehouseAccess($user, ?int $warehouseId): void
+    protected function ensureWarehouseAccess($user, ?int $warehouseId): void
     {
         $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : null;
         abort_unless($this->outletAccessService->canUseWarehouse($user, $warehouse), 403);
     }
 
-    private function ensureItemBelongsToOpname(StockOpname $stockOpname, StockOpnameItem $item): void
+    protected function ensureItemBelongsToOpname(StockOpname $stockOpname, StockOpnameItem $item): void
     {
         if ($item->stock_opname_id !== $stockOpname->id) {
             abort(404);
         }
     }
 
-    private function generateCode(): string
+    protected function generateCode(): string
     {
         do {
             $code = 'SO-'.now()->format('YmdHis').'-'.Str::upper(Str::random(4));

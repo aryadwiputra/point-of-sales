@@ -14,7 +14,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class DineTableController extends Controller
 {
-    public function __construct(private readonly OutletAccessService $outletAccess) {}
+    public function __construct(protected readonly OutletAccessService $outletAccess) {}
 
     public function index(Request $request)
     {
@@ -116,7 +116,7 @@ class DineTableController extends Controller
         ]);
     }
 
-    private function ownsTable(DiningTable $table, Request $request): bool
+    protected function ownsTable(DiningTable $table, Request $request): bool
     {
         $outlet = $this->outletAccess->activeOutlet($request);
         $area = $table->area;
@@ -124,7 +124,7 @@ class DineTableController extends Controller
         return $area?->outlet_id === null || ($outlet && (int) $area->outlet_id === (int) $outlet->id);
     }
 
-    private function validateAreaAccess(?int $areaId, Request $request): void
+    protected function validateAreaAccess(?int $areaId, Request $request): void
     {
         if (! $areaId) {
             return;
@@ -134,7 +134,7 @@ class DineTableController extends Controller
         abort_unless($this->ownsArea($area, $request), 404);
     }
 
-    private function ownsArea(DineArea $area, Request $request): bool
+    protected function ownsArea(DineArea $area, Request $request): bool
     {
         $outlet = $this->outletAccess->activeOutlet($request);
 

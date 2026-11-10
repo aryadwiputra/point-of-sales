@@ -14,8 +14,8 @@ use Inertia\Inertia;
 class GoodsReceivingController extends Controller
 {
     public function __construct(
-        private readonly GoodsReceivingService $goodsReceivingService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly GoodsReceivingService $goodsReceivingService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)

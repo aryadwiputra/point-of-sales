@@ -16,8 +16,8 @@ use Inertia\Inertia;
 class CrmCampaignController extends Controller
 {
     public function __construct(
-        private readonly CrmAutomationService $crmAutomationService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly CrmAutomationService $crmAutomationService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)
@@ -189,7 +189,7 @@ class CrmCampaignController extends Controller
             ->with('success', 'Campaign share piutang berhasil dibuat.');
     }
 
-    private function validateCampaign(Request $request): array
+    protected function validateCampaign(Request $request): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -213,7 +213,7 @@ class CrmCampaignController extends Controller
         ]);
     }
 
-    private function canUseCampaign(?CustomerCampaign $campaign): bool
+    protected function canUseCampaign(?CustomerCampaign $campaign): bool
     {
         if (! $campaign) {
             return false;

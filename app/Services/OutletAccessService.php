@@ -112,7 +112,7 @@ class OutletAccessService
         }
 
         $outlets = $this->accessibleOutlets($user);
-        $selectedId = (int) $request->session()->get('active_outlet_id');
+        $selectedId = (int) ($request->hasSession() ? $request->session()->get('active_outlet_id') : 0);
 
         return $outlets->firstWhere('id', $selectedId) ?? $outlets->first() ?? $this->defaultOutlet($user);
     }

@@ -32,10 +32,10 @@ use Inertia\Response;
 class SalesReturnController extends Controller
 {
     public function __construct(
-        private readonly StockMutationService $stockMutationService,
-        private readonly CashierShiftService $cashierShiftService,
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly StockMutationService $stockMutationService,
+        protected readonly CashierShiftService $cashierShiftService,
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response
@@ -337,7 +337,7 @@ class SalesReturnController extends Controller
         return back()->with('success', 'Retur penjualan berhasil diselesaikan.');
     }
 
-    private function salesReturnAuditPayload(SalesReturn $salesReturn): array
+    protected function salesReturnAuditPayload(SalesReturn $salesReturn): array
     {
         return [
             'code' => $salesReturn->code,
@@ -357,7 +357,7 @@ class SalesReturnController extends Controller
         ];
     }
 
-    private function resolveAccessibleTransaction(Request $request, int $transactionId): Transaction
+    protected function resolveAccessibleTransaction(Request $request, int $transactionId): Transaction
     {
         $transaction = Transaction::query()
             ->with([
@@ -378,7 +378,7 @@ class SalesReturnController extends Controller
         return $transaction;
     }
 
-    private function resolveAccessibleSalesReturn(Request $request, int $salesReturnId): SalesReturn
+    protected function resolveAccessibleSalesReturn(Request $request, int $salesReturnId): SalesReturn
     {
         $salesReturn = SalesReturn::query()
             ->with([
@@ -405,7 +405,7 @@ class SalesReturnController extends Controller
         return $salesReturn;
     }
 
-    private function transformTransactionForEditor(Transaction $transaction, ?SalesReturn $salesReturn = null): array
+    protected function transformTransactionForEditor(Transaction $transaction, ?SalesReturn $salesReturn = null): array
     {
         $draftItems = collect($salesReturn?->items ?? [])
             ->keyBy('transaction_detail_id');
@@ -466,7 +466,7 @@ class SalesReturnController extends Controller
         ];
     }
 
-    private function transformSalesReturn(SalesReturn $salesReturn): array
+    protected function transformSalesReturn(SalesReturn $salesReturn): array
     {
         return [
             'id' => $salesReturn->id,
@@ -513,7 +513,7 @@ class SalesReturnController extends Controller
         ];
     }
 
-    private function transactionHasReturnableItems(Transaction $transaction): bool
+    protected function transactionHasReturnableItems(Transaction $transaction): bool
     {
         return $transaction->details->contains(function (TransactionDetail $detail) {
             $completedReturnedQty = (int) $detail->salesReturnItems
@@ -524,7 +524,7 @@ class SalesReturnController extends Controller
         });
     }
 
-    private function prepareDraftPayload(Transaction $transaction, array $validated, ?int $excludeSalesReturnId = null): array
+    protected function prepareDraftPayload(Transaction $transaction, array $validated, ?int $excludeSalesReturnId = null): array
     {
         $details = $transaction->details->keyBy('id');
         $returnedQtyMap = $this->getCompletedReturnedQtyMap($transaction->id, $excludeSalesReturnId);
@@ -600,7 +600,7 @@ class SalesReturnController extends Controller
         ];
     }
 
-    private function calculateSettlement(Transaction $transaction, int $totalReturnAmount, string $returnType): array
+    protected function calculateSettlement(Transaction $transaction, int $totalReturnAmount, string $returnType): array
     {
         $resolvedReturnType = ! $transaction->customer_id && $returnType === 'store_credit'
             ? 'refund_cash'
@@ -637,7 +637,7 @@ class SalesReturnController extends Controller
         ];
     }
 
-    private function determineReceivableStatus(int $total, int $paid, $dueDate): string
+    protected function determineReceivableStatus(int $total, int $paid, $dueDate): string
     {
         if ($paid >= $total) {
             return 'paid';
@@ -654,7 +654,7 @@ class SalesReturnController extends Controller
         return 'unpaid';
     }
 
-    private function getCompletedReturnedQtyMap(int $transactionId, ?int $excludeSalesReturnId = null): Collection
+    protected function getCompletedReturnedQtyMap(int $transactionId, ?int $excludeSalesReturnId = null): Collection
     {
         return SalesReturnItem::query()
             ->selectRaw('transaction_detail_id, COALESCE(SUM(qty_return), 0) as total_qty')
@@ -670,7 +670,7 @@ class SalesReturnController extends Controller
             ->pluck('total_qty', 'transaction_detail_id');
     }
 
-    private function ensureDraft(SalesReturn $salesReturn): void
+    protected function ensureDraft(SalesReturn $salesReturn): void
     {
         if (! $salesReturn->isDraft()) {
             throw ValidationException::withMessages([
@@ -679,14 +679,14 @@ class SalesReturnController extends Controller
         }
     }
 
-    private function ensureSalesReturnTablesExist(): void
+    protected function ensureSalesReturnTablesExist(): void
     {
         if (! Schema::hasTable('sales_returns') || ! Schema::hasTable('sales_return_items')) {
             abort(503, 'Fitur retur penjualan belum siap. Jalankan migrasi database terlebih dahulu.');
         }
     }
 
-    private function generateCode(): string
+    protected function generateCode(): string
     {
         do {
             $code = 'SR-'.now()->format('YmdHis').'-'.Str::upper(Str::random(4));

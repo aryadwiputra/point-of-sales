@@ -65,7 +65,7 @@ class Payable extends Model
             return 'current';
         }
 
-        $daysOverdue = now()->diffInDays($this->due_date);
+        $daysOverdue = now()->diffInDays($this->due_date, true);
 
         return match (true) {
             $daysOverdue <= 30 => '0-30',

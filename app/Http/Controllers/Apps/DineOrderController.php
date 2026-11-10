@@ -13,8 +13,8 @@ use Inertia\Inertia;
 class DineOrderController extends Controller
 {
     public function __construct(
-        private DineOrderService $service,
-        private readonly OutletAccessService $outletAccessService,
+        protected DineOrderService $service,
+        protected readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -58,7 +58,7 @@ class DineOrderController extends Controller
         return back()->with('success', 'Pesanan ditolak.');
     }
 
-    private function ensureOutletAccess(Request $request, DineOrder $dineOrder): void
+    protected function ensureOutletAccess(Request $request, DineOrder $dineOrder): void
     {
         $user = $request->user();
         if ($user->isSuperAdmin()) {

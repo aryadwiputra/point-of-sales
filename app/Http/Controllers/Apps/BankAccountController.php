@@ -13,8 +13,8 @@ use Inertia\Inertia;
 class BankAccountController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     /**
@@ -247,7 +247,7 @@ class BankAccountController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function bankAccountPayload(BankAccount $bankAccount): array
+    protected function bankAccountPayload(BankAccount $bankAccount): array
     {
         return [
             'bank_name' => $bankAccount->bank_name,
@@ -258,7 +258,7 @@ class BankAccountController extends Controller
         ];
     }
 
-    private function ensureVisible(BankAccount $bankAccount): void
+    protected function ensureVisible(BankAccount $bankAccount): void
     {
         abort_unless(
             BankAccount::forOutlet($this->outletAccessService->activeOutlet(request()))

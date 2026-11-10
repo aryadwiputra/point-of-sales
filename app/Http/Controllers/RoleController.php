@@ -12,7 +12,7 @@ use Spatie\Permission\Models\Role;
 class RoleController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        protected readonly AuditLogService $auditLogService
     ) {}
 
     /**

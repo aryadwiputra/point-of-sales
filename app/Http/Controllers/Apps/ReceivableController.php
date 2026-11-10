@@ -16,8 +16,8 @@ use Inertia\Inertia;
 class ReceivableController extends Controller
 {
     public function __construct(
-        private readonly ReceivableService $receivableService,
-        private readonly OutletAccessService $outletAccessService,
+        protected readonly ReceivableService $receivableService,
+        protected readonly OutletAccessService $outletAccessService,
     ) {}
 
     public function index(Request $request)
@@ -181,7 +181,7 @@ class ReceivableController extends Controller
         return back()->with('success', 'Catatan penagihan berhasil disimpan.');
     }
 
-    private function ensureAccess(Receivable $receivable): void
+    protected function ensureAccess(Receivable $receivable): void
     {
         $warehouse = $receivable->transaction?->warehouse;
         abort_unless($this->outletAccessService->canUseWarehouse(request()->user(), $warehouse), 404);

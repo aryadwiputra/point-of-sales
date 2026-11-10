@@ -15,10 +15,10 @@ use Inertia\Inertia;
 class SettingController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly LoyaltyService $loyaltyService,
-        private readonly WhatsAppService $whatsAppService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly AuditLogService $auditLogService,
+        protected readonly LoyaltyService $loyaltyService,
+        protected readonly WhatsAppService $whatsAppService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     /**

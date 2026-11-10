@@ -19,8 +19,8 @@ use Laravolt\Indonesia\Models\Village;
 class MemberController extends Controller
 {
     public function __construct(
-        private readonly LoyaltyService $loyaltyService,
-        private readonly CustomerSegmentationService $segmentationService
+        protected readonly LoyaltyService $loyaltyService,
+        protected readonly CustomerSegmentationService $segmentationService
     ) {}
 
     public function index(Request $request)
@@ -201,7 +201,7 @@ class MemberController extends Controller
         return to_route('members.show', $member);
     }
 
-    private function validateMemberRequest(Request $request, ?Customer $customer = null): array
+    protected function validateMemberRequest(Request $request, ?Customer $customer = null): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -216,7 +216,7 @@ class MemberController extends Controller
         ]);
     }
 
-    private function resolveRegionPayload(array $validated): array
+    protected function resolveRegionPayload(array $validated): array
     {
         $province = Province::where('code', $validated['province_id'])->first();
         $regency = City::where('code', $validated['regency_id'])->first();
@@ -235,7 +235,7 @@ class MemberController extends Controller
         ];
     }
 
-    private function memberPayloadFromRequest(Request $request, ?Customer $customer = null): array
+    protected function memberPayloadFromRequest(Request $request, ?Customer $customer = null): array
     {
         $isMember = $request->boolean('is_loyalty_member', true);
         $existingTier = $customer?->loyalty_tier ?? LoyaltyService::TIER_REGULAR;
@@ -258,7 +258,7 @@ class MemberController extends Controller
         ];
     }
 
-    private function buildStats(Customer $customer)
+    protected function buildStats(Customer $customer)
     {
         return Transaction::where('customer_id', $customer->id)
             ->selectRaw('
@@ -269,7 +269,7 @@ class MemberController extends Controller
             ->first();
     }
 
-    private function recentTransactions(Customer $customer)
+    protected function recentTransactions(Customer $customer)
     {
         return Transaction::where('customer_id', $customer->id)
             ->select('id', 'invoice', 'grand_total', 'payment_method', 'created_at')
@@ -285,7 +285,7 @@ class MemberController extends Controller
             ]);
     }
 
-    private function frequentProducts(Customer $customer)
+    protected function frequentProducts(Customer $customer)
     {
         return Transaction::where('customer_id', $customer->id)
             ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')

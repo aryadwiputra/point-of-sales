@@ -12,8 +12,8 @@ use Inertia\Inertia;
 class CrmReminderController extends Controller
 {
     public function __construct(
-        private readonly CrmAutomationService $crmAutomationService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly CrmAutomationService $crmAutomationService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request)

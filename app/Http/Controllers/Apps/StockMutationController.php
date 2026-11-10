@@ -14,7 +14,7 @@ use Inertia\Response;
 class StockMutationController extends Controller
 {
     public function __construct(
-        private readonly OutletAccessService $outletAccessService
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function index(Request $request): Response

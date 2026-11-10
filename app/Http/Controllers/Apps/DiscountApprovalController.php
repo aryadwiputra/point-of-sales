@@ -14,8 +14,8 @@ use Inertia\Inertia;
 class DiscountApprovalController extends Controller
 {
     public function __construct(
-        private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        protected readonly AuditLogService $auditLogService,
+        protected readonly OutletAccessService $outletAccessService
     ) {}
 
     public function pending()
@@ -72,7 +72,7 @@ class DiscountApprovalController extends Controller
         return back()->with('success', 'Diskon ditolak.');
     }
 
-    private function ensureOutletAccess(Transaction $transaction): void
+    protected function ensureOutletAccess(Transaction $transaction): void
     {
         abort_unless(
             $this->outletAccessService->canUseWarehouse(request()->user(), $transaction->warehouse),
@@ -80,7 +80,7 @@ class DiscountApprovalController extends Controller
         );
     }
 
-    private function logAndUpdate(Transaction $transaction, string $status, ?string $notes = null): void
+    protected function logAndUpdate(Transaction $transaction, string $status, ?string $notes = null): void
     {
         \DB::transaction(function () use ($transaction, $status, $notes) {
             // ponytail: approval only settles the approval state — payment stays tied to the actual method.

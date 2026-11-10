@@ -10,7 +10,7 @@ use Inertia\Inertia;
 
 class DineAreaController extends Controller
 {
-    public function __construct(private readonly OutletAccessService $outletAccess) {}
+    public function __construct(protected readonly OutletAccessService $outletAccess) {}
 
     public function index()
     {
@@ -69,7 +69,7 @@ class DineAreaController extends Controller
         return back()->with('success', 'Area berhasil dihapus.');
     }
 
-    private function ownsArea(DineArea $area, Request $request): bool
+    protected function ownsArea(DineArea $area, Request $request): bool
     {
         $outlet = $this->outletAccess->activeOutlet($request);
 
