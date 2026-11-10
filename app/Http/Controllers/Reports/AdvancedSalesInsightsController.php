@@ -31,6 +31,14 @@ class AdvancedSalesInsightsController extends Controller
 
     public function index(Request $request)
     {
+        return Inertia::render('Dashboard/Reports/Insights', $this->reportData($request));
+    }
+
+    /**
+     * Compute the insights report data.
+     */
+    public function reportData(Request $request): array
+    {
         $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
         $activeOutlet = $this->outletAccessService->activeOutlet($request);
         if ($activeOutlet) {
@@ -85,7 +93,7 @@ class AdvancedSalesInsightsController extends Controller
         $loyaltyPerformance = $this->loyaltyPerformance($filters, $activeOutlet?->id);
         $crmOperations = $this->crmOperations($filters, $activeOutlet?->id);
 
-        return Inertia::render('Dashboard/Reports/Insights', [
+        return [
             'filters' => $filters,
             'cashiers' => User::select('id', 'name')->orderBy('name')->get(),
             'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
@@ -112,7 +120,7 @@ class AdvancedSalesInsightsController extends Controller
             'promoMonitor' => $promoMonitor,
             'loyaltyPerformance' => $loyaltyPerformance,
             'crmOperations' => $crmOperations,
-        ]);
+        ];
     }
 
     protected function applyTransactionFilters(Builder $query, array $filters): Builder

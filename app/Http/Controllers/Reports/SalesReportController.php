@@ -19,6 +19,14 @@ class SalesReportController extends Controller
      */
     public function index(Request $request, OutletAccessService $outletAccessService)
     {
+        return Inertia::render('Dashboard/Reports/Sales', $this->reportData($request, $outletAccessService));
+    }
+
+    /**
+     * Compute the sales report data.
+     */
+    public function reportData(Request $request, OutletAccessService $outletAccessService): array
+    {
         $warehouseIds = $outletAccessService->warehousesFor($request->user())->pluck('id');
         $activeOutlet = $outletAccessService->activeOutlet($request);
         if ($activeOutlet) {
@@ -79,14 +87,14 @@ class SalesReportController extends Controller
                 : 0,
         ];
 
-        return Inertia::render('Dashboard/Reports/Sales', [
+        return [
             'transactions' => $transactions,
             'summary' => $summary,
             'filters' => $filters,
             'cashiers' => User::select('id', 'name')->orderBy('name')->get(),
             'customers' => Customer::select('id', 'name')->orderBy('name')->get(),
             'warehouses' => $outletAccessService->warehousesFor($request->user()),
-        ]);
+        ];
     }
 
     /**

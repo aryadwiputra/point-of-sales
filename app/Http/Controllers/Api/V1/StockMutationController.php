@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Apps\StockMutationController as AppsStockMutationController;
+use App\Http\Traits\ApiResponder;
+use App\Models\Outlet;
+use App\Models\StockMutation;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class StockMutationController extends AppsStockMutationController
+{
+    use ApiResponder;
+
+    /**
+     * GET /api/v1/stock-mutations
+     * Paginated, filterable stock mutation history.
+     */
+    public function listMutations(Request $request): JsonResponse
+    {
+        $filters = [
+            'product_id' => $request->input('product_id'),
+            'mutation_type' => $request->input('mutation_type'),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+            'warehouse_id' => $request->input('warehouse_id'),
+        ];
+
+        $stockMutations = StockMutation::query()
+            ->with(['product:id,title,barcode,sku', 'creator:id,name', 'warehouse:id,code,name'])
+            ->when($filters['product_id'], fn ($query, $productId) => $query->where('product_id', $productId))
+            ->when($filters['mutation_type'], fn ($query, $mutationType) => $query->where('mutation_type', $mutationType))
+            ->when($filters['date_from'], fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
+            ->when($filters['date_to'], fn ($query, $date) => $query->whereDate('created_at', '<=', $date))
+            ->when($filters['warehouse_id'], fn ($query, $warehouseId) => $query->where('warehouse_id', $warehouseId))
+            ->where(function ($query) use ($request) {
+                $warehouseIds = $this->outletAccessService->warehousesFor($request->user())->pluck('id');
+                if ($warehouseIds->isEmpty()) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('warehouse_id', $warehouseIds);
+                    if (Outlet::active()->count() <= 1) {
+                        $query->orWhereNull('warehouse_id');
+                    }
+                }
+            })
+            ->latest()
+            ->paginate($this->perPage())->withQueryString();
+
+        return $this->paginated($stockMutations);
+    }
+}
