@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureApiStepUp;
 use App\Http\Traits\ApiResponder;
 use App\Models\Setting;
 use App\Models\User;
@@ -83,6 +84,54 @@ class AuthController extends Controller
             'roles' => $user->getRoleNames()->all(),
             'permissions' => $abilities,
         ], 'Login berhasil');
+    }
+
+    /**
+     * POST /api/v1/auth/confirm-password
+     * Re-authenticate with the account password to open a step-up window
+     * for privileged API actions (guarded by the api_step_up middleware).
+     */
+    public function confirmPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->string('password')->toString(), $user->password)) {
+            $this->auditLogService->log(
+                event: 'api.auth.confirm_password_failed',
+                module: 'auth',
+                auditable: $user,
+                description: 'Konfirmasi password API gagal.',
+                meta: ['severity' => 'warning', 'ip' => $request->ip()],
+            );
+
+            throw ValidationException::withMessages([
+                'password' => ['Password tidak cocok.'],
+            ]);
+        }
+
+        $timeout = (int) config('auth.password_timeout', 900);
+
+        cache()->put(
+            EnsureApiStepUp::cacheKey($request),
+            time(),
+            now()->addSeconds($timeout)
+        );
+
+        $this->auditLogService->log(
+            event: 'api.auth.confirm_password',
+            module: 'auth',
+            auditable: $user,
+            description: 'Konfirmasi password API berhasil.',
+            meta: ['severity' => 'info', 'ip' => $request->ip()],
+        );
+
+        return $this->ok([
+            'confirmed_until' => now()->addSeconds($timeout)->toISOString(),
+        ], 'Password dikonfirmasi');
     }
 
     /**

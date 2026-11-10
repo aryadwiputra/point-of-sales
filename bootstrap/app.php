@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnforceAbsoluteSessionLifetime;
 use App\Http\Middleware\EnsureActiveCashierShift;
+use App\Http\Middleware\EnsureApiStepUp;
 use App\Http\Middleware\EnsureBotGuard;
 use App\Http\Middleware\EnsureNotInstalled;
 use App\Http\Middleware\EnsurePublicRegistrationEnabled;
@@ -51,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'bot.guard' => EnsureBotGuard::class,
             'setup.notinstalled' => EnsureNotInstalled::class,
             'step_up' => EnsureRecentPasswordConfirmation::class,
+            'api_step_up' => EnsureApiStepUp::class,
             'abilities' => CheckAbilities::class,
         ]);
     })
