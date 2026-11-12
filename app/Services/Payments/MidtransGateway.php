@@ -29,14 +29,6 @@ class MidtransGateway
 
     private function createTransaction(Transaction $transaction, array $config, ?array $enabledPayments = null, ?int $amount = null, ?string $orderId = null): array
     {
-        if (! ($config['enabled'] ?? false)) {
-            throw new PaymentGatewayException('Midtrans tidak aktif atau belum dikonfigurasi.');
-        }
-
-        $endpoint = $config['is_production'] ?? false
-            ? 'https://app.midtrans.com/snap/v1/transactions'
-            : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-
         $customer = $transaction->customer;
 
         $payload = [
@@ -58,6 +50,23 @@ class MidtransGateway
             $payload['enabled_payments'] = $enabledPayments;
         }
 
+        return $this->postSnap($payload, $config);
+    }
+
+    /**
+     * Send a raw Snap payload. Also used for non-sales invoices such as
+     * platform subscription billing.
+     */
+    public function postSnap(array $payload, array $config): array
+    {
+        if (! ($config['enabled'] ?? false)) {
+            throw new PaymentGatewayException('Midtrans tidak aktif atau belum dikonfigurasi.');
+        }
+
+        $endpoint = $config['is_production'] ?? false
+            ? 'https://app.midtrans.com/snap/v1/transactions'
+            : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+
         $response = Http::withBasicAuth($config['server_key'], '')
             ->post($endpoint, $payload);
 
@@ -68,7 +77,7 @@ class MidtransGateway
         }
 
         return [
-            'reference' => $response->json('order_id', $orderId ?? $transaction->invoice),
+            'reference' => $response->json('order_id', $payload['transaction_details']['order_id'] ?? null),
             'payment_url' => $response->json('redirect_url'),
             'token' => $response->json('token'),
             'raw' => $response->json(),

@@ -38,6 +38,7 @@ IconRulerMeasure,
     IconSpeakerphone,
     IconArrowsLeftRight,
     IconAlertCircle,
+    IconPlug,
     IconListDetails,
     IconBrandWhatsapp,
     IconToolsKitchen2,
@@ -369,6 +370,13 @@ export default function Menu() {
             title: t("sidebar.sections.settings"),
             details: [
                 {
+                    title: t("sidebar.items.subscription"),
+                    href: route("subscription.index"),
+                    active: url.startsWith("/dashboard/subscription"),
+                    icon: <IconCrown size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["dashboard-access"]),
+                },
+                {
                     title: t("sidebar.items.paymentGateway"),
                     href: route("settings.payments.edit"),
                     active: url === "/dashboard/settings/payments",
@@ -437,6 +445,15 @@ export default function Menu() {
                     active: url === "/dashboard/settings/whatsapp",
                     icon: <IconBrandWhatsapp size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["whatsapp-settings-access"]),
+                },
+                {
+                    title: t("sidebar.items.integrations"),
+                    href: route("settings.integrations"),
+                    active:
+                        url.startsWith("/dashboard/settings/integrations") ||
+                        url.startsWith("/dashboard/settings/bihaju"),
+                    icon: <IconPlug size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["dashboard-access"]),
                 },
             ],
         },

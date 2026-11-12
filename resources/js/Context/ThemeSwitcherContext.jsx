@@ -19,12 +19,14 @@ export const ThemeSwitcherProvider = ({ children }) => {
 
         toggleTransition();
 
-        if (darkMode)
+        if (darkMode) {
+            root.classList.add('dark');
             document.body.classList.add('dark');
-        else
+        } else {
+            root.classList.remove('dark');
             document.body.classList.remove('dark');
+        }
 
-        // set darkMode in localstorage
         localStorage.setItem('darkMode', darkMode);
     }, [darkMode]);
 

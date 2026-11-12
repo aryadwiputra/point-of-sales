@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PublicPortalPaymentTest extends TestCase

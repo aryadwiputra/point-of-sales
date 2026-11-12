@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerSegment extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const TYPE_MANUAL = 'manual';
 
@@ -20,6 +21,7 @@ class CustomerSegment extends Model
     public const RULE_RECEIVABLE_BEHAVIOR = 'receivable_behavior';
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'slug',
         'type',

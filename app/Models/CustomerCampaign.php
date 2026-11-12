@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerCampaign extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const TYPE_PROMO_BROADCAST = 'promo_broadcast';
 
@@ -30,6 +31,7 @@ class CustomerCampaign extends Model
     public const CHANNEL_WHATSAPP_LINK = 'whatsapp_link';
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'outlet_id',
         'type',

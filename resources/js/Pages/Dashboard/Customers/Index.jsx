@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Head, usePage, Link, router } from "@inertiajs/react";
 import Button from "@/Components/Dashboard/Button";
@@ -111,11 +111,18 @@ function CustomerCard({ customer, canUpdate, canDelete }) {
 }
 
 export default function Index({ customers }) {
+    const { flash, errors } = usePage().props;
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid");
     const canCreateCustomers = can("customers-create");
     const canEditCustomers = can("customers-edit");
     const canDeleteCustomers = can("customers-delete");
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+        if (errors?.file) toast.error(errors.file);
+    }, [flash, errors]);
 
     return (
         <>
@@ -142,6 +149,14 @@ export default function Index({ customers }) {
                                 <IconDownload size={18} />
                                 Export
                             </a>
+                            <a
+                                href={route("import.template", "customers")}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title="Download Template Excel"
+                            >
+                                <IconDownload size={18} />
+                                Template
+                            </a>
                             <button
                                 type="button"
                                 onClick={() => document.getElementById("import-customers-input")?.click()}
@@ -151,9 +166,20 @@ export default function Index({ customers }) {
                                 Import
                             </button>
                             <input id="import-customers-input" type="file" accept=".xlsx,.xls,.csv" className="hidden"
-                                onChange={function(e) {
-                                    const file = e.target.files && e.target.files[0];
-                                    if (file) router.post(route("import.customers"), { file });
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        router.post(
+                                            route("import.customers"),
+                                            { file },
+                                            {
+                                                preserveScroll: true,
+                                                onFinish: () => {
+                                                    e.target.value = "";
+                                                },
+                                            }
+                                        );
+                                    }
                                 }}
                             />
                             <Button

@@ -123,7 +123,10 @@ class ProductController extends Controller
             $this->syncUnits($product, $request->input('units'));
 
             // ponytail: keep global products.stock and per-warehouse pivot in sync; PUSAT (first active main) is the default warehouse
+            $activeOutlet = $this->outletAccessService->activeOutlet($request);
             $warehouse = Warehouse::find($request->warehouse_id)
+                ?? $activeOutlet?->warehouses()->first()
+                ?? $this->outletAccessService->salesWarehousesFor($request->user())->first()
                 ?? Warehouse::active()->where('type', 'main')->orderBy('sort_order')->orderBy('code')->first()
                 ?? Warehouse::active()->orderBy('sort_order')->orderBy('code')->first();
 

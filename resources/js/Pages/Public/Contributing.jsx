@@ -36,7 +36,7 @@ const checklist = [
 export default function Contributing() {
     return (
         <PublicLayout active="/kontribusi">
-            <Head title="Kontribusi — Dikasir" />
+            <Head title="Tentang & Dukungan — Bihaju POS" />
 
             {/* Header */}
             <section className="pt-20 pb-14 px-6 bg-gradient-to-b from-primary-50 dark:from-primary-950/40 to-transparent">
@@ -46,11 +46,10 @@ export default function Contributing() {
                         Kontribusi
                     </div>
                     <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white">
-                        Bantu Dikasir Tumbuh
+                        Dukungan & Pengembangan
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                        Open source hidup dari kontributor — laporan bug, perbaikan kode,
-                        dokumentasi, atau sekadar ide. Semua disambut!
+                        Bihaju POS terus dikembangkan untuk mendukung kebutuhan operasional usaha. Sampaikan masukan, kebutuhan fitur, atau pertanyaan melalui kanal dukungan resmi.
                     </p>
                 </div>
             </section>

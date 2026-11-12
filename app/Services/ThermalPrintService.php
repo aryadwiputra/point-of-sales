@@ -12,14 +12,14 @@ class ThermalPrintService
     public function generateReceiptText(Transaction $transaction, string $paperSize = '80mm'): string
     {
         $outlet = $transaction->warehouse?->outlet;
-        $storeName = Setting::getForOutlet('store_name', $outlet, 'Toko Anda');
+        $storeName = Setting::getForOutlet('store_name', $outlet, config('brand.name', 'Bihaju POS'));
         $storeAddress = Setting::getForOutlet('store_address', $outlet, '');
         $storePhone = Setting::getForOutlet('store_phone', $outlet, '');
         $maxWidth = $paperSize === '58mm' ? 32 : 48;
 
         $lines = [];
         $lines[] = '';
-        $lines[] = $this->center(strtoupper($storeName ?? 'TOKO ANDA'), $maxWidth);
+        $lines[] = $this->center(strtoupper($storeName ?? config('brand.name', 'BIHAJU POS')), $maxWidth);
         if ($storeAddress) {
             $lines[] = $this->center($storeAddress, $maxWidth);
         }
@@ -111,14 +111,14 @@ class ThermalPrintService
     public function generateShiftReportText(CashierShift $shift, string $paperSize = '80mm', string $reportType = 'X'): string
     {
         $outlet = $shift->warehouse?->outlet;
-        $storeName = Setting::getForOutlet('store_name', $outlet, 'Toko Anda');
+        $storeName = Setting::getForOutlet('store_name', $outlet, config('brand.name', 'Bihaju POS'));
         $storeAddress = Setting::getForOutlet('store_address', $outlet, '');
         $maxWidth = $paperSize === '58mm' ? 32 : 48;
         $isX = $reportType === 'X';
 
         $lines = [];
         $lines[] = '';
-        $lines[] = $this->center(strtoupper($storeName ?? 'TOKO ANDA'), $maxWidth);
+        $lines[] = $this->center(strtoupper($storeName ?? config('brand.name', 'BIHAJU POS')), $maxWidth);
         if ($storeAddress) {
             $lines[] = $this->center($storeAddress, $maxWidth);
         }

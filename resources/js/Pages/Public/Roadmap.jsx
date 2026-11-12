@@ -163,7 +163,7 @@ const directions = [
 export default function Roadmap() {
     return (
         <PublicLayout active="/roadmap">
-            <Head title="Roadmap — Dikasir" />
+            <Head title="Roadmap — Bihaju POS" />
 
             {/* Header */}
             <section className="pt-20 pb-14 px-6 bg-gradient-to-b from-primary-50 dark:from-primary-950/40 to-transparent">
@@ -173,11 +173,10 @@ export default function Roadmap() {
                         Roadmap
                     </div>
                     <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white">
-                        Perjalanan Dikasir
+                        Perjalanan Bihaju POS
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                        Dari kasir sederhana menjadi ekosistem POS lengkap — dan masih terus
-                        berkembang bersama komunitas.
+                        Dari fondasi kasir hingga platform operasional yang terus berkembang — berfokus membantu usaha makin maju.
                     </p>
                 </div>
             </section>

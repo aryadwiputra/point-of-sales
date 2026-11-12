@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Category;
 use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\StockMutation;
@@ -70,7 +71,7 @@ class OutletAccessTest extends TestCase
         $user->markEmailAsVerified();
         $user->givePermissionTo($permission);
         $user->outlets()->attach($allowed->id, ['is_default' => true]);
-        $category = \App\Models\Category::create([
+        $category = Category::create([
             'name' => 'Kategori Mutasi',
             'image' => 'categories/mutation.jpg',
             'description' => 'Kategori mutasi',

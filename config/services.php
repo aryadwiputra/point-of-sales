@@ -31,6 +31,7 @@ return [
     'xendit' => [
         'secret_key' => env('XENDIT_SECRET_KEY'),
         'callback_token' => env('XENDIT_CALLBACK_TOKEN'),
+        'is_production' => env('XENDIT_IS_PRODUCTION', false),
     ],
 
     'whatsapp' => [
@@ -40,6 +41,7 @@ return [
 
     'midtrans' => [
         'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
     'slack' => [

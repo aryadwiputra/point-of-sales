@@ -43,7 +43,6 @@
             "inactive": "Inactive",
             "all": "All",
             "yes": "Yes",
-            "no": "No",
             "required": "Required",
             "optional": "Optional",
             "search": "Search...",
@@ -196,7 +195,7 @@
             "title": "Sign In",
             "subtitle": "Welcome Back",
             "description": "Sign in to access your dashboard",
-            "appName": "POS Application",
+            "appName": "Bihaju POS",
             "email": "Email",
             "emailPlaceholder": "name@email.com",
             "password": "Password",
@@ -208,9 +207,13 @@
             "noAccount": "Don't have an account?",
             "registerNow": "Register Now",
             "registerLink": "Register Now",
-            "heroTitle": "Manage Your Business with Ease",
-            "heroDescription": "A modern Point of Sale system that helps you manage transactions, inventory, and financial reports efficiently.",
-            "features": ["Fast Transactions", "Real-time Reports", "Multi User"]
+            "heroTitle": "Bikin Usaha Maju",
+            "heroDescription": "Bihaju POS helps you manage transactions, inventory, customers, and reports in one POS platform built to grow your business.",
+            "features": [
+                "Fast Transactions",
+                "Reports & Insights",
+                "Multi-outlet & Add-ons"
+            ]
         },
         "register": {
             "title": "Register",
@@ -297,6 +300,7 @@
             "usersList": "User Data",
             "usersCreate": "Add User",
             "paymentGateway": "Payment Gateway",
+            "subscription": "Subscription & Plans",
             "storeProfile": "Store Profile",
             "bankAccounts": "Bank Accounts",
             "loyalty": "Loyalty",
@@ -304,7 +308,8 @@
             "priceLists": "Price Lists",
             "warehouses": "Warehouses / Branches",
             "units": "Units",
-            "whatsApp": "WhatsApp"
+            "whatsApp": "WhatsApp",
+            "integrations": "Integrations & Add-ons"
         },
         "menu": {
             "overview": "Overview",

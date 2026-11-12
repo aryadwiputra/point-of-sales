@@ -126,6 +126,9 @@ export default function PaymentPanel({
     isSubmitting = false,
     hasItems = false,
     selectedCustomer = null,
+    bihajuEnabled = false,
+    bihajuMemberCode = "",
+    onBihajuMemberCodeChange,
     className = "",
 }) {
     // Quick amount options
@@ -233,6 +236,30 @@ export default function PaymentPanel({
                     </div>
                 </div>
 
+                {bihajuEnabled && (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Kode Member Bihaju
+                        </label>
+                        <input
+                            type="text"
+                            value={bihajuMemberCode}
+                            onChange={(e) =>
+                                onBihajuMemberCodeChange?.(e.target.value)
+                            }
+                            placeholder="Opsional — kode referral"
+                            maxLength={60}
+                            className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700
+                                bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200
+                                focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+                                transition-all text-base"
+                        />
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Komisi & cashback akan dikirim ke member ini
+                        </p>
+                    </div>
+                )}
+
                 {selectedCustomer?.is_loyalty_member && (
                     <>
                         <div>
@@ -330,7 +357,7 @@ export default function PaymentPanel({
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                                 Pilih Rekening Tujuan
                             </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3">
                                 {bankAccounts.map((bank) => {
                                     const isActive =
                                         selectedBankAccount?.id === bank.id;
@@ -341,13 +368,13 @@ export default function PaymentPanel({
                                             onClick={() =>
                                                 onBankAccountChange?.(bank)
                                             }
-                                            className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors text-left ${
+                                            className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors text-left min-w-0 ${
                                                 isActive
                                                     ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
                                                     : "border-slate-200 dark:border-slate-700 hover:border-primary-200 dark:hover:border-primary-800"
                                             }`}
                                         >
-                                            <div className="w-12 h-12 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                                            <div className="w-12 h-12 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                                                 {bank.logo_url ? (
                                                     <img
                                                         src={bank.logo_url}
@@ -361,19 +388,19 @@ export default function PaymentPanel({
                                                     />
                                                 )}
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                                     {bank.bank_name}
                                                 </p>
-                                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                <p className="text-sm text-slate-600 dark:text-slate-400 truncate">
                                                     {bank.account_number}
                                                 </p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-500">
+                                                <p className="text-xs text-slate-500 dark:text-slate-500 truncate">
                                                     a.n. {bank.account_name}
                                                 </p>
                                             </div>
                                             {isActive && (
-                                                <span className="text-primary-600 text-xs font-semibold">
+                                                <span className="text-primary-600 text-xs font-semibold flex-shrink-0">
                                                     Dipilih
                                                 </span>
                                             )}

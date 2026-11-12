@@ -55,7 +55,7 @@ class DocumentController extends Controller
         }
 
         return [
-            'name' => Setting::getForOutlet('store_name', $outlet, 'Toko Anda'),
+            'name' => Setting::getForOutlet('store_name', $outlet, config('brand.name', 'Bihaju POS')),
             'logo' => $logo,
             'logo_data' => $logoData,
             'address' => Setting::getForOutlet('store_address', $outlet, ''),

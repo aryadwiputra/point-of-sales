@@ -28,10 +28,6 @@ class XenditGateway
 
     private function createInvoiceRequest(Transaction $transaction, array $config, ?array $channels = null, ?int $amount = null, ?string $externalId = null): array
     {
-        if (! ($config['enabled'] ?? false)) {
-            throw new PaymentGatewayException('Xendit tidak aktif atau belum dikonfigurasi.');
-        }
-
         $customer = $transaction->customer;
 
         $payload = [
@@ -48,6 +44,19 @@ class XenditGateway
 
         if ($channels !== null) {
             $payload['channel_code'] = $channels;
+        }
+
+        return $this->postInvoice($payload, $config);
+    }
+
+    /**
+     * Send a raw invoice payload. Also used for non-sales invoices such as
+     * platform subscription billing.
+     */
+    public function postInvoice(array $payload, array $config): array
+    {
+        if (! ($config['enabled'] ?? false)) {
+            throw new PaymentGatewayException('Xendit tidak aktif atau belum dikonfigurasi.');
         }
 
         $response = Http::withBasicAuth($config['secret_key'], '')

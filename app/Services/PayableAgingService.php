@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Payable;
 use App\Models\Outlet;
+use App\Models\Payable;
 use App\Models\Supplier;
 use Illuminate\Support\Collection;
 

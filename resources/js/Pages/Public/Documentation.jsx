@@ -74,7 +74,7 @@ const categories = [
 export default function Documentation() {
     return (
         <PublicLayout active="/dokumentasi">
-            <Head title="Dokumentasi — Dikasir" />
+            <Head title="Dokumentasi & Bantuan — Bihaju POS" />
 
             {/* Header */}
             <section className="pt-20 pb-14 px-6 bg-gradient-to-b from-primary-50 dark:from-primary-950/40 to-transparent">
@@ -87,8 +87,7 @@ export default function Documentation() {
                         Dokumentasi Lengkap
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                        Semua panduan tersedia di repository GitHub — selalu terbaru, ikut
-                        berkembang bersama kode.
+                        Panduan penggunaan, pengaturan, dan informasi produk Bihaju POS untuk membantu tim Anda bekerja lebih efektif.
                     </p>
                 </div>
             </section>

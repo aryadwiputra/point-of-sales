@@ -54,7 +54,7 @@ class DineMenuController extends Controller
             ];
         })->values();
 
-        $storeName = Setting::getForOutlet('store_name', $outlet, 'Restoran');
+        $storeName = Setting::getForOutlet('store_name', $outlet, config('brand.name', 'Bihaju POS'));
         $storeLogo = Setting::getForOutlet('store_logo', $outlet);
 
         return Inertia::render('Public/DineMenu', [

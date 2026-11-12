@@ -542,6 +542,7 @@ class PosApiController extends Controller
             'customer_npwp' => ['nullable', 'string', 'max:50'],
             'order_type' => ['nullable', 'in:in_store,takeaway,delivery'],
             'note' => ['nullable', 'string', 'max:1000'],
+            'bihaju_member_code' => ['nullable', 'string', 'max:60'],
             'tenders' => ['nullable', 'array', 'max:2'],
             'tenders.*.method' => ['required', 'string'],
             'tenders.*.amount' => ['required', 'integer', 'min:1'],
@@ -607,6 +608,9 @@ class PosApiController extends Controller
             syncFingerprint: $validated['sync_fingerprint'] ?? null,
             // Internal only: set by syncOne() so offline flush never consumes live carts.
             onlyCartIds: array_map('intval', (array) $request->input('only_cart_ids', [])) ?: null,
+            bihajuMemberCode: isset($validated['bihaju_member_code'])
+                ? trim((string) $validated['bihaju_member_code']) ?: null
+                : null,
         );
 
         try {

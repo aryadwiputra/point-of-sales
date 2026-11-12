@@ -12,7 +12,7 @@ import React from "react";
  */
 export default function ThermalReceipt({
     transaction,
-    storeName = "TOKO ANDA",
+    storeName = "Bihaju POS",
     storeAddress = "",
     storePhone = "",
     storeEmail = "",
@@ -279,7 +279,7 @@ export default function ThermalReceipt({
  */
 export function ThermalReceipt58mm({
     transaction,
-    storeName = "TOKO",
+    storeName = "Bihaju POS",
     storePhone = "",
     storeEmail = "",
     storeWebsite = "",

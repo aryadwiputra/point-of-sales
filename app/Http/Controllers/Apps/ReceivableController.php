@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\Receivable;
 use App\Models\ReceivablePayment;
+use App\Services\Finance\FinanceEventEmitter;
 use App\Services\OutletAccessService;
 use App\Services\ReceivableService;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class ReceivableController extends Controller
     public function __construct(
         private readonly ReceivableService $receivableService,
         private readonly OutletAccessService $outletAccessService,
+        private readonly FinanceEventEmitter $financeEvents,
     ) {}
 
     public function index(Request $request)
@@ -113,7 +115,7 @@ class ReceivableController extends Controller
                 );
             }
 
-            ReceivablePayment::create([
+            $payment = ReceivablePayment::create([
                 'receivable_id' => $receivable->id,
                 'paid_at' => $validated['paid_at'],
                 'amount' => $validated['amount'],
@@ -136,6 +138,16 @@ class ReceivableController extends Controller
                     'payment_status' => $receivable->status === 'paid' ? 'paid' : 'unpaid',
                 ]);
             }
+
+            // Emit ke Finance SETELAH commit (non-blocking, idempoten per payment).
+            $paymentId = $payment->id;
+            $emitter = $this->financeEvents;
+            DB::afterCommit(function () use ($paymentId, $emitter) {
+                $created = ReceivablePayment::with('receivable.transaction')->find($paymentId);
+                if ($created) {
+                    $emitter->emitReceivablePayment($created);
+                }
+            });
         });
 
         return redirect()

@@ -100,7 +100,7 @@ export default function Print({ transaction }) {
 
     const store = useMemo(
         () => ({
-            name: storeProfile?.name || "Toko Anda",
+            name: storeProfile?.name || "Bihaju POS",
             logo: storeProfile?.logo || null,
             address: storeProfile?.address || "",
             phone: storeProfile?.phone || "",
@@ -175,7 +175,7 @@ export default function Print({ transaction }) {
             voucherDiscountTotal;
 
         return {
-            store_name: store.name,
+            store_name: store.name || "Bihaju POS",
             store_address: store.address,
             store_phone: store.phone,
             invoice: transaction.invoice,

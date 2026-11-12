@@ -1,5 +1,5 @@
 import React from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import {
     IconAlertTriangle,
     IconArrowLeft,
@@ -50,6 +50,8 @@ const errorContent = {
 
 export default function Error({ status, homeUrl, homeLabel }) {
     const { darkMode, themeSwitcher } = useTheme();
+    const { brand } = usePage().props || {};
+    const brandName = brand?.name || "Bihaju POS";
     const content = errorContent[status] ?? errorContent[500];
     const Icon = content.icon;
 
@@ -68,7 +70,7 @@ export default function Error({ status, homeUrl, homeLabel }) {
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Point of Sales
+                                    {brandName}
                                 </p>
                                 <p className="text-lg font-semibold text-slate-900 dark:text-white">
                                     Error {status}

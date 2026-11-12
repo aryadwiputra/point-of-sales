@@ -44,7 +44,7 @@ export default function Notification() {
                 ...n,
                 id: `stock-${n.id}`,
                 originalId: n.id,
-                title: `Stok habis: ${n.title}`,
+                title: `${Number(n.stock) <= 0 ? "Stok habis" : "Stok menipis"}: ${n.title}`,
                 subtitle: `Stok: ${n.stock}`,
                 type: "stock",
             }))

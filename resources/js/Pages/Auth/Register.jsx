@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
 import {
     IconShoppingCart,
@@ -13,6 +13,9 @@ import {
 } from "@tabler/icons-react";
 
 export default function Register({ botGuard }) {
+    const { brand } = usePage().props || {};
+    const brandName = brand?.name || "Bihaju POS";
+    const brandTagline = brand?.tagline || "Bikin Usaha Maju";
     const honeypotField = botGuard?.honeypot_field || "company_website";
     const tokenField = botGuard?.token_field || "bot_guard_token";
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -47,17 +50,16 @@ export default function Register({ botGuard }) {
                             <IconShoppingCart size={48} />
                         </div>
                         <h2 className="text-3xl font-bold mb-4">
-                            Bergabung Bersama Kami
+                            Mulai bersama {brandName}
                         </h2>
                         <p className="text-lg opacity-90">
-                            Mulai kelola bisnis Anda dengan sistem Point of Sale
-                            yang modern, cepat, dan mudah digunakan.
+                            {brandTagline}. Kelola operasional usaha dengan platform kasir yang rapi, cepat, dan siap bertumbuh.
                         </p>
                         <div className="mt-8 space-y-3">
                             {[
-                                "Gratis untuk memulai",
-                                "Setup dalam 5 menit",
-                                "Dukungan penuh",
+                                "Kelola transaksi & operasional",
+                                "Akses aman per akun/tenant",
+                                "Siap bertumbuh dengan add-on",
                             ].map((feature, i) => (
                                 <div
                                     key={i}
@@ -89,9 +91,10 @@ export default function Register({ botGuard }) {
                                         className="text-white"
                                     />
                                 </div>
-                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    Aplikasi Kasir
-                                </span>
+                                <div>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{brandName}</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">{brandTagline}</div>
+                                </div>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 Buat Akun Baru

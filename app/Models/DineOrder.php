@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Support\Str;
 
 class DineOrder extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const STATUS_SUBMITTED = 'submitted';
 
@@ -25,6 +26,7 @@ class DineOrder extends Model
     public const PAY_AT_COUNTER = 'pay_at_counter';
 
     protected $fillable = [
+        'tenant_id',
         'dine_table_id',
         'customer_id',
         'access_token',

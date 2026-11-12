@@ -16,11 +16,11 @@ import { useTour } from "@/Hooks/useTour";
 import i18n from "@/i18n";
 
 export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
-    const { auth, storeProfile } = usePage().props;
+    const { auth, storeProfile, brand } = usePage().props;
     const { start: startTour, isActive: tourActive } = useTour("dashboard");
     const menuNavigation = Menu();
 
-    const storeName = storeProfile?.name || "KASIR";
+    const storeName = storeProfile?.name || brand?.name || "Bihaju POS";
     const storeInitial = storeName?.charAt(0)?.toUpperCase() || "K";
 
     // Get current page title

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
 import {
@@ -14,6 +14,9 @@ import { useState } from "react";
 
 export default function Login({ status, canResetPassword, canRegister, botGuard }) {
     const { t } = useTranslation();
+    const { brand } = usePage().props || {};
+    const brandName = brand?.name || "Bihaju POS";
+    const brandTagline = brand?.tagline || "Bikin Usaha Maju";
     const honeypotField = botGuard?.honeypot_field || "company_website";
     const tokenField = botGuard?.token_field || "bot_guard_token";
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -54,9 +57,10 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                                         className="text-white"
                                     />
                                 </div>
-                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {t("auth.login.appName")}
-                                </span>
+                                <div>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{brandName}</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">{brandTagline}</div>
+                                </div>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {t("auth.login.subtitle")}
@@ -233,13 +237,16 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                             <IconShoppingCart size={48} />
                         </div>
                         <h2 className="text-3xl font-bold mb-4">
-                            {t("auth.login.heroTitle")}
+                            {t("auth.login.heroTitle", { defaultValue: "Kelola Usaha Lebih Maju" })}
                         </h2>
                         <p className="text-lg opacity-90">
-                            {t("auth.login.heroDescription")}
+                            {t("auth.login.heroDescription", { defaultValue: `${brandName} — ${brandTagline}. Platform kasir untuk operasional yang rapi, cepat, dan siap bertumbuh.` })}
                         </p>
                         <div className="mt-8 flex flex-wrap justify-center gap-3">
-                            {t("auth.login.features", { returnObjects: true }).map((feature, i) => (
+                            {(Array.isArray(t("auth.login.features", { returnObjects: true }))
+                                ? t("auth.login.features", { returnObjects: true })
+                                : ["Transaksi Cepat", "Laporan & Insight", "Multi Outlet & Add-on"]
+                            ).map((feature, i) => (
                                 <span
                                     key={i}
                                     className="px-4 py-2 bg-white/20 rounded-full text-sm font-medium"

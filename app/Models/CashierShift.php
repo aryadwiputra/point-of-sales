@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CashierShift extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const STATUS_OPEN = 'open';
 
@@ -16,6 +17,7 @@ class CashierShift extends Model
     public const STATUS_FORCE_CLOSED = 'force_closed';
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'warehouse_id',
         'opened_by',

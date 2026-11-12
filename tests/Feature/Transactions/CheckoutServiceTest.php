@@ -17,6 +17,7 @@ use Database\Seeders\RoleSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class CheckoutServiceTest extends TestCase
@@ -205,7 +206,7 @@ class CheckoutServiceTest extends TestCase
             bankAccountId: null,
         );
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         app(CheckoutService::class)->execute($context);
     }
 }

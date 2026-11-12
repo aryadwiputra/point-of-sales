@@ -53,6 +53,20 @@ Konfigurasi di `dashboard/settings/payments`:
 
 Detail setup: `docs/features/settings-payments.md`
 
+### Langganan Platform (SaaS Billing)
+
+Pembayaran langganan tenant memakai kredensial gateway level platform dari `.env`, bukan pengaturan per-outlet:
+
+- `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION`
+- `XENDIT_SECRET_KEY`, `XENDIT_CALLBACK_TOKEN`
+
+Webhook langganan:
+
+- Midtrans: `POST /api/webhooks/subscription/midtrans`
+- Xendit: `POST /api/webhooks/subscription/xendit`
+
+Order ID langganan berformat `SUB-{id}`. Bila tidak ada gateway yang dikonfigurasi, paket berbayar tidak bisa di-checkout otomatis dari portal tenant (admin platform harus mengaktifkan manual dari portal superadmin).
+
 ## Bank Accounts
 
 Konfigurasi di `dashboard/settings/bank-accounts`:

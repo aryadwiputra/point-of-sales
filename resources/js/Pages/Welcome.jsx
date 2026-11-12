@@ -1,4 +1,4 @@
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import PublicLayout from "@/Layouts/PublicLayout";
 import {
     IconShoppingCart,
@@ -11,24 +11,16 @@ import {
     IconBrandWhatsapp,
     IconShieldLock,
     IconCloudOff,
-    IconBrandGithub,
-    IconStar,
     IconArrowRight,
-    IconDeviceMobile,
-    IconTerminal2,
     IconQrcode,
     IconApi,
 } from "@tabler/icons-react";
 
-const GITHUB_URL = "https://github.com/aryadwiputra/point-of-sales";
-const DOCS_URL = `${GITHUB_URL}/blob/main/docs/getting-started.md`;
-const GALLERY_URL = `${GITHUB_URL}/blob/main/docs/screenshots.md`;
-
 const stats = [
-    { value: "200+", label: "GitHub Stars" },
-    { value: "44+", label: "Fitur Lengkap" },
-    { value: "MIT", label: "Open Source" },
-    { value: "8", label: "Modul Terintegrasi" },
+    { value: "Kasir", label: "Cepat & Andal" },
+    { value: "Multi", label: "Outlet & Gudang" },
+    { value: "Add-on", label: "Siap Terintegrasi" },
+    { value: "SaaS", label: "Aman per Tenant" },
 ];
 
 const features = [
@@ -70,7 +62,7 @@ const features = [
     {
         icon: IconBrandWhatsapp,
         title: "WhatsApp Gateway",
-        desc: "Kirim struk, reminder piutang, dan promo via WhatsApp jika service Node dan perangkat sudah terhubung.",
+        desc: "Kirim struk, pengingat, dan informasi ke pelanggan melalui kanal komunikasi yang terhubung.",
     },
     {
         icon: IconShieldLock,
@@ -95,12 +87,12 @@ const features = [
 ];
 
 const techStack = [
-    { name: "Laravel 13", color: "bg-red-500" },
-    { name: "Inertia.js 3", color: "bg-purple-500" },
-    { name: "React 19", color: "bg-cyan-500" },
-    { name: "Tailwind CSS", color: "bg-sky-500" },
-    { name: "MySQL", color: "bg-orange-500" },
-    { name: "PWA", color: "bg-emerald-500" },
+    { name: "POS & Kasir", color: "bg-primary-500" },
+    { name: "Inventori", color: "bg-emerald-500" },
+    { name: "Laporan", color: "bg-cyan-500" },
+    { name: "Pelanggan & CRM", color: "bg-amber-500" },
+    { name: "Multi-Outlet", color: "bg-orange-500" },
+    { name: "Add-on & Integrasi", color: "bg-purple-500" },
 ];
 
 const screenshots = [
@@ -113,85 +105,73 @@ const screenshots = [
 
 const faqs = [
     {
-        q: "Apakah Dikasir benar-benar gratis?",
-        a: "Ya. Dikasir dirilis di bawah lisensi MIT, sehingga bebas digunakan, dimodifikasi, dan didistribusikan. Hosting, hardware, biaya payment gateway, dan layanan pihak ketiga tetap menjadi tanggung jawab pengguna.",
+        q: "Untuk siapa Bihaju POS cocok digunakan?",
+        a: "Bihaju POS cocok untuk berbagai jenis usaha — ritel, F&B, jasa, dan operasional multi-outlet — yang membutuhkan kasir, inventori, laporan, dan pengelolaan pelanggan dalam satu platform.",
     },
     {
         q: "Bisakah dipakai untuk bisnis multi-cabang?",
-        a: "Bisa. Dikasir mendukung multi-warehouse dengan stok terpisah per gudang/cabang, transfer stok antar gudang, dan laporan per gudang.",
+        a: "Bisa. Platform ini mendukung multi-outlet/multi-gudang dengan stok terpisah, transfer antar lokasi, dan kontrol operasional per cabang.",
     },
     {
         q: "Bagaimana kalau internet di toko mati?",
-        a: "Checkout yang sudah disiapkan dapat masuk antrean lokal dan tersinkron otomatis saat koneksi kembali. Menambahkan produk baru ke cart saat offline masih memiliki keterbatasan karena cart berbasis server.",
+        a: "Transaksi yang sudah disiapkan dapat diantrikan secara lokal dan disinkronkan saat koneksi kembali tersedia, sesuai kemampuan mode offline yang aktif.",
     },
     {
-        q: "Apa saja yang dibutuhkan untuk instalasi?",
-        a: "PHP 8.3+, MySQL/MariaDB, Composer, Node.js 18+, dan npm. Untuk WhatsApp Gateway, siapkan Chrome/Chromium dan service Node terpisah. Semua panduan ada di dokumentasi getting-started.",
+        q: "Bagaimana sistem langganan dan add-on?",
+        a: "Akses fitur dan add-on (seperti modul terintegrasi) mengikuti paket/entitlement akun atau tenant Anda. Hak akses divalidasi per akun/tenant agar penggunaan sesuai langganan yang aktif.",
     },
     {
-        q: "Bagaimana cara berkontribusi?",
-        a: "Fork repository, buat branch dari development (feature/nama-fitur), lalu buat Pull Request ke development. Pastikan php artisan test lulus sebelum submit.",
+        q: "Ada paket tanpa biaya bulanan?",
+        a: "Ada. Paket Bayar Per Transaksi tidak memungut biaya bulanan — Anda hanya dikenakan biaya kecil per transaksi (mis. 1,5% dengan minimum Rp500 dan maksimum Rp2.000, bisa diatur platform). Paket ini membuka fitur inti POS: kasir, shift, struk, pelanggan, dan laporan dasar.",
+    },
+    {
+        q: "Apakah data dan akses aman?",
+        a: "Akses dikelola per akun/tenant dengan kontrol peran dan izin. Entitlement add-on divalidasi di sisi layanan, dan praktik keamanan diterapkan untuk melindungi operasional usaha Anda.",
     },
 ];
 
-const quickStart = `git clone https://github.com/aryadwiputra/point-of-sales
-cd point-of-sales
-composer install
-PUPPETEER_SKIP_DOWNLOAD=true npm install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
-php artisan storage:link
-
-# Jalankan server, queue, logs, dan Vite
-composer run dev
-
-# Buka http://localhost:8000 dan selesaikan wizard /setup`;
-
 export default function Welcome() {
+    const { brand } = usePage().props;
+    const brandName = brand?.name || "Bihaju POS";
+    const brandTagline = brand?.tagline || "Bikin Usaha Maju";
     return (
         <PublicLayout>
-            <Head title="Dikasir — Sistem Kasir Open Source untuk UMKM" />
+            <Head title="Bihaju POS — Bikin Usaha Maju" />
 
             {/* ============ HERO ============ */}
             <section className="pt-28 pb-16 px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center max-w-4xl mx-auto">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 text-sm font-medium mb-6 border border-primary-100 dark:border-primary-900">
-                            <IconBrandGithub size={16} />
-                            Open Source · MIT License · 200+ Stars
+<IconShoppingCart size={16} />
+                            Platform POS SaaS · Bikin Usaha Maju
                         </div>
 
                         <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 dark:text-white leading-tight">
-                            Sistem Kasir Modern
+                            Kelola Usaha Lebih Maju
                             <span className="block mt-2 bg-gradient-to-r from-primary-500 to-primary-600 bg-clip-text text-transparent">
-                                Gratis &amp; Open Source
+                                dengan {brandName}
                             </span>
                         </h1>
 
                         <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                            Dikasir adalah aplikasi point of sale lengkap untuk warung, toko, dan
-                            UMKM Indonesia — multi-warehouse, PPN, loyalty &amp; CRM, WhatsApp
-                            gateway, hingga offline mode. Self-hosted, data 100% milik Anda.
+                            {brandName} adalah platform kasir (POS) SaaS untuk membantu operasional usaha lebih rapi, cepat, dan terukur — dari transaksi, inventori, pelanggan, hingga laporan dan integrasi add-on sesuai kebutuhan.
                         </p>
 
                         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
                             <a
-                                href={GITHUB_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href="/login"
                                 className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl hover:from-primary-600 hover:to-primary-700 shadow-xl shadow-primary-500/30 transition-all flex items-center justify-center gap-2"
                             >
-                                <IconStar size={20} />
-                                Star di GitHub
+                                Mulai Sekarang
                                 <IconArrowRight size={18} />
                             </a>
                             <Link
                                 href="/login"
                                 className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-primary-300 dark:hover:border-primary-700 transition-all flex items-center justify-center gap-2"
                             >
-                                <IconDeviceMobile size={20} />
-                                Coba Demo
+                                <IconArrowRight size={20} />
+Masuk ke Akun
                             </Link>
                         </div>
                     </div>
@@ -207,12 +187,12 @@ export default function Welcome() {
                                     <div className="w-3 h-3 rounded-full bg-green-400" />
                                 </div>
                                 <div className="flex-1 text-center text-xs text-slate-500">
-                                    dikasir.web.id
+Bihaju POS
                                 </div>
                             </div>
                             <img
                                 src="/media/revamp-pos.png"
-                                alt="Preview POS Dikasir"
+                                alt={`Tampilan ${brandName}`}
                                 className="w-full"
                                 loading="lazy"
                             />
@@ -245,8 +225,7 @@ export default function Welcome() {
                             Tampilan Aplikasi
                         </h2>
                         <p className="mt-4 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                            Dari kasir harian hingga laporan manajemen — semua dalam satu aplikasi
-                            yang rapi dan cepat.
+                            Dari kasir harian hingga laporan manajemen — semua dalam satu platform yang rapi dan mudah digunakan.
                         </p>
                     </div>
 
@@ -270,19 +249,7 @@ export default function Welcome() {
                             </div>
                         ))}
                     </div>
-
-                    <div className="text-center mt-8">
-                        <a
-                            href={GALLERY_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors"
-                        >
-                            Lihat galeri lengkap (33 screenshot)
-                            <IconArrowRight size={16} />
-                        </a>
-                    </div>
-                </div>
+</div>
             </section>
 
             {/* ============ FEATURES ============ */}
@@ -293,8 +260,7 @@ export default function Welcome() {
                             Fitur Lengkap untuk Bisnis Nyata
                         </h2>
                         <p className="mt-4 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                            44+ modul terintegrasi — dari transaksi harian sampai analitik
-                            lanjutan, dirancang untuk kebutuhan UMKM Indonesia.
+                            Fitur terintegrasi untuk operasional harian hingga analitik — dirancang membantu usaha bertumbuh dengan alur kerja yang rapi.
                         </p>
                     </div>
 
@@ -333,10 +299,10 @@ export default function Welcome() {
             <section className="py-16 px-6">
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
-                        Tech Stack Modern
+Solusi Lengkap untuk Operasional
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400 mb-10">
-                        Dibangun dengan teknologi yang teruji, cepat, dan mudah dikembangkan
+Modul-modul utama yang saling terhubung untuk mendukung operasional dan pertumbuhan usaha Anda
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
                         {techStack.map((tech) => (
@@ -354,59 +320,56 @@ export default function Welcome() {
                 </div>
             </section>
 
-            {/* ============ INSTALLATION ============ */}
-            <section id="instalasi" className="py-20 px-6 bg-white dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
-                            Instalasi dalam Hitungan Menit
-                        </h2>
-                        <p className="mt-4 text-slate-600 dark:text-slate-400">
-                             Clone, install, lalu buka wizard setup untuk membuat akun admin,
-                             profil toko, kategori, dan gudang utama.
-                        </p>
-                    </div>
-
-                    <div className="bg-slate-900 dark:bg-slate-800 rounded-2xl p-6 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-4">
-                            <IconTerminal2 size={16} className="text-slate-500" />
-                            <span className="text-xs font-mono text-slate-500">bash</span>
+            {/* ============ PAKET & LANGGANAN ============ */}
+            <section id="paket" className="py-20 px-6 bg-white dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
+                <div className="max-w-5xl mx-auto text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Paket & Langganan Fleksibel</h2>
+                    <p className="mt-4 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                        Pilih paket sesuai skala usaha Anda. Akses fitur dan add-on (seperti modul integrasi) mengikuti entitlement akun/tenant dan dapat disesuaikan saat bisnis berkembang.
+                    </p>
+                    <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+                        <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <div className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-warning-100 text-warning-700 dark:bg-warning-900/40 dark:text-warning-300 mb-2">Baru</div>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bayar Per Transaksi</h3>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Tanpa biaya bulanan — bayar hanya saat ada penjualan.</p>
+                            <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                                <li>• Biaya 1,5% / transaksi (min Rp500, maks Rp2.000)</li>
+                                <li>• Fitur inti POS, shift, & struk</li>
+                                <li>• Laporan dasar & pelanggan</li>
+                            </ul>
                         </div>
-                        <pre className="text-sm text-slate-300 font-mono overflow-x-auto leading-relaxed">
-                            {quickStart}
-                        </pre>
+                        <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Mulai</h3>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Untuk operasional kasir dan pencatatan dasar yang rapi.</p>
+                            <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                                <li>• Transaksi & kasir</li>
+                                <li>• Produk & laporan dasar</li>
+                                <li>• Akses aman per akun</li>
+                            </ul>
+                        </div>
+                        <div className="p-6 rounded-2xl border-2 border-primary-300 dark:border-primary-700 bg-white dark:bg-slate-900 shadow-lg shadow-primary-500/10">
+                            <div className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 mb-2">Populer</div>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Berkembang</h3>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Untuk usaha yang butuh kontrol stok, pelanggan, dan multi-outlet.</p>
+                            <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                                <li>• Inventori & multi-outlet</li>
+                                <li>• CRM & promosi</li>
+                                <li>• Laporan & insight</li>
+                            </ul>
+                        </div>
+                        <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Scale & Add-on</h3>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Untuk kebutuhan lanjutan dengan integrasi dan modul tambahan.</p>
+                            <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                                <li>• Add-on terintegrasi (per tenant)</li>
+                                <li>• Kontrol & visibilitas lanjutan</li>
+                                <li>• Dukungan prioritas</li>
+                            </ul>
+                        </div>
                     </div>
-
-                    <div className="mt-6 text-center">
-                        <a
-                            href={DOCS_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors"
-                        >
-                            Baca dokumentasi lengkap
-                            <IconArrowRight size={16} />
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            {/* ============ DEMO ============ */}
-            <section className="py-16 px-6">
-                <div className="max-w-3xl mx-auto">
-                    <div className="rounded-2xl border border-primary-200 dark:border-primary-900 bg-primary-50/50 dark:bg-primary-950/30 p-8 text-center">
-                        <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                            Ingin Coba Langsung?
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400 mb-6">
-                             Untuk mencoba aplikasi, jalankan instalasi lokal dan selesaikan
-                             wizard setup. Seeder utama tidak membuat akun demo atau sample data.
-                        </p>
-                        <Link
-                            href="/setup"
-                            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-2xl hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all"
-                        >
-                            Mulai Setup
+                    <div className="mt-10">
+                        <Link href="/login" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold rounded-2xl hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all">
+                            Lihat & Mulai Berlangganan
                             <IconArrowRight size={18} />
                         </Link>
                     </div>
@@ -449,27 +412,23 @@ export default function Welcome() {
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-3xl p-12 text-center text-white">
                         <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                            Siap Kelola Bisnis dengan Dikasir?
+                            Siap Bikin Usaha Maju?
                         </h2>
                         <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
-                             Gratis digunakan dan dimodifikasi di bawah lisensi MIT, dengan data
-                             tetap berada di infrastruktur Anda.
+                            Mulai kelola operasional usaha dengan {brandName} — platform kasir SaaS yang membantu Anda bekerja lebih rapi, cepat, dan siap bertumbuh.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <a
-                                href={GITHUB_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href="/fitur"
                                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary-600 font-semibold rounded-2xl hover:bg-slate-50 transition-colors"
                             >
-                                <IconBrandGithub size={20} />
-                                Star di GitHub
+                                Lihat Fitur
                             </a>
                             <Link
                                 href="/login"
                                 className="inline-flex items-center gap-2 px-8 py-4 border border-white/40 text-white font-semibold rounded-2xl hover:bg-white/10 transition-colors"
                             >
-                                Coba Demo
+                                Masuk / Mulai
                                 <IconArrowRight size={18} />
                             </Link>
                         </div>

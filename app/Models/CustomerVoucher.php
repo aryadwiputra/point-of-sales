@@ -2,18 +2,20 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerVoucher extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const TYPE_FIXED_AMOUNT = 'fixed_amount';
 
     public const TYPE_PERCENTAGE = 'percentage';
 
     protected $fillable = [
+        'tenant_id',
         'customer_id',
         'outlet_id',
         'code',

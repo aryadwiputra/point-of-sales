@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\PaymentSetting;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
+use App\Services\Finance\FinanceEventEmitter;
 use App\Services\TransactionTenderService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentWebhookController extends Controller
 {
+    public function __construct(
+        private readonly FinanceEventEmitter $financeEvents,
+    ) {}
     /**
      * Handle Midtrans notification webhook
      * URL: POST /api/webhooks/midtrans
@@ -78,6 +83,7 @@ class PaymentWebhookController extends Controller
             $fraudStatus = $request->input('fraud_status');
 
             $newStatus = $this->mapMidtransStatus($transactionStatus, $fraudStatus);
+            $previousStatus = $transaction->payment_status;
 
             // Split payments: tender-level update when order_id targets one (invoice-{method})
             $tender = TransactionTender::where('transaction_id', $transaction->id)
@@ -99,6 +105,18 @@ class PaymentWebhookController extends Controller
                     'payment_status' => $newStatus,
                     'payment_reference' => $request->input('transaction_id') ?: $transaction->payment_reference,
                 ]);
+            }
+
+            $transaction->refresh();
+            if ($previousStatus !== 'paid' && $transaction->payment_status === 'paid') {
+                $txId = $transaction->id;
+                $emitter = $this->financeEvents;
+                DB::afterCommit(function () use ($txId, $emitter) {
+                    $paid = Transaction::find($txId);
+                    if ($paid) {
+                        $emitter->emitPaymentReceivedForTransaction($paid, 'webhook_midtrans');
+                    }
+                });
             }
 
             Log::info('Midtrans Webhook: Transaction updated', [
@@ -199,6 +217,7 @@ class PaymentWebhookController extends Controller
 
             // Map Xendit status to our status
             $newStatus = $this->mapXenditStatus($status);
+            $previousStatus = $transaction->payment_status;
 
             // Split payments: tender-level update when external_id targets one (invoice-{method})
             $tender = TransactionTender::where('transaction_id', $transaction->id)
@@ -220,6 +239,18 @@ class PaymentWebhookController extends Controller
                     'payment_status' => $newStatus,
                     'payment_reference' => $paymentId ?: $transaction->payment_reference,
                 ]);
+            }
+
+            $transaction->refresh();
+            if ($previousStatus !== 'paid' && $transaction->payment_status === 'paid') {
+                $txId = $transaction->id;
+                $emitter = $this->financeEvents;
+                DB::afterCommit(function () use ($txId, $emitter) {
+                    $paid = Transaction::find($txId);
+                    if ($paid) {
+                        $emitter->emitPaymentReceivedForTransaction($paid, 'webhook_xendit');
+                    }
+                });
             }
 
             Log::info('Xendit Webhook: Transaction updated', [

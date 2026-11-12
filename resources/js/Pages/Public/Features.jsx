@@ -21,7 +21,7 @@ const modules = [
     {
         icon: IconShoppingCart,
         title: "POS & Transaksi",
-        desc: "Inti dari Dikasir — kasir yang cepat, fleksibel, dan bisa diandalkan setiap hari.",
+        desc: "Inti dari Bihaju POS — kasir yang cepat, fleksibel, dan bisa diandalkan setiap hari.",
         screenshot: "/screenshots/02-pos-checkout.png",
         features: [
             "Pencarian produk via barcode / keyword",
@@ -167,7 +167,7 @@ const modules = [
 export default function Features() {
     return (
         <PublicLayout active="/fitur">
-            <Head title="Fitur Lengkap — Dikasir" />
+            <Head title="Fitur Lengkap — Bihaju POS" />
 
             {/* Header */}
             <section className="pt-20 pb-14 px-6 bg-gradient-to-b from-primary-50 dark:from-primary-950/40 to-transparent">
@@ -176,8 +176,7 @@ export default function Features() {
                         Fitur Lengkap untuk Bisnis Nyata
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
-                        Fitur terintegrasi dari kasir harian sampai analitik lanjutan, gratis
-                        digunakan dan open source di bawah lisensi MIT.
+                        Fitur terintegrasi dari kasir harian sampai analitik lanjutan — dirancang untuk membantu usaha bertumbuh lebih rapi dan terukur.
                     </p>
                     <div className="mt-8 flex flex-wrap justify-center gap-3">
                         {modules.map((m) => (

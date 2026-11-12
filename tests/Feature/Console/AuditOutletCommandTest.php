@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Console;
 
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\StockMutation;
 use App\Models\StockOpname;
 use App\Models\Warehouse;

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Head, usePage, Link } from "@inertiajs/react";
 import Button from "@/Components/Dashboard/Button";
+import toast from "react-hot-toast";
 import {
     IconCirclePlus,
     IconDatabaseOff,
@@ -184,6 +185,7 @@ function ProductCard({
 }
 
 export default function Index({ products }) {
+    const { flash, errors } = usePage().props;
     const { can } = useAuthorization();
     const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
@@ -192,6 +194,12 @@ export default function Index({ products }) {
     const canCreateProducts = can("products-create");
     const canEditProducts = can("products-edit");
     const canDeleteProducts = can("products-delete");
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+        if (errors?.file) toast.error(errors.file);
+    }, [flash, errors]);
 
     const handlePrintSingleBarcode = (product) => {
         setSingleProductBarcode(product);
@@ -262,6 +270,14 @@ export default function Index({ products }) {
                         {canCreateProducts && (
                             <>
                                 <a
+                                    href={route("import.template", "products")}
+                                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
+                                    title="Download Template Excel"
+                                >
+                                    <IconDownload size={18} />
+                                    Template
+                                </a>
+                                <a
                                     href={route("export.products")}
                                     className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto"
                                 >
@@ -281,9 +297,20 @@ export default function Index({ products }) {
                                     type="file"
                                     accept=".xlsx,.xls,.csv"
                                     className="hidden"
-                                    onChange={function(e) {
-                                        const file = e.target.files && e.target.files[0];
-                                        if (file) router.post(route("import.products"), { file });
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            router.post(
+                                                route("import.products"),
+                                                { file },
+                                                {
+                                                    preserveScroll: true,
+                                                    onFinish: () => {
+                                                        e.target.value = "";
+                                                    },
+                                                }
+                                            );
+                                        }
                                     }}
                                 />
                             </>

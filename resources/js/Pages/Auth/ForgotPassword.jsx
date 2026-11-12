@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import {
     IconShoppingCart,
     IconMail,
@@ -8,6 +8,8 @@ import {
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
 
 export default function ForgotPassword({ status, botGuard }) {
+    const { brand } = usePage().props || {};
+    const brandName = brand?.name || "Bihaju POS";
     const honeypotField = botGuard?.honeypot_field || "company_website";
     const tokenField = botGuard?.token_field || "bot_guard_token";
     const { data, setData, post, processing, errors } = useForm({
@@ -38,7 +40,7 @@ export default function ForgotPassword({ status, botGuard }) {
                                     <IconShoppingCart size={24} className="text-white" />
                                 </div>
                                 <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    Aplikasi Kasir
+                                    {brandName}
                                 </span>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">

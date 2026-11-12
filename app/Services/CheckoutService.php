@@ -9,6 +9,8 @@ use App\Models\ProductWarehouse;
 use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
+use App\Services\Bihaju\BihajuService;
+use App\Services\Finance\FinanceEventEmitter;
 use App\Support\Checkout\CheckoutContext;
 use App\Support\Checkout\CheckoutResult;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +28,9 @@ class CheckoutService
         private readonly BatchService $batchService,
         private readonly TransactionTenderService $tenderService,
         private readonly StockMutationService $stockMutationService,
+        private readonly TransactionFeeService $transactionFeeService,
+        private readonly BihajuService $bihajuService,
+        private readonly FinanceEventEmitter $financeEvents,
     ) {}
 
     public function execute(CheckoutContext $ctx): CheckoutResult
@@ -88,6 +93,14 @@ class CheckoutService
                 ? (collect($tenders)->firstWhere('bank_account_id', '!==', null)['bank_account_id'] ?? null)
                 : ($ctx->paymentGateway === 'bank_transfer' ? $ctx->bankAccountId : null);
 
+            // Biaya paket pay-per-transaksi: dihitung di server dari paket tenant.
+            // Tidak menambah grand_total pelanggan — hanya dicatat sebagai biaya
+            // pemakaian platform pada transaksi.
+            $feeMethods = $ctx->useTenders
+                ? array_values(array_unique(array_column($tenders, 'method')))
+                : [$paymentMethod];
+            $serviceFee = $this->transactionFeeService->calculate($grandTotal, $feeMethods);
+
             $transaction = Transaction::create([
                 'cashier_id' => $ctx->userId,
                 'cashier_shift_id' => $activeShift->id,
@@ -103,6 +116,7 @@ class CheckoutService
                 'customer_voucher_code' => data_get($checkoutPreview, 'voucher.code'),
                 'customer_voucher_name' => data_get($checkoutPreview, 'voucher.name'),
                 'shipping_cost' => $ctx->shippingCost,
+                'service_fee' => $serviceFee,
                 'grand_total' => $grandTotal,
                 'payment_method' => $paymentMethod,
                 'payment_status' => $paymentStatus,
@@ -143,6 +157,29 @@ class CheckoutService
             }
 
             $needsDiscountApproval = $appliedManualDiscount > 0 && $transaction->needsDiscountApproval();
+
+            // Integrasi Bihaju & Finance: kirim SETELAH commit agar rollback tidak
+            // meninggalkan record yatim, dan kegagalan integrasi tidak pernah
+            // membatalkan penjualan (non-blocking).
+            if (! $needsDiscountApproval) {
+                $transactionId = $transaction->id;
+                $memberCode = $ctx->bihajuMemberCode;
+                $isPaidSale = ! $ctx->isPayLater && $paymentStatus === 'paid';
+
+                DB::afterCommit(function () use ($transactionId, $memberCode, $isPaidSale) {
+                    $created = Transaction::find($transactionId);
+
+                    if (! $created) {
+                        return;
+                    }
+
+                    $this->bihajuService->submitAfterCheckout($created, $memberCode);
+
+                    if ($isPaidSale) {
+                        $this->financeEvents->emitSaleCompleted($created);
+                    }
+                });
+            }
 
             return new CheckoutResult(
                 transaction: $transaction->fresh(['customer']),

@@ -3,10 +3,15 @@
 namespace Database\Seeders;
 
 use App\Models\Outlet;
+use App\Models\Plan;
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\Warehouse;
+use App\Services\TenantContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Laravolt\Indonesia\Models\Province;
+use Laravolt\Indonesia\Seeds\IndonesiaSeeder;
 use Spatie\Permission\PermissionRegistrar;
 
 class DatabaseSeeder extends Seeder
@@ -16,15 +21,35 @@ class DatabaseSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->call([
+            PlanSeeder::class,
             PermissionSeeder::class,
             RoleSeeder::class,
             PaymentSettingSeeder::class,
             DineInSettingsSeeder::class,
         ]);
 
+        if (! app()->environment('testing') && Province::count() === 0) {
+            $this->call(IndonesiaSeeder::class);
+        }
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        $proPlan = Plan::where('slug', 'pro')->first();
+        $defaultTenant = Tenant::firstOrCreate(
+            ['subdomain' => 'default'],
+            [
+                'name' => 'Berkah Jaya Niaga',
+                'plan_id' => $proPlan?->id,
+                'status' => 'active',
+                'trial_ends_at' => now()->addDays(30),
+                'subscription_ends_at' => now()->addYear(),
+            ]
+        );
+        TenantContext::set($defaultTenant);
+
         $this->seedDefaultWarehouse();
+
+        TenantContext::reset();
     }
 
     private function seedDefaultWarehouse(): void

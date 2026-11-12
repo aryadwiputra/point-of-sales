@@ -3,6 +3,7 @@
 use App\Http\Controllers\Apps\AgingController;
 use App\Http\Controllers\Apps\AuditLogController;
 use App\Http\Controllers\Apps\BankAccountController;
+use App\Http\Controllers\Apps\BihajuSettingController;
 use App\Http\Controllers\Apps\CashierShiftController;
 use App\Http\Controllers\Apps\CategoryController;
 use App\Http\Controllers\Apps\CrmCampaignController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Apps\DineTableController;
 use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
+use App\Http\Controllers\Apps\IntegrationController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\OutletController;
 use App\Http\Controllers\Apps\PayableController;
@@ -29,6 +31,7 @@ use App\Http\Controllers\Apps\SettingController;
 use App\Http\Controllers\Apps\StockMutationController;
 use App\Http\Controllers\Apps\StockOpnameController;
 use App\Http\Controllers\Apps\StockTransferController;
+use App\Http\Controllers\Apps\SubscriptionController;
 use App\Http\Controllers\Apps\SupplierController;
 use App\Http\Controllers\Apps\SupplierReturnController;
 use App\Http\Controllers\Apps\TransactionController;
@@ -50,6 +53,10 @@ use App\Http\Controllers\Reports\ProfitReportController;
 use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\Superadmin\PlanManagementController;
+use App\Http\Controllers\Superadmin\SuperadminDashboardController;
+use App\Http\Controllers\Superadmin\SuperadminTransactionController;
+use App\Http\Controllers\Superadmin\TenantManagementController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\UserController;
 use App\Models\Setting;
@@ -82,6 +89,13 @@ Route::get('/dokumentasi', fn () => Inertia::render('Public/Documentation'))->na
 Route::get('/roadmap', fn () => Inertia::render('Public/Roadmap'))->name('roadmap.index');
 Route::get('/kontribusi', fn () => Inertia::render('Public/Contributing'))->name('contributing.index');
 
+// Legal & trust pages (SaaS)
+Route::get('/syarat-layanan', fn () => Inertia::render('Public/Terms'))->name('legal.terms');
+Route::get('/kebijakan-privasi', fn () => Inertia::render('Public/Privacy'))->name('legal.privacy');
+Route::get('/kebijakan-pengembalian', fn () => Inertia::render('Public/RefundPolicy'))->name('legal.refund');
+Route::get('/keamanan', fn () => Inertia::render('Public/Security'))->name('legal.security');
+
+
 Route::get('/dashboard/access', function () {
     return Inertia::render('Dashboard/Access');
 })->middleware(['auth'])->name('dashboard.access');
@@ -102,11 +116,13 @@ Route::post('/portal/receivables/{receivable}/pay', [PublicPortalController::cla
 // Language switch
 Route::post('/language/switch', [LanguageController::class, 'switch'])->name('language.switch');
 
-Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
+Route::group(['prefix' => 'dashboard', 'middleware' => ['auth', 'active_subscription']], function () {
     Route::post('/outlet', [OutletContextController::class, 'switch'])->name('outlet.switch');
     Route::post('/tours/{tour}/complete', [TourController::class, 'complete'])->name('tours.complete');
     Route::post('/tours/reset', [TourController::class, 'reset'])->name('tours.reset');
     Route::get('/', [DashboardController::class, 'index'])->middleware(['permission:dashboard-access'])->name('dashboard');
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->middleware('permission:dashboard-access')->name('subscription.index');
+    Route::post('/subscription/checkout', [SubscriptionController::class, 'checkout'])->middleware('permission:dashboard-access')->name('subscription.checkout');
     Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:permissions-access')->name('permissions.index');
     // roles route
     Route::resource('/roles', RoleController::class)
@@ -119,8 +135,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::resource('/users', UserController::class)
         ->except('show')
         ->middlewareFor('index', 'permission:users-access')
-        ->middlewareFor(['create', 'store'], 'permission:users-create')
-        ->middlewareFor('store', ['permission:users-create', 'step_up'])
+        ->middlewareFor('create', 'permission:users-create')
+        ->middlewareFor('store', ['permission:users-create', 'step_up', 'quota:user'])
         ->middlewareFor(['edit', 'update'], 'permission:users-update')
         ->middlewareFor('update', ['permission:users-update', 'step_up'])
         ->middlewareFor('destroy', ['permission:users-delete', 'step_up']);
@@ -137,7 +153,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
         ->middlewareFor('destroy', 'permission:categories-delete');
     Route::resource('products', ProductController::class)
         ->middlewareFor(['index', 'show'], 'permission:products-access')
-        ->middlewareFor(['create', 'store'], 'permission:products-create')
+        ->middlewareFor('create', 'permission:products-create')
+        ->middlewareFor('store', ['permission:products-create', 'quota:product'])
         ->middlewareFor(['edit', 'update'], 'permission:products-edit')
         ->middlewareFor('destroy', 'permission:products-delete');
 
@@ -161,9 +178,11 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('stock-opnames/create', [StockOpnameController::class, 'create'])->middleware('permission:stock-opnames-create')->name('stock-opnames.create');
     Route::post('stock-opnames', [StockOpnameController::class, 'store'])->middleware('permission:stock-opnames-create')->name('stock-opnames.store');
     Route::get('stock-opnames/{stockOpname}', [StockOpnameController::class, 'show'])->middleware('permission:stock-opnames-access')->name('stock-opnames.show');
+    Route::get('stock-opnames/{stockOpname}/print', [StockOpnameController::class, 'print'])->middleware('permission:stock-opnames-access')->name('stock-opnames.print');
     Route::patch('stock-opnames/{stockOpname}', [StockOpnameController::class, 'update'])->middleware('permission:stock-opnames-create')->name('stock-opnames.update');
     Route::post('stock-opnames/{stockOpname}/items', [StockOpnameController::class, 'storeItem'])->middleware('permission:stock-opnames-create')->name('stock-opnames.items.store');
     Route::patch('stock-opnames/{stockOpname}/items/{item}', [StockOpnameController::class, 'updateItem'])->middleware('permission:stock-opnames-create')->name('stock-opnames.items.update');
+    Route::delete('stock-opnames/{stockOpname}/items/{item}', [StockOpnameController::class, 'destroyItem'])->middleware('permission:stock-opnames-create')->name('stock-opnames.items.destroy');
     Route::post('stock-opnames/{stockOpname}/finalize', [StockOpnameController::class, 'finalize'])->middleware('permission:stock-opnames-finalize')->name('stock-opnames.finalize');
     Route::get('stock-mutations', [StockMutationController::class, 'index'])->middleware('permission:stock-mutations-access')->name('stock-mutations.index');
     Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('permission:audit-logs-access')->name('audit-logs.index');
@@ -176,7 +195,8 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('cashier-shifts/{cashierShift}/report/{type}', [CashierShiftController::class, 'printReport'])->middleware('permission:cashier-shifts-access')->name('cashier-shifts.report');
     Route::resource('customers', CustomerController::class)
         ->middlewareFor(['index', 'show'], 'permission:customers-access')
-        ->middlewareFor(['create', 'store'], 'permission:customers-create')
+        ->middlewareFor('create', 'permission:customers-create')
+        ->middlewareFor('store', ['permission:customers-create', 'quota:customer'])
         ->middlewareFor(['edit', 'update'], 'permission:customers-edit')
         ->middlewareFor('destroy', 'permission:customers-delete');
     Route::resource('members', MemberController::class)
@@ -203,24 +223,25 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
         ->middleware('permission:customer-segments-update')
         ->name('customer-segments.members.destroy');
     Route::resource('crm-campaigns', CrmCampaignController::class)
+        ->middleware('feature:crm')
         ->middlewareFor(['index', 'show'], 'permission:crm-campaigns-access')
         ->middlewareFor(['create', 'store'], 'permission:crm-campaigns-create')
         ->middlewareFor(['edit', 'update'], 'permission:crm-campaigns-update')
         ->middlewareFor('destroy', 'permission:crm-campaigns-delete');
     Route::post('crm-campaigns/{crmCampaign}/process', [CrmCampaignController::class, 'process'])
-        ->middleware('permission:crm-campaigns-update')
+        ->middleware(['feature:crm', 'permission:crm-campaigns-update'])
         ->name('crm-campaigns.process');
     Route::post('crm-campaigns/{crmCampaign}/cancel', [CrmCampaignController::class, 'cancel'])
-        ->middleware('permission:crm-campaigns-update')
+        ->middleware(['feature:crm', 'permission:crm-campaigns-update'])
         ->name('crm-campaigns.cancel');
     Route::post('crm-campaign-logs/{log}/mark-sent', [CrmCampaignController::class, 'markLogSent'])
-        ->middleware('permission:crm-campaigns-update')
+        ->middleware(['feature:crm', 'permission:crm-campaigns-update'])
         ->name('crm-campaign-logs.mark-sent');
     Route::post('crm-campaign-logs/{log}/skip', [CrmCampaignController::class, 'markLogSkipped'])
-        ->middleware('permission:crm-campaigns-update')
+        ->middleware(['feature:crm', 'permission:crm-campaigns-update'])
         ->name('crm-campaign-logs.skip');
     Route::get('crm-reminders', [CrmReminderController::class, 'index'])
-        ->middleware('permission:crm-reminders-access')
+        ->middleware(['feature:crm', 'permission:crm-reminders-access'])
         ->name('crm-reminders.index');
 
     // route customer history
@@ -347,6 +368,18 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('/settings/whatsapp/status', [SettingController::class, 'whatsappStatus'])->middleware('permission:whatsapp-settings-access')->name('settings.whatsapp.status');
     Route::post('/settings/whatsapp/disconnect', [SettingController::class, 'disconnectWhatsapp'])->middleware('permission:whatsapp-settings-update')->name('settings.whatsapp.disconnect');
 
+    // settings integrations & add-on (finance, bihaju)
+    Route::get('/settings/integrations', [IntegrationController::class, 'index'])->middleware('permission:dashboard-access')->name('settings.integrations');
+    Route::post('/settings/integrations/{code}', [IntegrationController::class, 'update'])->middleware('permission:dashboard-access')->name('settings.integrations.update');
+    Route::get('/settings/finance/launch', [IntegrationController::class, 'launchFinance'])->middleware('permission:dashboard-access')->name('settings.finance.launch');
+
+    // settings integrasi bihaju (binding outlet, member, retry transaksi)
+    Route::get('/settings/bihaju', [BihajuSettingController::class, 'index'])->middleware(['permission:dashboard-access', 'feature:bihaju'])->name('settings.bihaju');
+    Route::post('/settings/bihaju/bindings', [BihajuSettingController::class, 'bind'])->middleware(['permission:dashboard-access', 'feature:bihaju'])->name('settings.bihaju.bind');
+    Route::delete('/settings/bihaju/bindings/{binding}', [BihajuSettingController::class, 'unbind'])->middleware(['permission:dashboard-access', 'feature:bihaju'])->name('settings.bihaju.unbind');
+    Route::get('/settings/bihaju/members', [BihajuSettingController::class, 'members'])->middleware(['permission:dashboard-access', 'feature:bihaju'])->name('settings.bihaju.members');
+    Route::post('/settings/bihaju/transactions/{bihajuTransaction}/retry', [BihajuSettingController::class, 'retry'])->middleware(['permission:dashboard-access', 'feature:bihaju'])->name('settings.bihaju.retry');
+
     // settings bank accounts
     Route::get('/settings/bank-accounts', [BankAccountController::class, 'index'])->middleware('permission:payment-settings-access')->name('settings.bank-accounts.index');
     Route::get('/settings/bank-accounts/create', [BankAccountController::class, 'create'])->middleware('permission:payment-settings-update')->name('settings.bank-accounts.create');
@@ -380,7 +413,7 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
         ->middleware('permission:outlets-access')
         ->name('settings.outlets.index');
     Route::post('/settings/outlets', [OutletController::class, 'store'])
-        ->middleware(['permission:outlets-create', 'step_up'])
+        ->middleware(['permission:outlets-create', 'step_up', 'quota:outlet'])
         ->name('settings.outlets.store');
     Route::put('/settings/outlets/{outlet}', [OutletController::class, 'update'])
         ->middleware(['permission:outlets-update', 'step_up'])
@@ -435,6 +468,29 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// Superadmin Platform routes
+Route::middleware(['auth', 'platform.superadmin'])
+    ->prefix('superadmin')
+    ->name('superadmin.')
+    ->group(function () {
+        Route::get('/', [SuperadminDashboardController::class, 'index'])->name('dashboard');
+
+        // Tenants
+        Route::get('/tenants', [TenantManagementController::class, 'index'])->name('tenants.index');
+        Route::get('/tenants/{tenant}', [TenantManagementController::class, 'show'])->name('tenants.show');
+        Route::patch('/tenants/{tenant}/status', [TenantManagementController::class, 'updateStatus'])->name('tenants.status');
+        Route::post('/tenants/{tenant}/extend', [TenantManagementController::class, 'extendSubscription'])->name('tenants.extend');
+        Route::patch('/tenants/{tenant}/plan', [TenantManagementController::class, 'changePlan'])->name('tenants.plan');
+        Route::post('/tenants/{tenant}/reset-password', [TenantManagementController::class, 'resetOwnerPassword'])->name('tenants.reset-password');
+
+        // Transactions monitoring
+        Route::get('/transactions', [SuperadminTransactionController::class, 'index'])->name('transactions.index');
+
+        // Plans
+        Route::get('/plans', [PlanManagementController::class, 'index'])->name('plans.index');
+        Route::put('/plans/{plan}', [PlanManagementController::class, 'update'])->name('plans.update');
+    });
 
 // dine-in public routes
 Route::get('/dine/{token}', [DineMenuController::class, 'show'])->name('dine.menu');

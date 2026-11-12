@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import Button from "@/Components/Dashboard/Button";
@@ -7,11 +7,13 @@ import Table from "@/Components/Dashboard/Table";
 import {
     IconArrowLeft,
     IconCheck,
-    IconDeviceFloppy,
     IconClipboardCheck,
+    IconDeviceFloppy,
     IconPackage,
     IconPlus,
+    IconPrinter,
     IconSearch,
+    IconTrash,
 } from "@tabler/icons-react";
 import toast from "react-hot-toast";
 import { useAuthorization } from "@/Utils/authorization";
@@ -55,11 +57,12 @@ export default function Show({
     const isDraft = stockOpname.status === "draft";
     const canManageDraft = isDraft && canEditStockOpname;
     const [localItems, setLocalItems] = useState(stockOpname.items);
-    const [savingItemId, setSavingItemId] = useState(null);
+    const [isFinalizing, setIsFinalizing] = useState(false);
     const [showProductModal, setShowProductModal] = useState(false);
     const [productSearchInput, setProductSearchInput] = useState(
         productFilters.search || ""
     );
+    const localItemsRef = useRef(stockOpname.items);
 
     const notesForm = useForm({
         notes: stockOpname.notes || "",
@@ -67,8 +70,13 @@ export default function Show({
 
     useEffect(() => {
         setLocalItems(stockOpname.items);
+        localItemsRef.current = stockOpname.items;
         notesForm.setData("notes", stockOpname.notes || "");
     }, [stockOpname.items, stockOpname.notes]);
+
+    useEffect(() => {
+        localItemsRef.current = localItems;
+    }, [localItems]);
 
     useEffect(() => {
         setProductSearchInput(productFilters.search || "");
@@ -202,30 +210,73 @@ export default function Show({
         );
     };
 
-    const persistItem = (item) => {
-        if (!canManageDraft) {
+    const saveItem = (item, { silent = true } = {}) =>
+        new Promise((resolve) => {
+            if (!canManageDraft || !item) {
+                resolve(true);
+                return;
+            }
+
+            router.patch(
+                route("stock-opnames.items.update", [stockOpname.id, item.id]),
+                {
+                    physical_stock:
+                        item.physical_stock === "" || item.physical_stock === null
+                            ? null
+                            : Number(item.physical_stock),
+                    adjustment_reason: item.adjustment_reason || "",
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => resolve(true),
+                    onError: () => {
+                        if (!silent) {
+                            toast.error("Gagal menyimpan item opname");
+                        }
+                        resolve(false);
+                    },
+                }
+            );
+        });
+
+    const persistItem = (itemId) => {
+        const item = localItemsRef.current.find((i) => i.id === itemId);
+        if (item) {
+            saveItem(item, { silent: false });
+        }
+    };
+
+    const deleteItem = (item) => {
+        if (!canManageDraft) return;
+        if (!confirm(`Hapus ${item.product?.title || "item"} dari sesi stock opname ini?`)) return;
+
+        router.delete(route("stock-opnames.items.destroy", [stockOpname.id, item.id]), {
+            preserveScroll: true,
+            onSuccess: () => toast.success("Item dihapus dari sesi"),
+            onError: () => toast.error("Gagal menghapus item"),
+        });
+    };
+
+    const finalize = async () => {
+        if (!canManageDraft || isFinalizing) return;
+
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+
+        setIsFinalizing(true);
+
+        const results = await Promise.all(
+            localItemsRef.current.map((item) => saveItem(item, { silent: true }))
+        );
+
+        if (results.some((ok) => !ok)) {
+            setIsFinalizing(false);
+            toast.error("Gagal menyimpan beberapa item. Periksa input lalu coba finalize lagi.");
             return;
         }
 
-        setSavingItemId(item.id);
-
-        router.patch(
-            route("stock-opnames.items.update", [stockOpname.id, item.id]),
-            {
-                physical_stock:
-                    item.physical_stock === "" ? null : item.physical_stock,
-                adjustment_reason: item.adjustment_reason || "",
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success("Item opname diperbarui"),
-                onError: () => toast.error("Gagal memperbarui item opname"),
-                onFinish: () => setSavingItemId(null),
-            }
-        );
-    };
-
-    const finalize = () => {
         router.post(
             route("stock-opnames.finalize", stockOpname.id),
             {},
@@ -234,6 +285,7 @@ export default function Show({
                 onSuccess: () => toast.success("Stock opname difinalisasi"),
                 onError: () =>
                     toast.error("Gagal finalize. Periksa item yang belum valid."),
+                onFinish: () => setIsFinalizing(false),
             }
         );
     };
@@ -279,18 +331,31 @@ export default function Show({
                         )}
                     </div>
 
-                    {isDraft && canFinalizeStockOpname && (
-                        <Button
-                            type="button"
-                            icon={<IconCheck size={18} />}
-                            className="bg-success-500 hover:bg-success-600 text-white shadow-lg shadow-success-500/20 disabled:opacity-50"
-                            label="Finalize Stock Opname"
-                            onClick={finalize}
-                            disabled={
-                                localItems.length === 0 || summary.hasMissingReasons
-                            }
-                        />
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <a
+                            href={route("stock-opnames.print", stockOpname.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-primary-300 hover:text-primary-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-700 dark:hover:text-primary-400"
+                        >
+                            <IconPrinter size={18} />
+                            Cetak / Export Kartu
+                        </a>
+                        {isDraft && canFinalizeStockOpname && (
+                            <Button
+                                type="button"
+                                icon={<IconCheck size={18} />}
+                                className="bg-success-500 hover:bg-success-600 text-white shadow-lg shadow-success-500/20 disabled:opacity-50"
+                                label={isFinalizing ? "Menyimpan..." : "Finalize Stock Opname"}
+                                onClick={finalize}
+                                disabled={
+                                    isFinalizing ||
+                                    localItems.length === 0 ||
+                                    summary.hasMissingReasons
+                                }
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -343,7 +408,7 @@ export default function Show({
                                     <Table.Th>Stok Fisik</Table.Th>
                                     <Table.Th>Selisih</Table.Th>
                                     <Table.Th>Alasan</Table.Th>
-                                    <Table.Th className="w-24 text-center">Simpan</Table.Th>
+                                    <Table.Th className="w-20 text-center">Aksi</Table.Th>
                                 </tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -385,6 +450,7 @@ export default function Show({
                                                                 event.target.value
                                                             )
                                                         }
+                                                        onBlur={() => persistItem(item.id)}
                                                         className="h-10 w-24 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                                     />
                                                 </Table.Td>
@@ -417,6 +483,7 @@ export default function Show({
                                                                 event.target.value
                                                             )
                                                         }
+                                                        onBlur={() => persistItem(item.id)}
                                                         placeholder={
                                                             isDifferent
                                                                 ? "Wajib isi alasan"
@@ -429,11 +496,11 @@ export default function Show({
                                                     {canManageDraft ? (
                                                         <button
                                                             type="button"
-                                                            onClick={() => persistItem(item)}
-                                                            disabled={savingItemId === item.id}
-                                                            className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-600 transition hover:border-primary-300 hover:text-primary-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-primary-700 dark:hover:text-primary-400"
+                                                            onClick={() => deleteItem(item)}
+                                                            title="Hapus item"
+                                                            className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-600 transition hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-rose-700 dark:hover:text-rose-400"
                                                         >
-                                                            <IconDeviceFloppy size={18} />
+                                                            <IconTrash size={18} />
                                                         </button>
                                                     ) : (
                                                         "-"
@@ -544,41 +611,37 @@ export default function Show({
                         <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                             Menunggu input selesai, pencarian akan dijalankan dalam 1-2 detik.
                         </div>
-                    ) : filters.product_search ? (
-                        availableProducts.length > 0 ? (
-                            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 dashboard-scrollbar">
-                                {availableProducts.map((product) => (
-                                    <button
-                                        key={product.id}
-                                        type="button"
-                                        onClick={() => addProduct(product.id)}
-                                        className="flex w-full items-start justify-between gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-primary-300 hover:bg-primary-50/50 dark:border-slate-700 dark:hover:border-primary-700 dark:hover:bg-primary-950/20"
-                                    >
-                                        <div>
-                                            <p className="font-medium text-slate-800 dark:text-slate-200">
-                                                {product.title}
-                                            </p>
-                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                {product.category?.name || "-"} • {product.barcode || product.sku || "-"}
-                                            </p>
-                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                Stok sistem: {product.stock}
-                                            </p>
-                                        </div>
-                                        <span className="inline-flex rounded-lg bg-primary-500 px-3 py-2 text-xs font-semibold text-white">
-                                            Tambah
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                                Tidak ada produk yang cocok dengan kata kunci pencarian.
-                            </div>
-                        )
+                    ) : availableProducts.length > 0 ? (
+                        <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 dashboard-scrollbar">
+                            {availableProducts.map((product) => (
+                                <button
+                                    key={product.id}
+                                    type="button"
+                                    onClick={() => addProduct(product.id)}
+                                    className="flex w-full items-start justify-between gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-primary-300 hover:bg-primary-50/50 dark:border-slate-700 dark:hover:border-primary-700 dark:hover:bg-primary-950/20"
+                                >
+                                    <div>
+                                        <p className="font-medium text-slate-800 dark:text-slate-200">
+                                            {product.title}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            {product.category?.name || "-"} • {product.barcode || product.sku || "-"}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                            Stok sistem: {product.warehouse_stock ?? product.stock ?? 0}
+                                        </p>
+                                    </div>
+                                    <span className="inline-flex rounded-lg bg-primary-500 px-3 py-2 text-xs font-semibold text-white">
+                                        Tambah
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     ) : (
                         <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                            Ketik kata kunci, lalu tunggu sebentar untuk menampilkan hasil pencarian produk.
+                            {filters.product_search
+                                ? "Tidak ada produk yang cocok dengan kata kunci pencarian."
+                                : "Semua produk sudah ditambahkan atau belum ada produk tersedia."}
                         </div>
                     )}
                 </div>

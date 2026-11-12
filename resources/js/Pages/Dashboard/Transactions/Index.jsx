@@ -18,6 +18,7 @@ import HeldTransactions, {
 } from "@/Components/POS/HeldTransactions";
 import useBarcodeScanner from "@/Hooks/useBarcodeScanner";
 import { getProductImageUrl } from "@/Utils/imageUrl";
+import { calculateTransactionFee } from "@/Utils/transactionFee";
 import { useAuthorization } from "@/Utils/authorization";
 import {
     queueTransaction,
@@ -63,6 +64,7 @@ export default function Index({
     bankAccounts = [],
     warehouses = [],
     loyaltyTierOptions = [],
+    transactionFee = null,
 }) {
     const {
         auth,
@@ -70,7 +72,13 @@ export default function Index({
         flash,
         lowStockNotifications = [],
         activeCashierShift,
+        addons = [],
     } = usePage().props;
+
+    // Integrasi Bihaju aktif untuk tenant ini?
+    const bihajuEnabled = Array.isArray(addons)
+        ? addons.some((a) => a.code === "bihaju" && a.active)
+        : false;
     const offlineScopeKey = `${auth?.user?.id ?? "guest"}:${activeCashierShift?.warehouse_id ?? "none"}`;
     const { can } = useAuthorization();
     const canOpenShift = can("cashier-shifts-open");
@@ -90,6 +98,7 @@ export default function Index({
     const [shippingInput, setShippingInput] = useState("");
     const [orderType, setOrderType] = useState("in_store");
     const [orderNote, setOrderNote] = useState("");
+    const [bihajuMemberCode, setBihajuMemberCode] = useState("");
     const [paymentMethod, setPaymentMethod] = useState(
         defaultPaymentGateway ?? "cash"
     );
@@ -357,6 +366,18 @@ export default function Index({
         setSplitMode(false);
         setSplitTenders([{ ...emptyTender }, { ...emptyTender }]);
     };
+
+    // Preview biaya paket pay-per-transaksi (paket langganan biasa → null → biaya 0).
+    // Nilai final tetap dihitung ulang server saat checkout.
+    const serviceFee = useMemo(() => {
+        const methods = payLater
+            ? ["pay_later"]
+            : splitMode
+              ? activeSplitTenders.map((t) => t.method).filter(Boolean)
+              : [paymentMethod];
+
+        return calculateTransactionFee(transactionFee, payable, methods);
+    }, [transactionFee, payable, payLater, splitMode, paymentMethod, activeSplitTenders]);
 
     const handleOpenShift = () => {
         router.post(route("cashier-shifts.store"), {
@@ -759,6 +780,7 @@ export default function Index({
                 bank_account_id: isBankTransfer ? selectedBankAccount?.id : null,
                 order_type: orderType,
                 note: orderNote || null,
+                bihaju_member_code: bihajuMemberCode || null,
                 items: carts.map((item) => ({
                     product_id: item.product_id,
                     unit_id: item.unit?.id ?? item.unit_id ?? null,
@@ -815,6 +837,7 @@ export default function Index({
                 due_date: dueDate,
                 order_type: orderType,
                 note: orderNote || null,
+                bihaju_member_code: bihajuMemberCode || null,
             },
             {
                 onSuccess: () => {
@@ -831,6 +854,7 @@ export default function Index({
                     setDueDate("");
                     setOrderType("in_store");
                     setOrderNote("");
+                    setBihajuMemberCode("");
                     setIsSubmitting(false);
                     toast.success("Transaksi berhasil!");
                 },
@@ -1393,23 +1417,24 @@ export default function Index({
                                 <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                     Metode Pembayaran
                                 </label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-1 gap-2">
                                     {paymentOptions.map((method) => (
                                         <button
                                             key={method.value}
+                                            type="button"
                                             onClick={() =>
                                                 !payLater &&
                                                 setPaymentMethod(method.value)
                                             }
                                             disabled={payLater}
-                                            className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+                                            className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 min-w-0 text-left ${
                                                 paymentMethod === method.value && !payLater
                                                     ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
                                                     : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                                             } ${payLater ? "opacity-50 cursor-not-allowed" : ""}`}
                                         >
                                             <div
-                                                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                                     paymentMethod ===
                                                         method.value &&
                                                     !payLater
@@ -1428,9 +1453,9 @@ export default function Index({
                                                     <IconCreditCard size={16} />
                                                 )}
                                             </div>
-                                            <div className="text-left">
+                                            <div className="text-left min-w-0 flex-1">
                                                 <p
-                                                    className={`text-sm font-semibold ${
+                                                    className={`text-sm font-semibold truncate ${
                                                         paymentMethod ===
                                                         method.value
                                                             ? "text-primary-700 dark:text-primary-300"
@@ -1610,7 +1635,7 @@ export default function Index({
                                         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
                                             Rekening Tujuan
                                         </label>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-1 gap-2">
                                             {bankAccounts.map((bank) => {
                                                 const isActive =
                                                     selectedBankAccount?.id ===
@@ -1623,13 +1648,13 @@ export default function Index({
                                                                 bank
                                                             )
                                                         }
-                                                        className={`p-3 rounded-xl border-2 transition-colors flex items-center gap-3 text-left ${
+                                                        className={`p-3 rounded-xl border-2 transition-colors flex items-center gap-3 text-left min-w-0 ${
                                                             isActive
                                                                 ? "border-primary-500 bg-primary-50 dark:bg-primary-950/30"
                                                                 : "border-slate-200 dark:border-slate-700 hover:border-primary-200 dark:hover:border-primary-800"
                                                         }`}
                                                     >
-                                                        <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                                                        <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                                                             {bank.logo_url ? (
                                                                 <img
                                                                     src={
@@ -1647,18 +1672,18 @@ export default function Index({
                                                                 />
                                                             )}
                                                         </div>
-                                                        <div className="flex-1">
-                                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                                                                 {
                                                                     bank.bank_name
                                                                 }
                                                             </p>
-                                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
                                                                 {
                                                                     bank.account_number
                                                                 }
                                                             </p>
-                                                            <p className="text-[11px] text-slate-500 dark:text-slate-500">
+                                                            <p className="text-[11px] text-slate-500 dark:text-slate-500 truncate">
                                                                 a.n.{" "}
                                                                 {
                                                                     bank.account_name
@@ -1666,7 +1691,7 @@ export default function Index({
                                                             </p>
                                                         </div>
                                                         {isActive && (
-                                                            <span className="text-[11px] font-semibold text-primary-600">
+                                                            <span className="text-[11px] font-semibold text-primary-600 flex-shrink-0">
                                                                 Dipilih
                                                             </span>
                                                         )}
@@ -1831,6 +1856,28 @@ export default function Index({
                                 </div>
                             )}
 
+                            {bihajuEnabled && (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
+                                        Kode Member Bihaju
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bihajuMemberCode}
+                                        onChange={(e) =>
+                                            setBihajuMemberCode(
+                                                e.target.value.slice(0, 60)
+                                            )
+                                        }
+                                        placeholder="Opsional — kode referral"
+                                        className="w-full h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    />
+                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                        Komisi & cashback dikirim ke member ini
+                                    </p>
+                                </div>
+                            )}
+
                             {selectedCustomer?.is_loyalty_member &&
                                 (pricingPreview?.eligible_vouchers || [])
                                     .length > 0 && (
@@ -1951,6 +1998,19 @@ export default function Index({
                                 <span className="text-slate-500">PPN</span>
                                 <span className="font-medium">
                                     +{formatPrice(taxTotal)}
+                                </span>
+                            </div>
+                        )}
+                        {serviceFee > 0 && (
+                            <div className="flex justify-between items-start mb-2 text-sm">
+                                <span className="text-slate-500">
+                                    Biaya Transaksi
+                                    <span className="block text-[11px] text-slate-400">
+                                        Paket bayar per transaksi · dibebankan ke akun Anda
+                                    </span>
+                                </span>
+                                <span className="font-semibold text-warning-600 dark:text-warning-400">
+                                    {formatPrice(serviceFee)}
                                 </span>
                             </div>
                         )}

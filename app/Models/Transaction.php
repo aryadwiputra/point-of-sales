@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Transaction extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected static function booted(): void
     {
@@ -18,6 +19,7 @@ class Transaction extends Model
     }
 
     protected $fillable = [
+        'tenant_id',
         'cashier_id',
         'cashier_shift_id',
         'warehouse_id',
@@ -35,6 +37,7 @@ class Transaction extends Model
         'customer_voucher_code',
         'customer_voucher_name',
         'shipping_cost',
+        'service_fee',
         'grand_total',
         'payment_method',
         'payment_status',
@@ -68,6 +71,7 @@ class Transaction extends Model
         'loyalty_discount_total' => 'integer',
         'customer_voucher_discount' => 'integer',
         'shipping_cost' => 'integer',
+        'service_fee' => 'integer',
         'grand_total' => 'integer',
         'bank_account_id' => 'integer',
         'tax_rate' => 'decimal:2',

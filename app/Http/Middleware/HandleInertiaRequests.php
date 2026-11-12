@@ -11,10 +11,13 @@ use App\Models\ProductBatch;
 use App\Models\Receivable;
 use App\Models\Setting;
 use App\Models\Transaction;
+use App\Services\AddonService;
 use App\Services\CashierShiftService;
 use App\Services\OutletAccessService;
 use App\Services\PayableAgingService;
 use App\Services\ReceivableService;
+use App\Services\TenantContext;
+use App\Services\TransactionFeeService;
 use App\Support\ProductionSecurityBaseline;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -209,13 +212,25 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $brand = [
+            'name' => config('brand.name', config('app.name', 'Bihaju POS')),
+            'tagline' => config('brand.tagline', 'Bikin Usaha Maju'),
+            'legalName' => config('brand.legal_name', 'Bihaju POS'),
+            'company' => config('brand.company', 'Bihaju'),
+            'domain' => config('brand.domain', config('app.url')),
+            'url' => config('brand.url', config('app.url')),
+            'supportEmail' => config('brand.support_email'),
+            'supportWhatsapp' => config('brand.support_whatsapp'),
+            'description' => config('brand.description'),
+        ];
+
         $storeProfile = [
-            'name' => 'Toko Anda',
+            'name' => $brand['name'],
             'logo' => null,
             'address' => '',
             'phone' => '',
-            'email' => '',
-            'website' => '',
+            'email' => $brand['supportEmail'] ?? '',
+            'website' => $brand['url'] ?? '',
             'city' => '',
         ];
         $outlet = $activeShift?->warehouse?->outlet;
@@ -229,13 +244,14 @@ class HandleInertiaRequests extends Middleware
                 $logo = asset('storage/'.ltrim($logo, '/'));
             }
 
+            $configuredStoreName = Setting::getForOutlet('store_name', $outlet, '');
             $storeProfile = [
-                'name' => Setting::getForOutlet('store_name', $outlet, 'Toko Anda'),
+                'name' => filled($configuredStoreName) ? $configuredStoreName : $brand['name'],
                 'logo' => $logo,
                 'address' => Setting::getForOutlet('store_address', $outlet, ''),
                 'phone' => Setting::getForOutlet('store_phone', $outlet, ''),
-                'email' => Setting::getForOutlet('store_email', $outlet, ''),
-                'website' => Setting::getForOutlet('store_website', $outlet, ''),
+                'email' => Setting::getForOutlet('store_email', $outlet, $brand['supportEmail'] ?? ''),
+                'website' => Setting::getForOutlet('store_website', $outlet, $brand['url'] ?? ''),
                 'city' => Setting::getForOutlet('store_city', $outlet, ''),
             ];
 
@@ -252,6 +268,13 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+            'brand' => $brand,
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
+            ],
             'auth' => [
                 'user' => $request->user(),
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
@@ -277,6 +300,11 @@ class HandleInertiaRequests extends Middleware
             'receivableAgingSummary' => $receivableAgingSummary,
             'activeCashierShift' => $activeCashierShift,
             'storeProfile' => $storeProfile,
+            'currentTenant' => TenantContext::get()?->only(['id', 'name', 'subdomain', 'status', 'subscription_ends_at']),
+            // Entitlement add-on (lazy — hanya dihitung bila halaman memakainya).
+            'addons' => fn () => app(AddonService::class)->status(),
+            // Biaya paket pay-per-transaksi (preview di POS; nilai final dihitung server).
+            'transactionFee' => fn () => app(TransactionFeeService::class)->config(),
             'printerSettings' => $printerSettings,
             'pendingApprovalCount' => $pendingApprovalCount,
             'pendingDineOrdersCount' => $pendingDineOrdersCount,

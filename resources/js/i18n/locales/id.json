@@ -29,7 +29,7 @@
             "downloadTemplate": "Download Template"
         },
         "labels": {
-            "no": "No",
+            "no": "Tidak",
             "action": "Aksi",
             "status": "Status",
             "date": "Tanggal",
@@ -43,7 +43,6 @@
             "inactive": "Tidak Aktif",
             "all": "Semua",
             "yes": "Ya",
-            "no": "Tidak",
             "required": "Wajib",
             "optional": "Opsional",
             "search": "Pencarian...",
@@ -196,7 +195,7 @@
             "title": "Masuk",
             "subtitle": "Selamat Datang Kembali",
             "description": "Masuk untuk mengakses dashboard Anda",
-            "appName": "Aplikasi Kasir",
+            "appName": "Bihaju POS",
             "email": "Email",
             "emailPlaceholder": "nama@email.com",
             "password": "Password",
@@ -208,9 +207,13 @@
             "noAccount": "Belum punya akun?",
             "registerNow": "Daftar Sekarang",
             "registerLink": "Daftar Sekarang",
-            "heroTitle": "Kelola Bisnis Anda dengan Mudah",
-            "heroDescription": "Sistem Point of Sale modern yang membantu Anda mengelola transaksi, inventori, dan laporan keuangan dengan efisien.",
-            "features": ["Transaksi Cepat", "Laporan Real-time", "Multi User"]
+            "heroTitle": "Bikin Usaha Maju",
+            "heroDescription": "Bihaju POS membantu Anda mengelola transaksi, inventori, pelanggan, dan laporan dalam satu platform kasir yang rapi dan siap bertumbuh.",
+            "features": [
+                "Transaksi Cepat",
+                "Laporan & Insight",
+                "Multi Outlet & Add-on"
+            ]
         },
         "register": {
             "title": "Daftar",
@@ -297,6 +300,7 @@
             "usersList": "Data Pengguna",
             "usersCreate": "Tambah Data Pengguna",
             "paymentGateway": "Payment Gateway",
+            "subscription": "Langganan & Paket",
             "storeProfile": "Profil Toko",
             "bankAccounts": "Rekening Bank",
             "loyalty": "Loyalty",
@@ -305,7 +309,8 @@
             "warehouses": "Gudang / Cabang",
             "outlets": "Outlet",
             "units": "Satuan",
-            "whatsApp": "WhatsApp"
+            "whatsApp": "WhatsApp",
+            "integrations": "Integrasi & Add-on"
         },
         "menu": {
             "overview": "Overview",
@@ -923,14 +928,14 @@
             }
         },
         "pos": {
- "search": {
-  "title": "Pencarian Produk",
-  "desc": "Cari produk berdasarkan nama atau scan barcode langsung ke sini. Tekan / untuk fokus cepat."
- },
- "products": {
-  "title": "Daftar Produk",
-  "desc": "Klik produk untuk menambahkannya ke keranjang. Filter kategori tersedia di bagian atas."
- },
+            "search": {
+                "title": "Pencarian Produk",
+                "desc": "Cari produk berdasarkan nama atau scan barcode langsung ke sini. Tekan / untuk fokus cepat."
+            },
+            "products": {
+                "title": "Daftar Produk",
+                "desc": "Klik produk untuk menambahkannya ke keranjang. Filter kategori tersedia di bagian atas."
+            },
             "customer": {
                 "title": "Pilih Pelanggan",
                 "desc": "Opsional — pilih pelanggan untuk poin loyalitas, voucher, dan pencatatan piutang."
@@ -953,10 +958,10 @@
                 "title": "Aksi Produk",
                 "desc": "Cetak barcode massal, ekspor/impor produk, dan tambah produk baru."
             },
- "search": {
-  "title": "Pencarian",
-  "desc": "Cari produk berdasarkan nama, SKU, atau barcode."
- },
+            "search": {
+                "title": "Pencarian",
+                "desc": "Cari produk berdasarkan nama, SKU, atau barcode."
+            },
             "view": {
                 "title": "Mode Tampilan",
                 "desc": "Ganti antara tampilan grid dan tabel sesuai kenyamanan."
@@ -975,18 +980,18 @@
                 "title": "Buka Shift",
                 "desc": "Isi modal awal dan pilih gudang, lalu buka shift untuk mulai berjualan."
             },
- "active": {
-  "title": "Ringkasan Shift Aktif",
-  "desc": "Modal awal, kas yang diharapkan, dan jumlah transaksi berjalan."
- },
- "filters": {
-  "title": "Filter Histori",
-  "desc": "Filter histori shift berdasarkan kasir, status, dan rentang tanggal."
- },
- "history": {
-  "title": "Histori Shift",
-  "desc": "Tinjau shift yang sudah ditutup, termasuk selisih kas saat penutupan."
- }
+            "active": {
+                "title": "Ringkasan Shift Aktif",
+                "desc": "Modal awal, kas yang diharapkan, dan jumlah transaksi berjalan."
+            },
+            "filters": {
+                "title": "Filter Histori",
+                "desc": "Filter histori shift berdasarkan kasir, status, dan rentang tanggal."
+            },
+            "history": {
+                "title": "Histori Shift",
+                "desc": "Tinjau shift yang sudah ditutup, termasuk selisih kas saat penutupan."
+            }
         },
         "reports": {
             "header": {
@@ -997,14 +1002,14 @@
                 "title": "Kartu Ringkasan",
                 "desc": "Metrik utama periode terpilih — pendapatan, profit, dan lainnya."
             },
- "filters": {
-  "title": "Filter Laporan",
-  "desc": "Persempit data berdasarkan tanggal, invoice, kasir, atau pelanggan."
- },
- "table": {
-  "title": "Data Laporan",
-  "desc": "Rincian per transaksi. Navigasi halaman tersedia di bawah."
- }
+            "filters": {
+                "title": "Filter Laporan",
+                "desc": "Persempit data berdasarkan tanggal, invoice, kasir, atau pelanggan."
+            },
+            "table": {
+                "title": "Data Laporan",
+                "desc": "Rincian per transaksi. Navigasi halaman tersedia di bawah."
+            }
         }
     },
     "setupChecklist": {

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PricingRule extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const KIND_STANDARD_DISCOUNT = 'standard_discount';
 
@@ -38,6 +39,7 @@ class PricingRule extends Model
     public const TYPE_FIXED_PRICE = 'fixed_price';
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'outlet_id',
         'kind',

@@ -107,37 +107,57 @@ class StockOpnameController extends Controller
 
         $selectedProductIds = $stockOpname->items->pluck('product_id');
 
-        $availableProducts = blank($productFilters['search'])
-            ? collect()
-            : Product::query()
-                ->with('category:id,name')
-                ->where(function ($builder) use ($productFilters) {
-                    $builder
-                        ->where('title', 'like', '%'.$productFilters['search'].'%')
-                        ->orWhere('barcode', 'like', '%'.$productFilters['search'].'%')
-                        ->orWhere('sku', 'like', '%'.$productFilters['search'].'%');
-                })
-                ->whereNotIn('id', $selectedProductIds)
-                ->orderBy('title')
-                ->limit(20)
-                ->get()
-                ->map(function ($product) use ($stockOpname) {
-                    $pivotStock = 0;
-                    if ($stockOpname->warehouse_id) {
-                        $wh = $product->warehouses()->where('warehouse_id', $stockOpname->warehouse_id)->first();
-                        $pivotStock = $wh?->pivot->stock ?? 0;
-                    }
+        $search = trim((string) ($productFilters['search'] ?? ''));
 
-                    return [
-                        ...$product->toArray(),
-                        'warehouse_stock' => $pivotStock,
-                    ];
+        $availableProducts = Product::query()
+            ->with('category:id,name')
+            ->when($search !== '', function ($builder) use ($search) {
+                $builder->where(function ($query) use ($search) {
+                    $query
+                        ->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('barcode', 'like', '%'.$search.'%')
+                        ->orWhere('sku', 'like', '%'.$search.'%');
                 });
+            })
+            ->whereNotIn('id', $selectedProductIds)
+            ->orderBy('title')
+            ->get()
+            ->map(function ($product) use ($stockOpname) {
+                $pivotStock = 0;
+                if ($stockOpname->warehouse_id) {
+                    $wh = $product->warehouses()->where('warehouse_id', $stockOpname->warehouse_id)->first();
+                    $pivotStock = $wh?->pivot->stock ?? 0;
+                }
+
+                return [
+                    ...$product->toArray(),
+                    'warehouse_stock' => $pivotStock,
+                ];
+            });
 
         return Inertia::render('Dashboard/StockOpnames/Show', [
             'stockOpname' => $stockOpname,
             'availableProducts' => $availableProducts,
             'productFilters' => $productFilters,
+        ]);
+    }
+
+    public function print(Request $request, StockOpname $stockOpname): Response
+    {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
+
+        $stockOpname->load([
+            'creator:id,name',
+            'finalizer:id,name',
+            'warehouse:id,code,name',
+            'items' => fn ($query) => $query->orderBy('id'),
+            'items.product:id,title,barcode,sku,category_id',
+            'items.product.category:id,name',
+        ]);
+
+        return Inertia::render('Dashboard/StockOpnames/Print', [
+            'stockOpname' => $stockOpname,
+            'printedAt' => now()->toIso8601String(),
         ]);
     }
 
@@ -212,6 +232,17 @@ class StockOpnameController extends Controller
         ]);
 
         return back()->with('success', 'Item stock opname berhasil diperbarui.');
+    }
+
+    public function destroyItem(Request $request, StockOpname $stockOpname, StockOpnameItem $item): RedirectResponse
+    {
+        $this->ensureWarehouseAccess($request->user(), $stockOpname->warehouse_id);
+        $this->ensureDraft($stockOpname);
+        $this->ensureItemBelongsToOpname($stockOpname, $item);
+
+        $item->delete();
+
+        return back()->with('success', 'Item stock opname berhasil dihapus.');
     }
 
     public function finalize(Request $request, StockOpname $stockOpname): RedirectResponse

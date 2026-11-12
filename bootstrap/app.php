@@ -1,12 +1,17 @@
 <?php
 
+use App\Http\Middleware\CheckFeatureAccess;
+use App\Http\Middleware\CheckPlanQuota;
 use App\Http\Middleware\EnforceAbsoluteSessionLifetime;
 use App\Http\Middleware\EnsureActiveCashierShift;
+use App\Http\Middleware\EnsureActiveSubscription;
 use App\Http\Middleware\EnsureBotGuard;
 use App\Http\Middleware\EnsureNotInstalled;
+use App\Http\Middleware\EnsurePlatformSuperAdmin;
 use App\Http\Middleware\EnsurePublicRegistrationEnabled;
 use App\Http\Middleware\EnsureRecentPasswordConfirmation;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecureHeaders;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Auth\AuthenticationException;
@@ -35,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            ResolveTenant::class,
             SetLocale::class,
             SecureHeaders::class,
             EnforceAbsoluteSessionLifetime::class,
@@ -42,11 +48,20 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->api(prepend: [
+            ResolveTenant::class,
+        ]);
+
         $middleware->alias([
+            'platform.superadmin' => EnsurePlatformSuperAdmin::class,
+            'quota' => CheckPlanQuota::class,
+            'feature' => CheckFeatureAccess::class,
+            'tenant.resolve' => ResolveTenant::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'active_shift' => EnsureActiveCashierShift::class,
+            'active_subscription' => EnsureActiveSubscription::class,
             'registration.enabled' => EnsurePublicRegistrationEnabled::class,
             'bot.guard' => EnsureBotGuard::class,
             'setup.notinstalled' => EnsureNotInstalled::class,

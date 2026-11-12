@@ -3,9 +3,11 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Cart;
-use App\Models\Product;
 use App\Models\Transaction;
+use App\Services\CashierShiftService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 
 class PosTransactionConcurrencyTest extends PosTransactionSyncTest
 {
@@ -80,7 +82,7 @@ class PosTransactionConcurrencyTest extends PosTransactionSyncTest
 
         Transaction::create($data);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         DB::beginTransaction();
         try {
             Transaction::create($data);
@@ -91,9 +93,9 @@ class PosTransactionConcurrencyTest extends PosTransactionSyncTest
 
     protected function actingAsPosCashier(): void
     {
-        \Laravel\Sanctum\Sanctum::actingAs($this->cashier, ['*']);
+        Sanctum::actingAs($this->cashier, ['*']);
 
-        app(\App\Services\CashierShiftService::class)->openShift(
+        app(CashierShiftService::class)->openShift(
             cashier: $this->cashier,
             actor: $this->cashier,
             openingCash: 100000,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http\Middleware;
 
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\DineArea;
 use App\Models\DineOrder;
@@ -19,6 +20,7 @@ use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class HandleInertiaRequestsTest extends TestCase
@@ -134,7 +136,7 @@ class HandleInertiaRequestsTest extends TestCase
         [$outletA, $warehouseA] = $this->makeOutletWithWarehouse('BAT');
         [, $warehouseB] = $this->makeOutletWithWarehouse('BBT');
 
-        $category = \App\Models\Category::create(['name' => 'Kat', 'image' => '', 'description' => '']);
+        $category = Category::create(['name' => 'Kat', 'image' => '', 'description' => '']);
         $product = Product::create([
             'title' => 'Produk Batch',
             'barcode' => 'BATCH-1',
@@ -293,7 +295,7 @@ class HandleInertiaRequestsTest extends TestCase
 
         $user = User::factory()->create();
         $user->markEmailAsVerified();
-        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
         $user->assignRole($role);
 
         $response = $this->actingAs($user)->get('/dashboard/access');

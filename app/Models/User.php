@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,7 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable {
+    use BelongsToTenant, HasApiTokens, HasFactory, HasRoles, Notifiable {
         hasPermissionTo as protected spatieHasPermissionTo;
         checkPermissionTo as protected spatieCheckPermissionTo;
     }
@@ -25,6 +27,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'tenant_id',
         'name',
         'email',
         'password',
@@ -99,6 +102,11 @@ class User extends Authenticatable
     public function isSuperAdmin()
     {
         return $this->hasRole('super-admin');
+    }
+
+    public function isPlatformSuperAdmin(): bool
+    {
+        return ($this->hasRole('platform-superadmin') || $this->isSuperAdmin()) && $this->tenant_id === null;
     }
 
     public function hasPermissionTo($permission, $guardName = null): bool

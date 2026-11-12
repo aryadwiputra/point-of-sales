@@ -26,7 +26,7 @@ import {
 } from "@/Utils/offlineDb";
 
 export default function POSLayout({ children }) {
-    const { auth, storeProfile, activeCashierShift, appVersion } = usePage().props;
+    const { auth, storeProfile, activeCashierShift, appVersion, brand } = usePage().props;
     const { darkMode, themeSwitcher } = useTheme();
     const { start: startTour, isActive: tourActive } = useTour("pos");
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
@@ -122,7 +122,7 @@ export default function POSLayout({ children }) {
                             {storeProfile?.logo ? (
                                 <img
                                     src={storeProfile.logo}
-                                    alt={storeProfile?.name || "Store"}
+                                    alt={storeProfile?.name || brand?.name || "Toko"}
                                     className="w-full h-full object-contain"
                                 />
                             ) : (
@@ -132,7 +132,7 @@ export default function POSLayout({ children }) {
                             )}
                         </div>
                         <span className="hidden sm:block text-lg font-bold text-slate-800 dark:text-white">
-                            {storeProfile?.name || "KASIR"}
+                            {storeProfile?.name || brand?.name || "Bihaju POS"}
                         </span>
                     </Link>
 

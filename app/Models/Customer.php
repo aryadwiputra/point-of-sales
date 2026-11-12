@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     /**
      * fillable
@@ -15,6 +16,7 @@ class Customer extends Model
      * @var array
      */
     protected $fillable = [
+        'tenant_id',
         'name',
         'no_telp',
         'address',

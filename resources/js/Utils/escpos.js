@@ -31,7 +31,7 @@ function buildReceiptBytes(data, paperSize = "80mm") {
     };
 
     emphasize(true);
-    center(data.store_name || "TOKO");
+    center(data.store_name || "Bihaju POS");
     emphasize(false);
     if (data.store_address) center(data.store_address.slice(0, width));
     if (data.store_phone) center(`Telp: ${data.store_phone}`);
@@ -62,7 +62,7 @@ function buildReceiptBytes(data, paperSize = "80mm") {
     if (data.change > 0) leftRight("Kembali", data.money(data.change));
     if (data.note) bytes.push(...textBytes(`Cat: ${data.note.slice(0, width * 2)}\n`));
     line();
-    center(data.footer || "Terima kasih!");
+    center(data.footer || "Terima kasih — Bihaju POS, Bikin Usaha Maju");
     bytes.push(...textBytes("\n\n"));
 
     // Cut: GS V 66 0

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PaymentSetting extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     public const GATEWAY_MIDTRANS = 'midtrans';
 
@@ -22,6 +23,7 @@ class PaymentSetting extends Model
     ];
 
     protected $fillable = [
+        'tenant_id',
         'default_gateway',
         'outlet_id',
         'bank_transfer_enabled',

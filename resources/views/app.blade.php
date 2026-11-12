@@ -5,22 +5,26 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="theme-color" content="#4f46e5">
-    <meta name="description" content="Dikasir — sistem kasir (POS) open source untuk UMKM Indonesia. Multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode. Gratis, GNU AGPL-3.0.">
-    <meta property="og:site_name" content="Dikasir">
-    <meta property="og:title" content="Dikasir — Sistem Kasir Open Source untuk UMKM">
-    <meta property="og:description" content="POS gratis & open source: multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode. Laravel 13 + React 19.">
+    <meta name="application-name" content="{{ config('brand.name', config('app.name', 'Bihaju POS')) }}">
+    <meta name="description" content="{{ config('brand.description', 'Bihaju POS — platform kasir (POS) SaaS. Bikin Usaha Maju.') }}">
+    <meta property="og:site_name" content="{{ config('brand.name', 'Bihaju POS') }}">
+    <meta property="og:title" content="{{ config('brand.name', 'Bihaju POS') }} — {{ config('brand.tagline', 'Bikin Usaha Maju') }}">
+    <meta property="og:description" content="{{ config('brand.description', 'Platform kasir (POS) SaaS untuk membantu usaha tumbuh lebih cepat, rapi, dan terukur.') }}">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ config('app.url') }}/">
-    <meta property="og:image" content="{{ config('app.url') }}/images/og-image.png">
+    <meta property="og:url" content="{{ rtrim(config('brand.url', config('app.url')), '/') }}/">
+    <meta property="og:image" content="{{ rtrim(config('brand.url', config('app.url')), '/') }}/images/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Dikasir — Sistem Kasir Open Source untuk UMKM">
-    <meta name="twitter:description" content="POS gratis & open source: multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode.">
-    <meta name="twitter:image" content="{{ config('app.url') }}/images/og-image.png">
+    <meta name="twitter:title" content="{{ config('brand.name', 'Bihaju POS') }} — {{ config('brand.tagline', 'Bikin Usaha Maju') }}">
+    <meta name="twitter:description" content="{{ config('brand.description', 'Platform kasir (POS) SaaS untuk membantu usaha tumbuh lebih cepat, rapi, dan terukur.') }}">
+    <meta name="twitter:image" content="{{ rtrim(config('brand.url', config('app.url')), '/') }}/images/og-image.png">
+    <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <link rel="manifest" href="/manifest.json">
 
-    <title data-inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title data-inertia>{{ config('brand.name', config('app.name', 'Bihaju POS')) }}</title>
 
     <!-- Fonts - Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

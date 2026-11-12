@@ -105,14 +105,14 @@ class DineTableController extends Controller
         abort_unless($this->ownsTable($dineTable, request()), 404);
         $url = config('app.url').'/dine/'.$dineTable->token;
 
-        $png = QrCode::format('png')
+        $svg = QrCode::format('svg')
             ->size(300)
             ->margin(2)
             ->generate($url);
 
-        return response($png, 200, [
-            'Content-Type' => 'image/png',
-            'Content-Disposition' => 'inline; filename="qr-'.$dineTable->id.'.png"',
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Content-Disposition' => 'inline; filename="qr-'.$dineTable->id.'.svg"',
         ]);
     }
 

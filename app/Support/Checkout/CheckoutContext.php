@@ -30,6 +30,8 @@ class CheckoutContext
         public readonly ?string $clientUuid = null,
         public readonly ?string $syncFingerprint = null,
         public readonly ?array $onlyCartIds = null,
+        // Kode referral member Bihaju (opsional) — dikirim saat integrasi aktif.
+        public readonly ?string $bihajuMemberCode = null,
     ) {}
 
     public function isSplit(): bool

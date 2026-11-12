@@ -136,7 +136,7 @@ class DineOrderController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $storeName = Setting::getForOutlet('store_name', $order->table?->area?->outlet, 'Restoran');
+        $storeName = Setting::getForOutlet('store_name', $order->table?->area?->outlet, config('brand.name', 'Bihaju POS'));
 
         return Inertia::render('Public/DineOrderStatus', [
             'order' => $order,

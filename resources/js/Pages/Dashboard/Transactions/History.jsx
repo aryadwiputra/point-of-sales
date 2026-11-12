@@ -4,6 +4,7 @@ import DashboardLayout from "@/Layouts/DashboardLayout";
 import Button from "@/Components/Dashboard/Button";
 import Table from "@/Components/Dashboard/Table";
 import Pagination from "@/Components/Dashboard/Pagination";
+import TransactionDetailModal from "@/Components/Dashboard/TransactionDetailModal";
 import { useAuthorization } from "@/Utils/authorization";
 import {
     IconDatabaseOff,
@@ -48,6 +49,7 @@ const History = ({ transactions, filters, warehouses = [] }) => {
         open: false,
         transaction: null,
     });
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
     const [isConfirming, setIsConfirming] = useState(false);
 
     useEffect(() => {
@@ -269,7 +271,8 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                     {rows.map((transaction, index) => (
                                         <tr
                                             key={transaction.id}
-                                            className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                            onClick={() => setSelectedTransaction(transaction)}
+                                            className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                                         >
                                             <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
                                                 {index +
@@ -277,9 +280,17 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                                     (currentPage - 1) * perPage}
                                             </td>
                                             <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedTransaction(transaction);
+                                                    }}
+                                                    className="text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:underline text-left inline-flex items-center gap-1"
+                                                    title="Lihat detail pesanan"
+                                                >
                                                     {transaction.invoice}
-                                                </span>
+                                                </button>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
                                                 {transaction.created_at}
@@ -323,12 +334,13 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                                       "pending" &&
                                                   canConfirmPayment ? (
                                                     <button
-                                                        onClick={() =>
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             setConfirmModal({
                                                                 open: true,
                                                                 transaction,
-                                                            })
-                                                        }
+                                                            });
+                                                        }}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400 rounded-full hover:bg-warning-200 dark:hover:bg-warning-900/50 transition-colors"
                                                     >
                                                         Pending - Konfirmasi
@@ -340,8 +352,16 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedTransaction(transaction)}
+                                                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/50 transition-colors"
+                                                        title="Lihat Detail Pesanan"
+                                                    >
+                                                        <IconReceipt size={18} />
+                                                    </button>
                                                     {canCreateSalesReturn ? (
                                                         transaction.can_create_sales_return ? (
                                                         <Link
@@ -416,16 +436,24 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                             {rows.map((transaction, index) => (
                                 <div
                                     key={transaction.id}
-                                    className="p-4 space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm"
+                                    onClick={() => setSelectedTransaction(transaction)}
+                                    className="p-4 space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm hover:border-primary-300 dark:hover:border-primary-700 transition-all cursor-pointer"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-1">
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 No {index + 1 + (currentPage - 1) * perPage}
                                             </p>
-                                            <p className="text-base font-semibold text-slate-900 dark:text-white">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedTransaction(transaction);
+                                                }}
+                                                className="text-base font-semibold text-primary-600 dark:text-primary-400 hover:underline text-left block"
+                                            >
                                                 {transaction.invoice}
-                                            </p>
+                                            </button>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">
                                                 {transaction.created_at}
                                             </p>
@@ -449,12 +477,13 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                                       "pending" &&
                                                   canConfirmPayment ? (
                                                     <button
-                                                        onClick={() =>
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             setConfirmModal({
                                                                 open: true,
                                                                 transaction,
-                                                            })
-                                                        }
+                                                            });
+                                                        }}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400 rounded-full"
                                                     >
                                                         Pending
@@ -512,7 +541,7 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
                                         {canCreateSalesReturn ? (
                                             transaction.can_create_sales_return ? (
                                             <Link
@@ -530,15 +559,13 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                                             </div>
                                             )
                                         ) : null}
-                                        <Link
-                                            href={route(
-                                                "transactions.print",
-                                                transaction.invoice
-                                            )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedTransaction(transaction)}
                                             className="inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50"
                                         >
                                             Detail
-                                        </Link>
+                                        </button>
                                         <a
                                             href={route(
                                                 "transactions.public",
@@ -757,6 +784,12 @@ const History = ({ transactions, filters, warehouses = [] }) => {
                     </div>
                 </div>
             )}
+            {/* Transaction Detail Modal */}
+            <TransactionDetailModal
+                isOpen={!!selectedTransaction}
+                onClose={() => setSelectedTransaction(null)}
+                transaction={selectedTransaction}
+            />
         </>
     );
 };

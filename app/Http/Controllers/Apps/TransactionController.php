@@ -20,6 +20,7 @@ use App\Services\AuditLogService;
 use App\Services\BatchService;
 use App\Services\CashierShiftService;
 use App\Services\CheckoutService;
+use App\Services\Finance\FinanceEventEmitter;
 use App\Services\LoyaltyService;
 use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
@@ -48,6 +49,7 @@ class TransactionController extends Controller
         private readonly TransactionTenderService $tenderService,
         private readonly OutletAccessService $outletAccessService,
         private readonly CheckoutService $checkoutService,
+        private readonly FinanceEventEmitter $financeEvents,
     ) {}
 
     /**
@@ -283,27 +285,36 @@ class TransactionController extends Controller
             // Composite price = sum component prices
             $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
         } else {
-            $unitId = (int) (($validated['unit_id'] ?? null) ?: $product->baseUnit()?->id ?: 1);
+            $unitConversion = app(UnitConversionService::class);
+            $requestedUnitId = isset($validated['unit_id']) && $validated['unit_id'] !== null && $validated['unit_id'] !== ''
+                ? (int) $validated['unit_id']
+                : null;
+            $baseUnit = $product->baseUnit();
+            $unitId = $requestedUnitId ?? $baseUnit?->id;
 
             // Reject an explicitly provided unit that does not belong to this product
-            if (! empty($validated['unit_id'] ?? null) && ! $product->units()->whereKey($unitId)->exists()) {
+            if ($requestedUnitId !== null && ! $product->units()->whereKey($requestedUnitId)->exists()) {
                 return redirect()->back()->with('error', 'Satuan tidak valid untuk produk ini.');
             }
-
-            $unitConversion = app(UnitConversionService::class);
-            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
 
             $availableStock = $warehouseId
                 ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
                 : (int) $product->stock;
 
+            if ($unitId !== null) {
+                $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
+                $sellPrice = $unitConversion->getSellPrice($product, $unitId);
+                $pu = $product->units()->where('unit_id', $unitId)->first();
+                $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
+            } else {
+                $baseQty = (float) $validated['qty'];
+                $sellPrice = (int) $product->sell_price;
+                $conversionFactor = 1;
+            }
+
             if ($availableStock < $baseQty) {
                 return redirect()->back()->with('error', 'Stok tidak mencukupi.');
             }
-
-            $sellPrice = $unitConversion->getSellPrice($product, $unitId);
-            $pu = $product->units()->where('unit_id', $unitId)->first();
-            $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
         }
         if (! isset($conversionFactor)) {
             $conversionFactor = 1;
@@ -660,6 +671,9 @@ class TransactionController extends Controller
             tenderInput: $tenderInput,
             outlet: $outlet,
             bankAccountId: $request->input('bank_account_id'),
+            bihajuMemberCode: $request->filled('bihaju_member_code')
+                ? trim((string) $request->input('bihaju_member_code'))
+                : null,
         );
 
         $result = $this->checkoutService->execute($context);
@@ -711,7 +725,7 @@ class TransactionController extends Controller
                     ->route('transactions.print', $result->transaction->invoice)
                     ->with('error', $exception->getMessage());
             }
-        } elseif ($paymentGateway) {
+        } elseif ($paymentGateway && $paymentGateway !== 'bank_transfer') {
             try {
                 $paymentResponse = $paymentGateway === 'qris'
                     ? $paymentGatewayManager->createQrisPayment($result->transaction, $paymentSetting)
@@ -788,8 +802,12 @@ class TransactionController extends Controller
                 'cashier:id,name',
                 'warehouse:id,code,name',
                 'cashierShift:id,opened_at,status',
-                'customer:id,name',
+                'customer:id,name,no_telp,address,province_name,regency_name,district_name,village_name',
                 'receivable',
+                'details.product:id,title,barcode,sku,image',
+                'details.unit:id,name,symbol',
+                'bankAccount:id,bank_name,account_name,account_number',
+                'tenders',
             ])
             ->withSum('details as total_items', 'qty')
             ->withSum('profits as total_profit', 'total')
@@ -896,6 +914,15 @@ class TransactionController extends Controller
         $transaction->update([
             'payment_status' => 'paid',
         ]);
+
+        $transactionId = $transaction->id;
+        $emitter = $this->financeEvents;
+        DB::afterCommit(function () use ($transactionId, $emitter) {
+            $paid = Transaction::find($transactionId);
+            if ($paid) {
+                $emitter->emitPaymentReceivedForTransaction($paid, 'bank_transfer_confirmed');
+            }
+        });
 
         $this->auditLogService->log(
             event: 'transaction.payment_confirmed',
