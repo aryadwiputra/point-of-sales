@@ -312,7 +312,7 @@ class ProductController extends Controller
     {
         return [
             'is_composite' => 'nullable|boolean',
-            'components' => 'required_if:is_composite,1,true|array|min:1',
+            'components' => 'exclude_unless:is_composite,1,true|required|array|min:1',
             'components.*.component_product_id' => 'required|integer|distinct|exists:products,id',
             'components.*.qty' => 'required|integer|min:1',
         ];
