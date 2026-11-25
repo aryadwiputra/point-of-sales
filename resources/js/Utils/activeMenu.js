@@ -1,5 +1,16 @@
 export function pathOf(url = "") {
-    const path = String(url).split(/[?#]/)[0];
+    let path = String(url ?? "");
+
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            path = new URL(path).pathname;
+        } catch {
+            path = path.replace(/^https?:\/\/[^/]+/i, "");
+        }
+    }
+
+    path = path.split(/[?#]/)[0];
+
     if (path.length > 1 && path.endsWith("/")) {
         return path.replace(/\/+$/, "");
     }
