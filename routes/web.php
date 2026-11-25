@@ -11,6 +11,8 @@ use App\Http\Controllers\Apps\CustomerController;
 use App\Http\Controllers\Apps\CustomerSegmentController;
 use App\Http\Controllers\Apps\CustomerVoucherController;
 use App\Http\Controllers\Apps\DineAreaController;
+use App\Http\Controllers\Apps\DineBillController;
+use App\Http\Controllers\Apps\DineSessionController;
 use App\Http\Controllers\Apps\DineTableController;
 use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
@@ -431,6 +433,33 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('/dine-orders', [App\Http\Controllers\Apps\DineOrderController::class, 'index'])->middleware('permission:dine-orders-access')->name('dine-orders.index');
     Route::post('/dine-orders/{dineOrder}/accept', [App\Http\Controllers\Apps\DineOrderController::class, 'accept'])->middleware('permission:dine-orders-process')->name('dine-orders.accept');
     Route::post('/dine-orders/{dineOrder}/reject', [App\Http\Controllers\Apps\DineOrderController::class, 'reject'])->middleware('permission:dine-orders-process')->name('dine-orders.reject');
+
+    // dine-in sessions & bills
+    Route::post('/dine-tables/{dineTable}/sessions', [DineSessionController::class, 'open'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-sessions.store');
+    Route::post('/dine-sessions/{dineSession}/close', [DineSessionController::class, 'close'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-sessions.close');
+    Route::post('/dine-sessions/{dineSession}/move', [DineSessionController::class, 'move'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-sessions.move');
+    Route::post('/dine-sessions/{dineSession}/merge', [DineSessionController::class, 'merge'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-sessions.merge');
+
+    Route::post('/dine-bills/{dineBill}/submit-cart', [DineBillController::class, 'submitCart'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-bills.submit-cart');
+    Route::delete('/dine-bills/{dineBill}/items/{dineOrderItem}', [DineBillController::class, 'voidItem'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-bills.void-item');
+    Route::post('/dine-bills/{dineBill}/split', [DineBillController::class, 'split'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-bills.split');
+    Route::post('/dine-bills/{dineBill}/settle', [DineBillController::class, 'settle'])
+        ->middleware('permission:dine-bills-process')
+        ->name('dine-bills.settle');
 
     // modifier library
     Route::get('/modifiers', [ModifierController::class, 'index'])->middleware('permission:modifiers-access')->name('modifiers.index');

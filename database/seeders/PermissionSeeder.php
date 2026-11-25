@@ -181,6 +181,8 @@ class PermissionSeeder extends Seeder
         $create('dine-tables-delete');
         $create('dine-orders-access');
         $create('dine-orders-process');
+        $create('dine-bills-access');
+        $create('dine-bills-process');
 
         // modifiers
         $create('modifiers-access');

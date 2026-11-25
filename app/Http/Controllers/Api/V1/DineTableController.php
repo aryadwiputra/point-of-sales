@@ -108,6 +108,11 @@ class DineTableController extends AppsDineTableController
     public function destroyTable(Request $request, DiningTable $dineTable): JsonResponse
     {
         abort_unless($this->ownsTable($dineTable, $request), 404);
+
+        if ($dineTable->sessions()->exists()) {
+            return response()->json(['message' => 'Meja memiliki riwayat sesi dan tidak dapat dihapus.'], 422);
+        }
+
         $dineTable->delete();
 
         return $this->noContent();

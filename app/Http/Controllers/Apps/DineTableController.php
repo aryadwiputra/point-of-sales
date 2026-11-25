@@ -3,8 +3,13 @@
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Models\BankAccount;
+use App\Models\Customer;
 use App\Models\DineArea;
+use App\Models\DineSession;
 use App\Models\DiningTable;
+use App\Models\PaymentSetting;
+use App\Services\DineSessionService;
 use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,7 +19,10 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class DineTableController extends Controller
 {
-    public function __construct(protected readonly OutletAccessService $outletAccess) {}
+    public function __construct(
+        protected readonly OutletAccessService $outletAccess,
+        protected readonly DineSessionService $sessions,
+    ) {}
 
     public function index(Request $request)
     {
@@ -36,17 +44,50 @@ class DineTableController extends Controller
             $query->where('is_active', false);
         }
 
+        if ($request->input('occupancy') === 'available') {
+            $query->whereDoesntHave('sessions', fn ($session) => $session->where('status', DineSession::STATUS_OPEN));
+        } elseif ($request->input('occupancy') === 'occupied') {
+            $query->whereHas('sessions', fn ($session) => $session->where('status', DineSession::STATUS_OPEN));
+        }
+
         $tables = $query->orderBy('dine_area_id')->orderBy('sort_order')->get();
+        $occupancy = $this->sessions->occupancyForTables($tables);
+
+        $tables->each(function (DiningTable $table) use ($occupancy) {
+            $table->setAttribute('occupancy', $occupancy[$table->id] ?? null);
+        });
+
+        $sessions = DineSession::with([
+            'table:id,name',
+            'bills.items.product:id,title',
+            'bills.items.modifiers',
+            'bills.items.voidedBy:id,name',
+        ])
+            ->whereIn('dine_table_id', $tables->pluck('id'))
+            ->where('status', DineSession::STATUS_OPEN)
+            ->get();
+
         $areas = DineArea::whereNull('outlet_id')
             ->when($outlet, fn ($query) => $query->orWhere('outlet_id', $outlet->id))
-            ->orderBy('sort_order')->get();
+            ->orderBy('sort_order')
+            ->get();
+
+        $paymentSetting = PaymentSetting::forOutlet($outlet);
 
         return Inertia::render('Dashboard/DineIn/Tables/Index', [
             'tables' => $tables,
             'areas' => $areas,
+            'sessions' => $sessions,
+            'customers' => Customer::with([
+                'vouchers' => fn ($query) => $query->where('is_active', true)->where('is_used', false),
+            ])->orderBy('name')->get(),
+            'paymentGateways' => $paymentSetting?->enabledGateways($outlet) ?? [],
+            'defaultPaymentGateway' => $paymentSetting?->default_gateway ?? 'cash',
+            'bankAccounts' => BankAccount::active()->forOutlet($outlet)->ordered()->get(),
             'filters' => [
                 'area_id' => $request->area_id,
                 'is_active' => $request->input('is_active', 'all'),
+                'occupancy' => $request->input('occupancy', 'all'),
             ],
         ]);
     }
@@ -95,6 +136,11 @@ class DineTableController extends Controller
     public function destroy(DiningTable $dineTable)
     {
         abort_unless($this->ownsTable($dineTable, request()), 404);
+
+        if ($dineTable->sessions()->exists()) {
+            return back()->with('error', 'Meja memiliki riwayat sesi dan tidak dapat dihapus.');
+        }
+
         $dineTable->delete();
 
         return back()->with('success', 'Meja berhasil dihapus.');

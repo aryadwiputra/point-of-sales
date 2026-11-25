@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DineOrder;
+use App\Models\DineSession;
 use App\Models\DiningTable;
 use App\Models\Product;
 use App\Models\Setting;
@@ -87,10 +88,17 @@ class DineOrderController extends Controller
             ];
         }
 
+        $sessionId = DineSession::query()
+            ->where('dine_table_id', $table->id)
+            ->where('status', DineSession::STATUS_OPEN)
+            ->value('id');
+
         $order = DineOrder::create([
             'dine_table_id' => $table->id,
+            'dine_session_id' => $sessionId,
             'access_token' => (string) Str::uuid(),
             'status' => DineOrder::STATUS_SUBMITTED,
+            'source' => DineOrder::SOURCE_QR,
             'submitted_at' => now(),
             'payment_option' => $validated['payment_option'],
             'notes' => $validated['notes'] ?? null,
