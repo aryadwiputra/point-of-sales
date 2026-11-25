@@ -24,8 +24,13 @@ class DineOrderController extends Controller
             ? null
             : $this->outletAccessService->accessibleOutlets($request->user())->pluck('id')->all();
 
-        $orders = DineOrder::with(['table.area', 'items.product'])
-            ->whereIn('status', [DineOrder::STATUS_SUBMITTED, DineOrder::STATUS_ACCEPTED])
+        $orders = DineOrder::with(['table.area', 'session.table', 'items.product', 'items.bill'])
+            ->whereIn('status', [
+                DineOrder::STATUS_SUBMITTED,
+                DineOrder::STATUS_ACCEPTED,
+                DineOrder::STATUS_COMPLETED,
+                DineOrder::STATUS_CANCELLED,
+            ])
             ->when($outletIds !== null, function ($query) use ($outletIds, $includeLegacy) {
                 $query->where(function ($query) use ($outletIds, $includeLegacy) {
                     $query->whereHas('table.area', fn ($area) => $area->whereIn('outlet_id', $outletIds));

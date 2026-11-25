@@ -9,6 +9,7 @@ import {
     IconEye,
     IconDatabaseOff,
     IconRefresh,
+    IconArmchair,
 } from "@tabler/icons-react";
 import Table from "@/Components/Dashboard/Table";
 import { useAuthorization } from "@/Utils/authorization";
@@ -126,6 +127,15 @@ export default function Index({ orders }) {
                                                     />
                                                 </>
                                             )}
+                                            {order.dine_session_id && ["accepted", "completed"].includes(order.status) && (
+                                                <Button
+                                                    type="link"
+                                                    href={route("dine-tables.index")}
+                                                    label="Lihat Meja & Bill"
+                                                    icon={<IconArmchair size={16} strokeWidth={1.5} />}
+                                                    className="border border-primary-200 text-primary-600 hover:bg-primary-50 dark:border-primary-800 dark:text-primary-400"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -140,6 +150,11 @@ export default function Index({ orders }) {
                                                     </p>
                                                     {item.note && (
                                                         <p className="text-xs text-slate-400 mt-0.5">Catatan: {item.note}</p>
+                                                    )}
+                                                    {item.bill && (
+                                                        <p className="text-[11px] text-slate-400">
+                                                            Bill {item.bill.sequence} · {item.bill.status}
+                                                        </p>
                                                     )}
                                                 </div>
                                                 <div className="text-right">
