@@ -171,11 +171,15 @@ class PricingService
 
     private function buildPreview(Collection $carts, ?Customer $customer, Collection $rules, ?Outlet $outlet = null): array
     {
+        $carts->each(fn (Cart $cart) => $cart->loadMissing('modifiers'));
+
         $items = $carts->map(function (Cart $cart) use ($customer, $outlet) {
             // ponytail: composite sell_price is 0; unit price = stored cart price / qty
+            $modifierDelta = (int) $cart->modifiers->sum('price_delta');
+
             $baseUnitPrice = $cart->product->is_composite
                 ? (int) round($cart->price / max(1, (int) $cart->qty))
-                : $this->basePriceFor($cart->product, $customer, $outlet);
+                : $this->basePriceFor($cart->product, $customer, $outlet) + $modifierDelta;
 
             return [
                 'cart_id' => $cart->id,
