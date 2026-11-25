@@ -23,7 +23,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-    <title data-inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title data-inertia>{{ config('app.name', 'Dikasir') }}</title>
 
     <!-- Fonts - Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
