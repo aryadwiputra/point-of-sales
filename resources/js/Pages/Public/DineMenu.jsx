@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Head, router } from "@inertiajs/react";
 import { IconShoppingCart, IconMinus, IconPlus } from "@tabler/icons-react";
 import toast from "react-hot-toast";
+import ModifierModal from "@/Components/POS/ModifierModal";
 
 const fmt = (v) => Number(v || 0).toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
 
@@ -10,44 +11,87 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
     const [activeCategory, setActiveCategory] = useState("all");
     const [notes, setNotes] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [modalProduct, setModalProduct] = useState(null);
+
+    const optionsFor = (product) =>
+        (product?.modifier_groups || []).flatMap(
+            (group) => group.modifiers ?? group.options ?? []
+        );
+
+    const lineKey = (productId, modifierIds) =>
+        `${productId}:${[...(modifierIds || [])].sort((a, b) => a - b).join(",")}`;
+
+    const priceForLine = (item) => {
+        const product = products.find((candidate) => candidate.id === item.product_id);
+        if (!product) return 0;
+
+        const delta = (item.modifier_ids || []).reduce((total, id) => {
+            const option = optionsFor(product).find((candidate) => candidate.id === id);
+            return total + Number(option?.price_delta || 0);
+        }, 0);
+
+        return (Number(product.sell_price) + delta) * Number(item.qty);
+    };
+
+    const addLine = (productId, modifierIds = [], note = "") => {
+        setCart((current) => {
+            const key = lineKey(productId, modifierIds);
+            const index = current.findIndex(
+                (item) =>
+                    lineKey(item.product_id, item.modifier_ids) === key &&
+                    (item.note || "") === note
+            );
+
+            if (index >= 0) {
+                const next = [...current];
+                next[index] = { ...next[index], qty: next[index].qty + 1 };
+                return next;
+            }
+
+            return [...current, { product_id: productId, qty: 1, note, modifier_ids: modifierIds }];
+        });
+    };
 
     const addItem = (product) => {
-        setCart((prev) => {
-            const idx = prev.findIndex((c) => c.product_id === product.id);
-            if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = { ...updated[idx], qty: updated[idx].qty + 1 };
-                return updated;
+        if (product.has_modifiers) {
+            setModalProduct(product);
+            return;
+        }
+
+        addLine(product.id, [], "");
+    };
+
+    const removeItem = (line) => {
+        setCart((current) => {
+            const key = lineKey(line.product_id, line.modifier_ids);
+            const index = current.findIndex(
+                (item) =>
+                    lineKey(item.product_id, item.modifier_ids) === key &&
+                    (item.note || "") === (line.note || "")
+            );
+
+            if (index < 0) return current;
+
+            const next = [...current];
+
+            if (next[index].qty > 1) {
+                next[index] = { ...next[index], qty: next[index].qty - 1 };
+            } else {
+                next.splice(index, 1);
             }
-            return [...prev, { product_id: product.id, qty: 1, note: "" }];
+
+            return next;
         });
     };
 
-    const removeItem = (productId) => {
-        setCart((prev) => {
-            const idx = prev.findIndex((c) => c.product_id === productId);
-            if (idx < 0) return prev;
-            if (prev[idx].qty <= 1) {
-                return prev.filter((c) => c.product_id !== productId);
-            }
-            const updated = [...prev];
-            updated[idx] = { ...updated[idx], qty: updated[idx].qty - 1 };
-            return updated;
-        });
-    };
-
-    const cartTotal = () =>
-        cart.reduce((sum, item) => {
-            const p = products.find((pr) => pr.id === item.product_id);
-            return sum + (p?.sell_price ?? 0) * item.qty;
-        }, 0);
+    const cartTotal = () => cart.reduce((total, item) => total + priceForLine(item), 0);
 
     const cartCount = () => cart.reduce((s, i) => s + i.qty, 0);
 
-    const getQty = (productId) => {
-        const item = cart.find((c) => c.product_id === productId);
-        return item?.qty ?? 0;
-    };
+    const getQty = (productId) =>
+        cart
+            .filter((item) => item.product_id === productId)
+            .reduce((total, item) => total + Number(item.qty), 0);
 
     const handleSubmit = (paymentOption) => {
         if (!selfOrderEnabled) {
@@ -146,7 +190,7 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                                             ) : (
                                                 <div className="flex items-center gap-2 w-full">
                                                     <button
-                                                        onClick={() => removeItem(product.id)}
+                                                        onClick={() => removeItem(cart.find((item) => item.product_id === product.id))}
                                                         className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                                                     >
                                                         <IconMinus size={14} />
@@ -196,17 +240,47 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
 
                         <div className="space-y-3 max-h-64 overflow-y-auto">
                             {cart.map((item) => {
-                                const p = products.find((pr) => pr.id === item.product_id);
                                 return (
-                                    <div key={item.product_id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                                        <div>
-                                            <p className="font-medium text-sm">{p?.title}</p>
-                                            <p className="text-xs text-slate-500">{fmt(p?.sell_price ?? 0)}</p>
+                                    <div key={`${item.product_id}-${(item.modifier_ids || []).join("-")}-${item.note || ""}`} className="flex items-start justify-between gap-3 py-2 border-b border-slate-100 last:border-0">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-slate-900">
+                                                {products.find((p) => p.id === item.product_id)?.title}
+                                            </p>
+                                            {(item.modifier_ids || []).length > 0 && (
+                                                <p className="text-xs text-slate-500">
+                                                    {optionsFor(products.find((p) => p.id === item.product_id))
+                                                        .filter((option) => item.modifier_ids.includes(option.id))
+                                                        .map((option) => option.name)
+                                                        .join(", ")}
+                                                </p>
+                                            )}
+                                            {item.note && (
+                                                <p className="text-xs italic text-slate-500">
+                                                    Catatan: {item.note}
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-slate-500">
+                                                Rp{new Intl.NumberFormat("id-ID").format(priceForLine(item) / item.qty)} × {item.qty}
+                                            </p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => removeItem(item.product_id)} className="btn btn-xs btn-ghost">−</button>
-                                            <span className="text-sm font-medium w-6 text-center">{item.qty}</span>
-                                            <button onClick={() => addItem({ id: item.product_id })} className="btn btn-xs btn-ghost">+</button>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeItem(item)}
+                                                className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600"
+                                            >
+                                                −
+                                            </button>
+                                            <span className="text-sm font-medium w-5 text-center">
+                                                {item.qty}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => addLine(item.product_id, item.modifier_ids || [], item.note || "")}
+                                                className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600"
+                                            >
+                                                +
+                                            </button>
                                         </div>
                                     </div>
                                 );
@@ -244,6 +318,17 @@ export default function DineMenu({ table, categories, products, selfOrderEnabled
                         <button>close</button>
                     </form>
                 </dialog>
+
+                <ModifierModal
+                    show={Boolean(modalProduct)}
+                    product={modalProduct}
+                    unit={null}
+                    onClose={() => setModalProduct(null)}
+                    onConfirm={({ product, modifierIds, note }) => {
+                        addLine(product.id, modifierIds, note || "");
+                        setModalProduct(null);
+                    }}
+                />
             </div>
         </>
     );
