@@ -98,10 +98,6 @@ class DemoDatabaseResetter
                 if (isset($tableSet[$parent]) && $parent !== $table) {
                     $dependencies[$parent][] = $table;
                 }
-
-                if ($parent === $table) {
-                    throw new RuntimeException("Demo reset cannot order self-referencing table [{$table}].");
-                }
             }
         }
 
