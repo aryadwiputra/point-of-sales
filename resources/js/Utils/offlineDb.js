@@ -1,7 +1,7 @@
 import { openDB } from "idb";
 
 const DB_NAME = "pos-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /**
  * Queue record shape (v2):

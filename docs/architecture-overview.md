@@ -96,6 +96,7 @@ dan diorkestrasi oleh `DemoSeeder` (dijalankan lewat `php artisan seed:demo` ata
 
 - **Transaction** adalah pusat: details, profits, receivable, sales returns, campaign logs, discount approvals
 - **Product** adalah pusat inventory: stock opname, stock mutation, batch, composite, pricing rules, price list items, units
+- **Menu modifiers** — reusable `modifier_groups`/`modifiers` attached per product through `product_modifier_groups`, with `product_modifier_overrides` for per-product pricing. Cart lines, transaction details, and dine-in items snapshot their selections so receipts stay stable. `products.track_stock` disables inventory gating for non-stocked F&B items.
 - **Warehouse** adalah dimensi baru: hampir semua tabel stok & transaksi punya `warehouse_id`
 - **Audit Log** lintas modul: setiap perubahan penting dicatat via `AuditLogService`
 

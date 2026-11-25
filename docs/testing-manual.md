@@ -40,3 +40,15 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 - [ ] Antrean dengan shift **sudah ditutup** → item gagal sync dengan alasan "Shift kasir belum dibuka" dan tetap di antrean
 - [ ] Stok berkurang sesuai item yang tersinkron; harga di server dipakai (bukan harga klien)
 - [ ] Kirim antrean yang sama dua kali (double flush) → tidak ada duplikat transaksi (idempotency `client_uuid`)
+
+## Menu Modifiers and Non-Stocked Items
+
+- [ ] Create a `single` group with a required option and attach it to a product; the POS grid opens the picker instead of adding directly.
+- [ ] Create a `multiple` group with `max_select = 2`; the third option is disabled.
+- [ ] Set a per-product override; the modal total and the cart line use the override, not the global delta.
+- [ ] Add the same product twice with different options; two separate cart lines appear and both survive a hold/resume.
+- [ ] Add two lines with identical options and note; they merge into one line with quantity 2.
+- [ ] Check out and verify the thermal receipt (58 mm and 80 mm), the web print page, and the PDF receipt list each option and the item note.
+- [ ] Create a product with `track_stock = false` and zero stock; it remains orderable from POS and the dine-in QR menu, and stock is not decremented.
+- [ ] Run a dine-in self-order with modifiers, accept it in the dashboard, and confirm the created transaction shows the options and note.
+- [ ] Queue a sale offline with modifiers, reconnect, and confirm the synced transaction keeps the options and note.

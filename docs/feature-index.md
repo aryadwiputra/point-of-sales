@@ -19,6 +19,7 @@
 | Multi-Warehouse & Stock Transfer | `docs/features/multi-warehouse.md` | ✅ |
 | Batch / Expiry Tracking | `docs/features/inventory-stock.md` | ✅ |
 | Composite Products (Kits) | `docs/features/inventory-stock.md` | ✅ |
+| Menu Modifiers | Attach reusable option groups (size, sugar, topping) to menu items with per-product price overrides and snapshot pricing. | [modifiers.md](features/modifiers.md) |
 | Reorder Point | `docs/features/inventory-stock.md` | ✅ |
 | Unit Conversion (Multi-Satuan) | `docs/features/unit-conversion.md` | ✅ |
 
