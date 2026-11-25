@@ -94,7 +94,16 @@ function TableShape({ table, onDragStart, isSelected, onClick }) {
     );
 }
 
-export default function Index({ tables, areas, sessions = [], filters }) {
+export default function Index({
+    tables,
+    areas,
+    sessions = [],
+    customers = [],
+    paymentGateways = [],
+    defaultPaymentGateway = "cash",
+    bankAccounts = [],
+    filters,
+}) {
     const { can } = useAuthorization();
     const canCreate = can("dine-tables-create");
     const canUpdate = can("dine-tables-update");
@@ -678,6 +687,12 @@ export default function Index({ tables, areas, sessions = [], filters }) {
 
             <BillDrawer
                 session={activeSession}
+                tables={tables}
+                sessions={sessions}
+                customers={customers}
+                paymentGateways={paymentGateways}
+                defaultPaymentGateway={defaultPaymentGateway}
+                bankAccounts={bankAccounts}
                 selectedBillId={selectedBillId}
                 onSelectBill={setSelectedBillId}
                 onClose={() => {

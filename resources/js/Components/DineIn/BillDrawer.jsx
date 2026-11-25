@@ -8,6 +8,9 @@ import {
     IconPlus,
 } from "@tabler/icons-react";
 import SplitBillModal from "@/Components/DineIn/SplitBillModal";
+import MergeTableModal from "@/Components/DineIn/MergeTableModal";
+import MoveTableModal from "@/Components/DineIn/MoveTableModal";
+import SettleBillModal from "@/Components/DineIn/SettleBillModal";
 import toast from "react-hot-toast";
 
 const formatPrice = (value = 0) =>
@@ -23,8 +26,22 @@ const durationFor = (openedAt) => {
     return `${Math.floor(minutes / 60)}j ${minutes % 60}m`;
 };
 
-export default function BillDrawer({ session, selectedBillId, onSelectBill, onClose }) {
+export default function BillDrawer({
+    session,
+    tables = [],
+    sessions = [],
+    customers = [],
+    paymentGateways = [],
+    defaultPaymentGateway = "cash",
+    bankAccounts = [],
+    selectedBillId,
+    onSelectBill,
+    onClose,
+}) {
     const [splitBill, setSplitBill] = useState(null);
+    const [mergeOpen, setMergeOpen] = useState(false);
+    const [moveOpen, setMoveOpen] = useState(false);
+    const [settleOpen, setSettleOpen] = useState(false);
     const bills = session?.bills ?? [];
     const activeBills = bills.filter((bill) => ["open", "pending_approval"].includes(bill.status));
     const selectedBill = bills.find((bill) => bill.id === selectedBillId) ?? activeBills[0] ?? bills[0];
@@ -158,13 +175,20 @@ export default function BillDrawer({ session, selectedBillId, onSelectBill, onCl
                 </div>
 
                 {selectedBill && (
-                    <footer className="grid grid-cols-2 gap-2 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-4">
+                    <footer className="grid grid-cols-2 gap-2 border-t border-slate-200 p-4 dark:border-slate-800 sm:grid-cols-5">
                         <button
                             type="button"
                             onClick={() => router.visit(route("transactions.index"))}
                             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                         >
                             <IconPlus size={16} /> Tambah Item
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMoveOpen(true)}
+                            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                            Pindah
                         </button>
                         <button
                             type="button"
@@ -176,21 +200,14 @@ export default function BillDrawer({ session, selectedBillId, onSelectBill, onCl
                         </button>
                         <button
                             type="button"
-                            onClick={() => {
-                                const target = prompt("ID sesi meja tujuan untuk digabung:");
-                                if (target) {
-                                    router.post(route("dine-sessions.merge", session.id), {
-                                        target_session_id: Number(target),
-                                    });
-                                }
-                            }}
+                            onClick={() => setMergeOpen(true)}
                             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-100 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                         >
                             Gabung
                         </button>
                         <button
                             type="button"
-                            onClick={() => router.visit(route("transactions.index"))}
+                            onClick={() => setSettleOpen(true)}
                             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-500 text-sm font-medium text-white"
                         >
                             <IconCash size={16} /> Bayar
@@ -203,6 +220,28 @@ export default function BillDrawer({ session, selectedBillId, onSelectBill, onCl
                 show={Boolean(splitBill)}
                 bill={splitBill}
                 onClose={() => setSplitBill(null)}
+            />
+
+            <MergeTableModal
+                show={mergeOpen}
+                session={session}
+                sessions={sessions}
+                onClose={() => setMergeOpen(false)}
+            />
+            <MoveTableModal
+                show={moveOpen}
+                session={session}
+                tables={tables}
+                onClose={() => setMoveOpen(false)}
+            />
+            <SettleBillModal
+                show={settleOpen}
+                bill={selectedBill}
+                customers={customers}
+                paymentGateways={paymentGateways}
+                bankAccounts={bankAccounts}
+                defaultPaymentGateway={defaultPaymentGateway}
+                onClose={() => setSettleOpen(false)}
             />
         </div>
     );
