@@ -1,6 +1,6 @@
 {
-    "name": "Point of Sales",
-    "short_name": "POS",
+    "name": "Dikasir — Sistem Kasir untuk UMKM",
+    "short_name": "Dikasir",
     "description": "Sistem kasir online untuk UMKM",
     "start_url": "/",
     "display": "standalone",
@@ -9,7 +9,9 @@
     "orientation": "any",
     "icons": [
         { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png" },
-        { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png" }
+        { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png" },
+        { "src": "/images/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+        { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
     ],
     "categories": ["business", "finance"],
     "lang": "id-ID"

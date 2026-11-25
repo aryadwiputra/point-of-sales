@@ -1,0 +1,32 @@
+{
+  "brand": "Dikasir",
+  "tagline": "Kasir cepat untuk UMKM",
+  "brief": "Aplikasi kasir (POS) open-source untuk UMKM Indonesia: multi-outlet, stok, laporan, dan mode offline. Logo harus terasa cepat, rapi, terpercaya dan ramah — dekat dengan keseharian warung dan toko, bukan korporat.",
+  "adjectives": ["cepat", "rapi", "terpercaya", "ramah"],
+  "criteria": "Harus terbaca di 16 px (favicon/PWA), bekerja satu warna dan reversed, dan tidak menyamai klise keranjang belanja / barcode / koin.",
+  "mockups": ["app-icon", "website", "signage", "payment-card", "readme", "shopping-bag"],
+  "brand_color": "#4F46E5",
+  "greyscale": false,
+  "designer": "Dikasir",
+  "round": 1,
+  "concepts": [
+    {
+      "name": "Struk d",
+      "symbol": "src/dikasir-symbol-two-tone.svg",
+      "lockup": "src/dikasir-lockup-horizontal.svg",
+      "idea": "Huruf d dari nama Dikasir, dibentuk dari struk kasir: mangkuk bulat dan batang dengan sobekan bergerigi.",
+      "rationale": [
+        "Struk adalah artefak inti kasir — makna terbaca tanpa teks",
+        "Satu detail milik sendiri: gerigi sobekan di batang",
+        "Tetap 'd' ketika gerigi hilang di ukuran kecil (ada potongan small-size)",
+        "Satu keluarga huruf dengan wordmark, mudah diperluas jadi ikon sistem"
+      ]
+    }
+  ],
+  "recommendation": "Struk d — dipilih: paling punya karakter di kategori POS, relevan langsung ke nama dan fungsi, dan sudah diuji satu warna + reversed.",
+  "next_steps": [
+    "Integrasi ke aplikasi: favicon, ikon PWA, manifest, og-image",
+    "Wordmark kustom (opsional) menggantikan Inter Bold",
+    "Panduan pemakaian satu halaman (sudah disertakan)"
+  ]
+}

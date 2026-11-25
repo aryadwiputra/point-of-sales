@@ -19,6 +19,9 @@
     <meta name="twitter:description" content="POS gratis & open source: multi-warehouse, PPN, loyalty & CRM, WhatsApp gateway, offline mode.">
     <meta name="twitter:image" content="{{ config('app.url') }}/images/og-image.png">
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <title data-inertia>{{ config('app.name', 'Laravel') }}</title>
 
