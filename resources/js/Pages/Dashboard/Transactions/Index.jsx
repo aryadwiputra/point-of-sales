@@ -14,6 +14,7 @@ import CartPanel from "@/Components/POS/CartPanel";
 import ModifierModal from "@/Components/POS/ModifierModal";
 import CustomerSelect from "@/Components/POS/CustomerSelect";
 import NumpadModal from "@/Components/POS/NumpadModal";
+import TableSelector from "@/Components/POS/TableSelector";
 import HeldTransactions, {
     HoldButton,
 } from "@/Components/POS/HeldTransactions";
@@ -64,6 +65,8 @@ export default function Index({
     bankAccounts = [],
     warehouses = [],
     loyaltyTierOptions = [],
+    dineTables = [],
+    dineSessions = [],
 }) {
     const {
         auth,
@@ -95,6 +98,8 @@ export default function Index({
     const [paymentMethod, setPaymentMethod] = useState(
         defaultPaymentGateway ?? "cash"
     );
+    const [selectedDineTable, setSelectedDineTable] = useState(null);
+    const [selectedDineBillId, setSelectedDineBillId] = useState(null);
     const [payLater, setPayLater] = useState(false);
     const [dueDate, setDueDate] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -353,6 +358,10 @@ export default function Index({
         [activeSplitTenders]
     );
     const splitRemaining = payable - splitTotal;
+    const selectedDineSession = selectedDineTable
+        ? (dineSessions ?? []).find((session) => session.dine_table_id === selectedDineTable.id)
+        : null;
+    const selectedDineBills = (selectedDineSession?.bills ?? []).filter((bill) => bill.status === "open");
     const updateSplitTender = (index, patch) =>
         setSplitTenders((prev) =>
             prev.map((tender, i) =>
@@ -899,6 +908,49 @@ export default function Index({
         );
     };
 
+    const handleSendToTable = () => {
+        if (!selectedDineBillId) {
+            toast.error("Pilih bill tujuan terlebih dahulu.");
+            return;
+        }
+        if (!carts.length) {
+            toast.error("Keranjang kosong.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        router.post(
+            route("dine-bills.submit-cart", selectedDineBillId),
+            {},
+            {
+                onSuccess: () => {
+                    setDiscountInput("");
+                    setRedeemPointsInput("");
+                    setCashInput("");
+                    setShippingInput("");
+                    setSelectedCustomer(null);
+                    setSelectedBankAccount(null);
+                    resetSplitTenders();
+                    setSelectedVoucherId("");
+                    setPaymentMethod(defaultPaymentGateway ?? "cash");
+                    setPayLater(false);
+                    setDueDate("");
+                    setOrderType("in_store");
+                    setOrderNote("");
+                    setSelectedDineTable(null);
+                    setSelectedDineBillId(null);
+                    setIsSubmitting(false);
+                    toast.success("Pesanan dikirim ke meja.");
+                },
+                onError: () => {
+                    setIsSubmitting(false);
+                    toast.error("Gagal mengirim ke meja.");
+                },
+            }
+        );
+    };
+
     // Filter products including out of stock
     const allProducts = useMemo(() => {
         return products.filter((product) => {
@@ -1089,6 +1141,31 @@ export default function Index({
                     }`}
                     style={{ height: "calc(100vh - 4rem)" }}
                 >
+                    {dineTables.length > 0 && (
+                        <div className="border-b border-slate-200 dark:border-slate-800 flex-shrink-0 p-3">
+                            <TableSelector
+                                tables={dineTables}
+                                sessions={dineSessions}
+                                selectedTable={selectedDineTable}
+                                selectedBillId={selectedDineBillId}
+                                onSelectTable={(table) => {
+                                    setSelectedDineTable(table);
+                                    const session = table
+                                        ? (dineSessions ?? []).find((candidate) => candidate.dine_table_id === table.id)
+                                        : null;
+                                    setSelectedDineBillId(
+                                        (session?.bills ?? []).find((bill) => bill.status === "open")?.id ?? null
+                                    );
+                                }}
+                                onSelectBill={setSelectedDineBillId}
+                                onClear={() => {
+                                    setSelectedDineTable(null);
+                                    setSelectedDineBillId(null);
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {/* Customer Select - Fixed */}
                     <div
                         data-tour="pos-customer"
@@ -1325,7 +1402,10 @@ export default function Index({
                         </div>
 
                         {/* Payment Details - Scrollable */}
-                        <div data-tour="pos-payment" className="p-3 space-y-4">
+                        <div
+                            data-tour="pos-payment"
+                            className={`p-3 space-y-4 ${selectedDineTable ? "hidden" : ""}`}
+                        >
                             {/* Pay later toggle */}
                             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                                 <div>
@@ -2117,6 +2197,30 @@ export default function Index({
                             )}
                         </button>
                     </div>
+
+                        {selectedDineTable && (
+                            <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0 p-3">
+                                <button
+                                    type="button"
+                                    onClick={handleSendToTable}
+                                    disabled={!carts.length || !selectedDineBillId || isSubmitting}
+                                    className={`w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                                        carts.length && selectedDineBillId && !isSubmitting
+                                            ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
+                                            : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                    }`}
+                                >
+                                    {isSubmitting ? (
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <>
+                                            <IconReceipt size={18} />
+                                            <span>Kirim ke Meja</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                 </div>
             </div>
 

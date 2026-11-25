@@ -9,10 +9,13 @@ use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerVoucher;
+use App\Models\DineSession;
+use App\Models\DiningTable;
 use App\Models\DiscountApprovalLog;
 use App\Models\Outlet;
 use App\Models\PaymentSetting;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
 use App\Models\Warehouse;
@@ -174,6 +177,16 @@ class TransactionController extends Controller
         // Get active bank accounts for bank transfer
         $bankAccounts = BankAccount::active()->forOutlet($outlet)->ordered()->get();
 
+        $dineEnabled = Setting::getBool('dine_in_enabled', true);
+        $dineTables = $dineEnabled
+            ? DiningTable::with('area')->active()->orderBy('name')->get()
+            : collect();
+        $dineSessions = $dineEnabled
+            ? DineSession::with(['bills:id,dine_session_id,sequence,status,grand_total'])
+                ->where('status', DineSession::STATUS_OPEN)
+                ->get()
+            : collect();
+
         return Inertia::render('Dashboard/Transactions/Index', [
             'carts' => $carts,
             'carts_total' => $carts_total,
@@ -188,6 +201,8 @@ class TransactionController extends Controller
             'warehouses' => $this->outletAccessService->salesWarehousesFor(auth()->user())->values(),
             'shiftSummary' => $this->cashierShiftService->summarizeForDisplay($activeShift),
             'loyaltyTierOptions' => $this->loyaltyService->tierOptions(),
+            'dineTables' => $dineTables,
+            'dineSessions' => $dineSessions,
         ]);
     }
 
