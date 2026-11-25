@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from "@inertiajs/react";
-import BrandLockup from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 import {
     IconMail,
     IconLoader2,
@@ -32,9 +32,12 @@ export default function ForgotPassword({ status, botGuard }) {
                         <div className="mb-8">
                             <Link
                                 href="/"
-                                className="inline-flex items-center mb-6"
+                                className="inline-flex items-center gap-2.5 mb-6"
                             >
-                                <BrandLockup height={38} />
+                                <BrandMark size={34} />
+                                <span className="text-xl font-bold text-slate-900 dark:text-white">
+                                    Dikasir
+                                </span>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 Reset Password

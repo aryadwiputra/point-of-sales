@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Head, useForm, usePage } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
-import BrandLockup from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 import {
     IconBuildingStore,
     IconTags,
@@ -228,8 +228,11 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
 
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
                 <div className="w-full max-w-2xl">
-                    <div className="flex items-center mb-8 justify-center">
-                        <BrandLockup height={40} />
+                    <div className="flex items-center gap-3 mb-8 justify-center">
+                        <BrandMark size={38} />
+                        <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                            Dikasir
+                        </span>
                     </div>
 
                     <div className="flex justify-center gap-1 mb-4">

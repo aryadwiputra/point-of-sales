@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
-import BrandLockup from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 import {
     IconShieldLock,
     IconLock,
@@ -43,8 +43,11 @@ export default function ConfirmPassword({ challenge = null }) {
                 <div className="flex-1 flex items-center justify-center p-8">
                     <div className="w-full max-w-md">
                         <div className="mb-8">
-                            <Link href="/" className="inline-flex items-center mb-6">
-                                <BrandLockup height={38} />
+                            <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
+                                <BrandMark size={34} />
+                                <span className="text-xl font-bold text-slate-900 dark:text-white">
+                                    Dikasir
+                                </span>
                             </Link>
                             <div className="w-14 h-14 rounded-2xl bg-primary-100 dark:bg-primary-950/50 flex items-center justify-center mb-5">
                                 <IconShieldLock size={28} className="text-primary-600 dark:text-primary-400" />

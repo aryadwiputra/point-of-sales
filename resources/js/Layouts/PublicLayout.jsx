@@ -4,7 +4,7 @@ import {
     IconStar,
     IconArrowRight,
 } from "@tabler/icons-react";
-import BrandLockup, { BrandMark } from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 
 const GITHUB_URL = "https://github.com/aryadwiputra/point-of-sales";
 const DOCS_URL = `${GITHUB_URL}/blob/main/docs/getting-started.md`;
@@ -22,8 +22,11 @@ export default function PublicLayout({ children, active = "" }) {
             {/* ============ NAVBAR ============ */}
             <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
                 <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-                    <Link href="/" className="flex items-center">
-                        <BrandLockup height={32} />
+                    <Link href="/" className="flex items-center gap-2.5">
+                        <BrandMark size={26} />
+                        <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                            Dikasir
+                        </span>
                     </Link>
 
                     <div className="hidden md:flex items-center gap-7">

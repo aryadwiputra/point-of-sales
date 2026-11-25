@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
-import BrandLockup, { BrandMark } from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 import {
     IconMail,
     IconLock,
@@ -46,9 +46,12 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                         <div className="mb-8">
                             <Link
                                 href="/"
-                                className="inline-flex items-center mb-6"
+                                className="inline-flex items-center gap-2.5 mb-6"
                             >
-                                <BrandLockup height={38} />
+                                <BrandMark size={34} />
+                                <span className="text-xl font-bold text-slate-900 dark:text-white">
+                                    Dikasir
+                                </span>
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {t("auth.login.subtitle")}

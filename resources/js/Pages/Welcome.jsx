@@ -1,6 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
 import PublicLayout from "@/Layouts/PublicLayout";
-import BrandLockup from "@/Components/Brand/Logo";
+import { BrandMark } from "@/Components/Brand/Logo";
 import {
     IconShoppingCart,
     IconWallet,
@@ -159,7 +159,7 @@ export default function Welcome() {
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center max-w-4xl mx-auto">
                         <div className="flex justify-center mb-7">
-                            <BrandLockup height={46} />
+                            <BrandMark size={64} />
                         </div>
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 text-sm font-medium mb-6 border border-primary-100 dark:border-primary-900">
                             <IconBrandGithub size={16} />
