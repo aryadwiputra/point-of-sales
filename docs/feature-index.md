@@ -6,6 +6,7 @@
 |-------|------|--------|
 | POS / Checkout | `docs/features/pos-transactions.md` | ✅ |
 | Dine-in Sessions & Bills | [dine-in.md](features/dine-in.md) | ✅ |
+| Kitchen Operations (KDS) | [kitchen.md](features/kitchen.md) | ✅ |
 | Sales Return | `docs/features/sales-returns.md` | ✅ |
 | Customer Portal (self-service) | `docs/features/customer-portal.md` | ✅ |
 | Offline Mode | `docs/features/offline-mode.md` | ✅ (queue + auto-sync dengan batasan cart) |

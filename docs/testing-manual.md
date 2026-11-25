@@ -63,3 +63,17 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 6. Merge two occupied tables. Confirm open bills move, sequences renumber, and the source table becomes available.
 7. Settle each bill with cash. Confirm change, one Transaction per bill, completed orders, and a free table.
 8. Repeat with split tender, bank transfer, gateway pending, pay later, voucher, points, and manual discount above the approval threshold.
+
+## Kitchen Display (KDS)
+
+- [ ] Create two active stations with different category mappings and one product override; verify the override wins.
+- [ ] Accept a QR dine-in order and confirm one ticket per station, with product, quantity, modifiers, and note snapshots.
+- [ ] Submit a staff round from POS to a table bill and confirm tickets appear.
+- [ ] Checkout a `takeaway` sale and confirm a ticket appears; checkout a plain `in_store` sale and confirm no ticket appears.
+- [ ] Move a table and confirm the KDS table label changes without creating a new ticket.
+- [ ] Mark an item cooking then ready, undo it, and confirm the column and timestamps follow the allowed transitions.
+- [ ] Clear a ready ticket and confirm it disappears from the board.
+- [ ] Void a bill item and confirm its ticket item disappears as cancelled; voiding every item cancels the ticket.
+- [ ] Log in as a `kitchen` user and confirm only assigned stations are visible and `/dashboard` is forbidden.
+- [ ] Disable `kitchen_enabled` and confirm no new tickets are created while existing tickets remain readable.
+- [ ] Queue an offline POS takeaway sale, reconnect, and confirm the ticket appears after sync.

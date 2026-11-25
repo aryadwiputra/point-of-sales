@@ -102,6 +102,8 @@ dan diorkestrasi oleh `DemoSeeder` (dijalankan lewat `php artisan seed:demo` ata
 
 Dine-in separates inventory timing from revenue timing. `DineOrderService::accept()` locks the order, ensures an open `DineSession`, assigns a `DineBill`, snapshots `unit_cost`/`tax_type`/`tax_rate`, deducts stock, and writes `dine_order_item_batch_allocations`. It creates no `Transaction`. `DineBillSettlementService::settle()` locks the bill and its active items, applies voucher/points/manual discounts, computes tax from item snapshots with `TaxService`, resolves tenders and gateways with the POS services, writes one `Transaction`, and marks the bill settled. Discount approval is the only branch that leaves a bill in `pending_approval`.
 
+Kitchen operations are a projection over dine-in and POS sales. `KitchenTicketService` routes each sold item through a product override or category mapping, creates one `KitchenTicket` per source round per station, and snapshots only display data on `KitchenTicketItem`. Ticket state is independent of payment and settlement: dine-in accept, staff rounds, and takeaway/delivery checkout create tickets, while voiding a bill item cancels the matching ticket item. The KDS polls `/dashboard/kitchen/board` every 5 seconds; there are no broadcasting, queue, or transaction status columns involved.
+
 ## Alur Data Multi-Warehouse
 
 ```
