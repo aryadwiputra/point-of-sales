@@ -133,4 +133,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(AuditLog::class);
     }
+
+    public function kitchenStations(): BelongsToMany
+    {
+        return $this->belongsToMany(KitchenStation::class, 'kitchen_station_user')->withTimestamps();
+    }
 }
