@@ -753,6 +753,24 @@ export default function Print({ transaction }) {
                                                                         "Promo aktif"}
                                                                 </p>
                                                             )}
+                                                            {(item.modifiers || []).map((modifier, index) => (
+                                                                <p
+                                                                    key={`${modifier.name}-${index}`}
+                                                                    className="text-xs text-slate-500"
+                                                                >
+                                                                    + {modifier.group_name ? `${modifier.group_name}: ` : ""}
+                                                                    {modifier.name}
+                                                                    {Number(modifier.price_delta) !== 0
+                                                                        ? ` (${Number(modifier.price_delta) > 0 ? "+" : "-"}Rp${new Intl.NumberFormat("id-ID").format(Math.abs(Number(modifier.price_delta)))})`
+                                                                        : ""}
+                                                                </p>
+                                                            ))}
+
+                                                            {item.note && (
+                                                                <p className="text-xs italic text-slate-500">
+                                                                    Catatan: {item.note}
+                                                                </p>
+                                                            )}
                                                             {item.product
                                                                 ?.barcode && (
                                                                 <p className="text-xs text-slate-500 dark:text-slate-400">

@@ -56,6 +56,16 @@
                 $unit = $item->unit_price ?: ($qty ? $total / $qty : $total);
             @endphp
             <div style="font-weight:600;">{{ $item->product->title ?? 'Produk' }}</div>
+            @foreach ($item->modifiers as $modifier)
+                <div style="font-size: 9px; padding-left: 6px;">
+                    + {{ $modifier->name }}@if ((int) $modifier->price_delta !== 0) ({{ (int) $modifier->price_delta > 0 ? '+' : '-' }}Rp{{ number_format(abs((int) $modifier->price_delta), 0, ',', '.') }})@endif
+                </div>
+            @endforeach
+            @if ($item->note)
+                <div style="font-size: 9px; font-style: italic; padding-left: 6px;">
+                    Catatan: {{ $item->note }}
+                </div>
+            @endif
             @if($item->discount_total > 0 && ($item->pricing_group_label || $item->pricing_rule_name))
                 <div style="display:flex; justify-content:space-between; font-size:9px; color:#64748b;">
                     <span>Promo: {{ $item->pricing_group_label ?: $item->pricing_rule_name }}</span>

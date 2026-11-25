@@ -249,6 +249,18 @@
                                 Promo: {{ $detail->pricing_group_label ?: $detail->pricing_rule_name }}
                             </div>
                         @endif
+                        @if ($detail->modifiers->isNotEmpty())
+                            @foreach ($detail->modifiers as $modifier)
+                                <div style="font-size: 10px; color: #6b7280; padding-left: 8px;">
+                                    + {{ $modifier->name }}@if ((int) $modifier->price_delta !== 0) ({{ (int) $modifier->price_delta > 0 ? '+' : '-' }}Rp{{ number_format(abs((int) $modifier->price_delta), 0, ',', '.') }})@endif
+                                </div>
+                            @endforeach
+                        @endif
+                        @if ($detail->note)
+                            <div style="font-size: 10px; color: #6b7280; font-style: italic; padding-left: 8px;">
+                                Catatan: {{ $detail->note }}
+                            </div>
+                        @endif
                     </td>
                     <td class="qty">{{ $detail->qty }}</td>
                     <td class="right">

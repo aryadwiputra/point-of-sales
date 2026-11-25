@@ -37,11 +37,27 @@ class ThermalPrintService
         }
         $lines[] = $this->line($maxWidth);
 
+        $transaction->loadMissing(['details.product', 'details.modifiers']);
+
         foreach ($transaction->details as $detail) {
             $title = mb_substr($detail->product?->title ?? 'Produk', 0, $maxWidth - 10);
             $linePrice = number_format((int) $detail->price, 0, ',', '.');
             $lineTotal = "{$detail->qty}x @ ".number_format((int) ($detail->unit_price ?: $detail->price / max(1, $detail->qty)), 0, ',', '.');
             $lines[] = $this->left($title, $maxWidth);
+
+            foreach ($detail->modifiers as $modifier) {
+                $delta = (int) $modifier->price_delta;
+                $suffix = $delta === 0
+                    ? ''
+                    : ' ('.($delta > 0 ? '+' : '-').number_format(abs($delta), 0, ',', '.').')';
+
+                $lines[] = $this->left('  + '.mb_substr($modifier->name, 0, $maxWidth - 6).$suffix, $maxWidth);
+            }
+
+            if ($detail->note) {
+                $lines[] = $this->left('  Catatan: '.mb_substr($detail->note, 0, $maxWidth - 12), $maxWidth);
+            }
+
             $lines[] = $this->leftRight($lineTotal, $linePrice, $maxWidth);
         }
 
