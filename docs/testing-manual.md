@@ -52,3 +52,14 @@ Kembali ke indeks dokumentasi: `docs/README.md`
 - [ ] Create a product with `track_stock = false` and zero stock; it remains orderable from POS and the dine-in QR menu, and stock is not decremented.
 - [ ] Run a dine-in self-order with modifiers, accept it in the dashboard, and confirm the created transaction shows the options and note.
 - [ ] Queue a sale offline with modifiers, reconnect, and confirm the synced transaction keeps the options and note.
+
+### Dine-in table lifecycle
+
+1. Open a table with 2 guests. The floor plan shows occupied with guest count, duration, and running total.
+2. Submit a QR order and accept it. Confirm the session/bill exists, stock drops, and no Transaction exists yet.
+3. From POS table mode, add a second round and press "Kirim ke Meja". Confirm items land on the chosen bill and the cart clears.
+4. Void one item. Confirm product/warehouse/batch stock returns and the stock mutation is `in`.
+5. Split the bill. Confirm selected items move to a new bill and both totals recompute.
+6. Merge two occupied tables. Confirm open bills move, sequences renumber, and the source table becomes available.
+7. Settle each bill with cash. Confirm change, one Transaction per bill, completed orders, and a free table.
+8. Repeat with split tender, bank transfer, gateway pending, pay later, voucher, points, and manual discount above the approval threshold.

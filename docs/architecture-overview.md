@@ -100,6 +100,8 @@ dan diorkestrasi oleh `DemoSeeder` (dijalankan lewat `php artisan seed:demo` ata
 - **Warehouse** adalah dimensi baru: hampir semua tabel stok & transaksi punya `warehouse_id`
 - **Audit Log** lintas modul: setiap perubahan penting dicatat via `AuditLogService`
 
+Dine-in separates inventory timing from revenue timing. `DineOrderService::accept()` locks the order, ensures an open `DineSession`, assigns a `DineBill`, snapshots `unit_cost`/`tax_type`/`tax_rate`, deducts stock, and writes `dine_order_item_batch_allocations`. It creates no `Transaction`. `DineBillSettlementService::settle()` locks the bill and its active items, applies voucher/points/manual discounts, computes tax from item snapshots with `TaxService`, resolves tenders and gateways with the POS services, writes one `Transaction`, and marks the bill settled. Discount approval is the only branch that leaves a bill in `pending_approval`.
+
 ## Alur Data Multi-Warehouse
 
 ```

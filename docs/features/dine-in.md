@@ -158,6 +158,21 @@ Dikontrol via `Setting` table:
 - Reject: dengan alasan opsional
 - Konfirmasi dari kasir via halaman POS seperti transaksi biasa
 
+## Sessions and bills (Phase B)
+
+Dine-in now uses a table lifecycle:
+
+1. Staff open a table from the floor plan, or the first accepted QR order opens it automatically.
+2. Accepted QR orders and staff rounds from POS belong to a session and a bill.
+3. Stock leaves inventory at accept, not at settlement. Batch allocations are stored in `dine_order_item_batch_allocations`.
+4. Void restores product, warehouse, and batch stock and writes an `in` mutation plus an audit log.
+5. Split, move, and merge never touch stock.
+6. Settlement creates exactly one Transaction, copies active items and modifiers to `transaction_details`, and creates profit rows from the snapshotted `unit_cost`.
+7. Manual discounts above the configured threshold put the bill into `pending_approval`; approval settles it and denial reopens it.
+
+Routes: `dine-sessions.store|close|move|merge` and `dine-bills.submit-cart|void-item|split|settle`.
+Permissions: `dine-bills-access` and `dine-bills-process`.
+
 ## Pembayaran
 
 Saat ini endpoint `/dine/{token}/order` hanya menerima `payment_option: pay_at_counter`.
