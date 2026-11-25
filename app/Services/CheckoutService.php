@@ -26,6 +26,7 @@ class CheckoutService
         private readonly BatchService $batchService,
         private readonly TransactionTenderService $tenderService,
         private readonly StockMutationService $stockMutationService,
+        private readonly KitchenTicketService $kitchenTicketService,
     ) {}
 
     public function execute(CheckoutContext $ctx): CheckoutResult
@@ -122,6 +123,10 @@ class CheckoutService
             }
 
             $this->processCartItems($transaction, $carts, $pricingPreview, $ctx->outlet, $subtotalAfterPromo, $appliedManualDiscount, $activeShift->warehouse_id, $ctx->userId);
+
+            if (in_array($ctx->orderType, ['takeaway', 'delivery'], true)) {
+                $this->kitchenTicketService->createForTransaction($transaction);
+            }
 
             Cart::where('cashier_id', $ctx->userId)
                 ->active()
