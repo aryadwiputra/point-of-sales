@@ -10,22 +10,35 @@ import {
     IconDownload,
     IconPlus,
     IconQrcode,
+    IconArmchair,
 } from "@tabler/icons-react";
 import Table from "@/Components/Dashboard/Table";
 import Modal from "@/Components/Dashboard/Modal";
 import Input from "@/Components/Dashboard/Input";
+import OpenTableModal from "@/Components/DineIn/OpenTableModal";
+import BillDrawer from "@/Components/DineIn/BillDrawer";
 import { useAuthorization } from "@/Utils/authorization";
 import toast from "react-hot-toast";
 
 const GRID_SIZE = 40;
 
+const formatPrice = (value = 0) =>
+    Number(value || 0).toLocaleString("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+    });
+
 function TableShape({ table, onDragStart, isSelected, onClick }) {
-    const { shape, name, is_active } = table;
-    const colorClass = is_active
-        ? isSelected
+    const { shape, name, is_active, occupancy } = table;
+    const occupied = Boolean(occupancy);
+    const colorClass = !is_active
+        ? "fill-slate-200 dark:fill-slate-700"
+        : occupied
+          ? "fill-warning-200 dark:fill-warning-800"
+          : isSelected
             ? "fill-primary-500"
-            : "fill-primary-200 dark:fill-primary-800"
-        : "fill-slate-200 dark:fill-slate-700";
+            : "fill-primary-200 dark:fill-primary-800";
     const textClass = is_active
         ? "text-slate-700 dark:text-slate-200"
         : "text-slate-400 dark:text-slate-500";
@@ -81,7 +94,7 @@ function TableShape({ table, onDragStart, isSelected, onClick }) {
     );
 }
 
-export default function Index({ tables, areas, filters }) {
+export default function Index({ tables, areas, sessions = [], filters }) {
     const { can } = useAuthorization();
     const canCreate = can("dine-tables-create");
     const canUpdate = can("dine-tables-update");
@@ -94,6 +107,14 @@ export default function Index({ tables, areas, filters }) {
     const [filterArea, setFilterArea] = useState(filters?.area_id || "");
     const [filterStatus, setFilterStatus] = useState(filters?.is_active || "all");
     const [activeView, setActiveView] = useState("grid");
+    const [openTableTarget, setOpenTableTarget] = useState(null);
+    const [activeSessionId, setActiveSessionId] = useState(null);
+    const [selectedBillId, setSelectedBillId] = useState(null);
+    const canProcessBills = can("dine-bills-process");
+    const sessionsById = Object.fromEntries((sessions ?? []).map((session) => [session.dine_table_id, session]));
+    const activeSession = activeSessionId
+        ? (sessions ?? []).find((session) => session.id === activeSessionId)
+        : null;
     const dragItem = useRef(null);
     const svgRef = useRef(null);
 
@@ -316,6 +337,33 @@ export default function Index({ tables, areas, filters }) {
                             </button>
                         ))}
                     </div>
+                    <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter okupansi meja">
+                        {[["all", "Semua okupansi"], ["available", "Tersedia"], ["occupied", "Terisi"]].map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={(filters?.occupancy ?? "all") === value}
+                                onClick={() =>
+                                    router.get(
+                                        route("dine-tables.index"),
+                                        {
+                                            ...(filterArea ? { area_id: filterArea } : {}),
+                                            ...(filterStatus !== "all" ? { is_active: filterStatus } : {}),
+                                            ...(value !== "all" ? { occupancy: value } : {}),
+                                        },
+                                        { preserveScroll: true, preserveState: true }
+                                    )
+                                }
+                                className={`min-h-11 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                    (filters?.occupancy ?? "all") === value
+                                        ? "bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400"
+                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -370,6 +418,13 @@ export default function Index({ tables, areas, filters }) {
                                 isSelected={selectedTable?.id === table.id}
                                 onClick={(t) => {
                                     setSelectedTable(t);
+                                    const session = sessionsById[t.id];
+                                    if (session && canProcessBills) {
+                                        setActiveSessionId(session.id);
+                                        setSelectedBillId(
+                                            (session.bills ?? []).find((bill) => bill.status === "open")?.id ?? null
+                                        );
+                                    }
                                 }}
                             />
                         ))}
@@ -378,9 +433,25 @@ export default function Index({ tables, areas, filters }) {
                         <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 p-3" aria-live="polite">
                             <div>
                                 <p className="font-medium text-slate-800 dark:text-slate-200">{selectedTable.name}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">{selectedTable.area?.name ?? "Tanpa area"} · {selectedTable.capacity} orang · {selectedTable.is_active ? "Aktif" : "Nonaktif"}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    {selectedTable.area?.name ?? "Tanpa area"} · {selectedTable.capacity} orang ·{" "}
+                                    {selectedTable.occupancy
+                                        ? `Terisi · ${selectedTable.occupancy.guest_count ?? "-"} tamu · ${formatPrice(selectedTable.occupancy.running_total)}`
+                                        : selectedTable.is_active
+                                          ? "Tersedia"
+                                          : "Nonaktif"}
+                                </p>
                             </div>
                             <div className="flex gap-2">
+                                {canProcessBills && !selectedTable.occupancy && selectedTable.is_active && (
+                                    <Button
+                                        type="button"
+                                        icon={<IconArmchair size={16} />}
+                                        label="Buka Meja"
+                                        onClick={() => setOpenTableTarget(selectedTable)}
+                                        className="min-h-11 border bg-success-100 border-success-200 text-success-700 dark:bg-success-900/50 dark:border-success-800 dark:text-success-300"
+                                    />
+                                )}
                                 {canAccess && (
                                     <Button type={"button"} icon={<IconQrcode size={16} />} label="QR Meja" onClick={() => downloadQr(selectedTable)} className="min-h-11 border bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" />
                                 )}
@@ -597,6 +668,23 @@ export default function Index({ tables, areas, filters }) {
                     </div>
                 </form>
             </Modal>
+
+            <OpenTableModal
+                show={Boolean(openTableTarget)}
+                table={openTableTarget}
+                onClose={() => setOpenTableTarget(null)}
+                onSuccess={() => setOpenTableTarget(null)}
+            />
+
+            <BillDrawer
+                session={activeSession}
+                selectedBillId={selectedBillId}
+                onSelectBill={setSelectedBillId}
+                onClose={() => {
+                    setActiveSessionId(null);
+                    setSelectedBillId(null);
+                }}
+            />
         </>
     );
 }
