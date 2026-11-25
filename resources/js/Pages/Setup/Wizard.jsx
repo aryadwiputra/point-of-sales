@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Head, useForm, usePage } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
+import BrandLockup from "@/Components/Brand/Logo";
 import {
-    IconShoppingCart,
     IconBuildingStore,
     IconTags,
     IconUserShield,
@@ -228,16 +228,8 @@ export default function Wizard({ businessTypes, primaryWarehouse }) {
 
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
                 <div className="w-full max-w-2xl">
-                    <div className="flex items-center gap-3 mb-8 justify-center">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                            <IconShoppingCart
-                                size={24}
-                                className="text-white"
-                            />
-                        </div>
-                        <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {t("auth.login.appName")}
-                        </span>
+                    <div className="flex items-center mb-8 justify-center">
+                        <BrandLockup height={40} />
                     </div>
 
                     <div className="flex justify-center gap-1 mb-4">

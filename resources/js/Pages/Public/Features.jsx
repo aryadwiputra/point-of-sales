@@ -177,7 +177,7 @@ export default function Features() {
                     </h1>
                     <p className="mt-5 text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
                         Fitur terintegrasi dari kasir harian sampai analitik lanjutan, gratis
-                        digunakan dan open source di bawah lisensi MIT.
+                        digunakan dan open source di bawah lisensi AGPL-3.0.
                     </p>
                     <div className="mt-8 flex flex-wrap justify-center gap-3">
                         {modules.map((m) => (

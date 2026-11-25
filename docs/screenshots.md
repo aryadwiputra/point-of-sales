@@ -1,6 +1,6 @@
 # Screenshots Gallery
 
-Berikut adalah seluruh screenshot fitur Point of Sales.
+Berikut adalah seluruh screenshot fitur Dikasir.
 
 ---
 

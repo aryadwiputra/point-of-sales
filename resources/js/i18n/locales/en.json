@@ -196,7 +196,7 @@
             "title": "Sign In",
             "subtitle": "Welcome Back",
             "description": "Sign in to access your dashboard",
-            "appName": "POS Application",
+            "appName": "Dikasir",
             "email": "Email",
             "emailPlaceholder": "name@email.com",
             "password": "Password",

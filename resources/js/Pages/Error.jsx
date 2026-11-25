@@ -68,7 +68,7 @@ export default function Error({ status, homeUrl, homeLabel }) {
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    Point of Sales
+                                    Dikasir
                                 </p>
                                 <p className="text-lg font-semibold text-slate-900 dark:text-white">
                                     Error {status}

@@ -1,4 +1,4 @@
-# Dokumentasi Point of Sales
+# Dokumentasi Dikasir
 
 Dokumentasi ini ditujukan untuk developer yang ingin setup, memahami alur modul, dan melakukan maintenance aplikasi.
 

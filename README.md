@@ -1,4 +1,8 @@
-# Point of Sales
+<p align="center">
+  <img src="design/logo/variants/dikasir-lockup-horizontal-mono-4f46e5.svg" alt="Dikasir" height="72">
+</p>
+
+# Dikasir
 
 Sistem kasir berbasis Laravel + Inertia + React untuk transaksi penjualan, inventory audit, purchasing, finance, CRM, loyalty, dan observability operasional — dengan dukungan multi-warehouse, PPN, dan offline mode.
 

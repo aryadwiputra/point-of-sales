@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { Head, Link, useForm } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
 import AuthBotGuardFields from "@/Components/AuthBotGuardFields";
+import BrandLockup, { BrandMark } from "@/Components/Brand/Logo";
 import {
-    IconShoppingCart,
     IconMail,
     IconLock,
     IconEye,
@@ -46,17 +46,9 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                         <div className="mb-8">
                             <Link
                                 href="/"
-                                className="inline-flex items-center gap-3 mb-6"
+                                className="inline-flex items-center mb-6"
                             >
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                                    <IconShoppingCart
-                                        size={24}
-                                        className="text-white"
-                                    />
-                                </div>
-                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {t("auth.login.appName")}
-                                </span>
+                                <BrandLockup height={38} />
                             </Link>
                             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                                 {t("auth.login.subtitle")}
@@ -229,9 +221,7 @@ export default function Login({ status, canResetPassword, canRegister, botGuard 
                 {/* Right - Image/Decoration */}
                 <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary-500 to-primary-700 items-center justify-center p-12">
                     <div className="max-w-md text-center text-white">
-                        <div className="w-24 h-24 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-8">
-                            <IconShoppingCart size={48} />
-                        </div>
+                        <BrandMark size={96} tone="white" className="mx-auto mb-8" />
                         <h2 className="text-3xl font-bold mb-4">
                             {t("auth.login.heroTitle")}
                         </h2>
