@@ -18,6 +18,7 @@ use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
 use App\Http\Controllers\Apps\KitchenController;
+use App\Http\Controllers\Apps\KitchenStationController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\ModifierController;
 use App\Http\Controllers\Apps\OutletController;
@@ -470,6 +471,10 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::post('/kitchen/tickets/{kitchenTicket}/ready', [KitchenController::class, 'ticketReady'])->middleware('permission:kitchen-process')->name('kitchen.tickets.ready');
     Route::post('/kitchen/tickets/{kitchenTicket}/clear', [KitchenController::class, 'clearTicket'])->middleware('permission:kitchen-process')->name('kitchen.tickets.clear');
     Route::post('/kitchen/settings', [KitchenController::class, 'updateSettings'])->middleware('permission:kitchen-manage')->name('kitchen.settings');
+    Route::get('/kitchen/stations', [KitchenStationController::class, 'index'])->middleware('permission:kitchen-manage')->name('kitchen.stations.index');
+    Route::post('/kitchen/stations', [KitchenStationController::class, 'store'])->middleware('permission:kitchen-manage')->name('kitchen.stations.store');
+    Route::patch('/kitchen/stations/{kitchenStation}', [KitchenStationController::class, 'update'])->middleware('permission:kitchen-manage')->name('kitchen.stations.update');
+    Route::delete('/kitchen/stations/{kitchenStation}', [KitchenStationController::class, 'destroy'])->middleware('permission:kitchen-manage')->name('kitchen.stations.destroy');
 
     // modifier library
     Route::get('/modifiers', [ModifierController::class, 'index'])->middleware('permission:modifiers-access')->name('modifiers.index');
