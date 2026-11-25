@@ -45,7 +45,7 @@ export default function ShippingLabel({ transaction, store = {} }) {
         );
     };
 
-    const storeName = store?.name || "TOKO";
+    const storeName = store?.name || "Dikasir";
     const storeInitial = storeName?.[0] || "T";
     const storeLogo = store?.logo;
     const customer = transaction?.customer || {};

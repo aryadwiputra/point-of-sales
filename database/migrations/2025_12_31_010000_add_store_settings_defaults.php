@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         $defaults = [
-            ['key' => 'store_name', 'value' => 'Toko Anda', 'description' => 'Nama toko'],
+            ['key' => 'store_name', 'value' => 'Dikasir', 'description' => 'Nama toko'],
             ['key' => 'store_logo', 'value' => null, 'description' => 'Logo toko'],
             ['key' => 'store_address', 'value' => 'Alamat belum diisi', 'description' => 'Alamat lengkap toko'],
             ['key' => 'store_phone', 'value' => '', 'description' => 'Nomor telepon toko'],
