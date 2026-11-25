@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/logo/variants/dikasir-lockup-horizontal-mono-4f46e5.svg" alt="Dikasir" height="72">
+  <img src="design/logo/variants/dikasir-horizontal-mono-4f46e5.svg" alt="Dikasir" height="72">
 </p>
 
 # Dikasir
