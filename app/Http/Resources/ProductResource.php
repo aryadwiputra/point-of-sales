@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\ModifierService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,6 +31,22 @@ class ProductResource extends JsonResource
             'tax_type' => $this->tax_type,
             'tax_rate' => (float) $this->tax_rate,
             'is_composite' => (bool) $this->is_composite,
+            'track_stock' => (bool) $this->tracksStock(),
+            'modifier_groups' => $this->whenLoaded('modifierGroups', fn () => app(ModifierService::class)
+                ->attachableGroups($this->resource)
+                ->map(fn ($group) => [
+                    'id' => $group->id,
+                    'name' => $group->name,
+                    'selection_type' => $group->selection_type,
+                    'min_select' => (int) $group->min_select,
+                    'max_select' => $group->max_select !== null ? (int) $group->max_select : null,
+                    'options' => $group->modifiers->map(fn ($modifier) => [
+                        'id' => $modifier->id,
+                        'name' => $modifier->name,
+                        'price_delta' => (int) $modifier->effective_price_delta,
+                        'is_default' => (bool) $modifier->is_default,
+                    ])->values(),
+                ])->values()),
             'created_at' => optional($this->created_at)->toISOString(),
             'updated_at' => optional($this->updated_at)->toISOString(),
         ];

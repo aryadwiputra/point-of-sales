@@ -20,12 +20,14 @@ use App\Models\Warehouse;
 use App\Services\CashierShiftService;
 use App\Services\CheckoutService;
 use App\Services\LoyaltyService;
+use App\Services\ModifierService;
 use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
+use App\Support\CartLineSignature;
 use App\Support\Checkout\CheckoutContext;
 use App\Support\Checkout\CheckoutFingerprint;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -48,6 +50,7 @@ class PosApiController extends Controller
         private readonly TransactionTenderService $tenderService,
         private readonly OutletAccessService $outletAccessService,
         private readonly CheckoutService $checkoutService,
+        protected readonly ModifierService $modifierService,
     ) {}
 
     /**
@@ -150,12 +153,15 @@ class PosApiController extends Controller
         $warehouseId = $shift?->warehouse_id;
 
         $products = Product::query()
-            ->with('category')
+            ->with(['category', 'modifierGroups.modifiers', 'modifierOverrides'])
             ->when($warehouseId, function ($q) use ($warehouseId) {
-                $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
-                    ->where('product_warehouse.stock', '>', 0));
+                $q->where(function ($sub) use ($warehouseId) {
+                    $sub->where('track_stock', false)
+                        ->orWhereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
+                            ->where('product_warehouse.stock', '>', 0));
+                });
             }, function ($q) {
-                $q->where('stock', '>', 0);
+                $q->where(fn ($sub) => $sub->where('track_stock', false)->orWhere('stock', '>', 0));
             })
             ->when($request->string('search')->toString(), function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
@@ -206,7 +212,7 @@ class PosApiController extends Controller
             ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
             : (int) $product->stock;
 
-        $data = (new ProductResource($product->load('category')))->resolve();
+        $data = (new ProductResource($product->load(['category', 'modifierGroups.modifiers', 'modifierOverrides'])))->resolve();
         $data['stock'] = $stock;
         $data['units'] = $product->units()->get()->map(fn ($u) => [
             'id' => $u->id,
@@ -223,7 +229,7 @@ class PosApiController extends Controller
      */
     public function cart(Request $request): JsonResponse
     {
-        $carts = Cart::with('product', 'unit')
+        $carts = Cart::with('product', 'unit', 'modifiers')
             ->where('cashier_id', $request->user()->id)
             ->active()
             ->latest()
@@ -272,6 +278,9 @@ class PosApiController extends Controller
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'qty' => ['required', 'numeric', 'min:0.01'],
             'unit_id' => ['nullable', 'integer', 'exists:units,id'],
+            'modifier_ids' => ['nullable', 'array'],
+            'modifier_ids.*' => ['integer'],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $shift = $this->cashierShiftService->getActiveShiftForUser($request->user()->id);
@@ -287,6 +296,11 @@ class PosApiController extends Controller
         if (! $product) {
             return $this->notFound('Produk tidak ditemukan.');
         }
+
+        $snapshot = $this->modifierService->selectionSnapshot($product, $validated['modifier_ids'] ?? []);
+        $modifierDelta = $this->modifierService->deltaFor($snapshot);
+        $note = $validated['note'] ?? null;
+        $lineSignature = CartLineSignature::make(array_column($snapshot, 'modifier_id'), $note);
 
         if ($product->is_composite) {
             $product->load('components');
@@ -307,14 +321,16 @@ class PosApiController extends Controller
                 return $this->error('Satuan tidak valid untuk produk ini.', 422);
             }
 
-            $baseQty = $this->unitConversionService->toBaseUnit($product, $unitId, $validated['qty']);
+            if ($product->tracksStock()) {
+                $baseQty = $this->unitConversionService->toBaseUnit($product, $unitId, $validated['qty']);
 
-            $availableStock = $warehouseId
-                ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
-                : (int) $product->stock;
+                $availableStock = $warehouseId
+                    ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+                    : (int) $product->stock;
 
-            if ($availableStock < $baseQty) {
-                return $this->error("Stok tidak mencukupi. Tersedia: {$availableStock}", 422);
+                if ($availableStock < $baseQty) {
+                    return $this->error("Stok tidak mencukupi. Tersedia: {$availableStock}", 422);
+                }
             }
 
             $sellPrice = $this->unitConversionService->getSellPrice($product, $unitId);
@@ -322,15 +338,19 @@ class PosApiController extends Controller
             $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
         }
 
-        $cart = Cart::with('product')
+        $unitPrice = $sellPrice + $modifierDelta;
+
+        $cart = Cart::with(['product', 'modifiers'])
             ->where('product_id', $validated['product_id'])
             ->where('cashier_id', $request->user()->id)
+            ->where('unit_id', $unitId)
+            ->where('line_signature', $lineSignature)
             ->active()
             ->first();
 
         if ($cart) {
             $cart->increment('qty', $validated['qty']);
-            $cart->price = $sellPrice * $cart->qty;
+            $cart->price = $unitPrice * $cart->qty;
             $cart->save();
         } else {
             $cart = Cart::create([
@@ -340,12 +360,15 @@ class PosApiController extends Controller
                 'unit_id' => $unitId,
                 'conversion_factor' => $conversionFactor,
                 'qty' => $validated['qty'],
-                'price' => $sellPrice * $validated['qty'],
+                'price' => $unitPrice * $validated['qty'],
+                'note' => $note,
+                'line_signature' => $lineSignature,
             ]);
+            $cart->modifiers()->createMany($snapshot);
         }
 
         return $this->ok(
-            new CartResource($cart->load('product', 'unit')),
+            new CartResource($cart->load('product', 'unit', 'modifiers')),
             'Produk ditambahkan ke keranjang'
         );
     }
@@ -374,8 +397,18 @@ class PosApiController extends Controller
 
         $product = $cart->product;
 
-        if (! $product->is_composite) {
-            $baseQty = $this->unitConversionService->toBaseUnit($product, $cart->unit_id, $validated['qty']);
+        $cart->loadMissing('modifiers');
+        $modifierDelta = (int) $cart->modifiers->sum('price_delta');
+
+        if ($product->is_composite) {
+            $product->loadMissing('components');
+        }
+
+        if ($product->is_composite || $product->tracksStock()) {
+            $baseQty = $product->is_composite
+                ? (int) $validated['qty']
+                : $this->unitConversionService->toBaseUnit($product, $cart->unit_id, $validated['qty']);
+
             $availableStock = $warehouseId
                 ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
                 : (int) $product->stock;
@@ -385,13 +418,15 @@ class PosApiController extends Controller
             }
         }
 
+        $baseUnitPrice = $product->is_composite
+            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty)
+            : $this->unitConversionService->getSellPrice($product, $cart->unit_id);
+
         $cart->qty = $validated['qty'];
-        $cart->price = $product->is_composite
-            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty) * $validated['qty']
-            : $this->unitConversionService->getSellPrice($product, $cart->unit_id) * $validated['qty'];
+        $cart->price = ($baseUnitPrice + $modifierDelta) * $validated['qty'];
         $cart->save();
 
-        return $this->ok(new CartResource($cart->load('product', 'unit')), 'Keranjang diperbarui');
+        return $this->ok(new CartResource($cart->load('product', 'unit', 'modifiers')), 'Keranjang diperbarui');
     }
 
     /**
