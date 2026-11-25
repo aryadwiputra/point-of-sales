@@ -301,7 +301,7 @@ class PosApiController extends Controller
             $unitId = null;
             $conversionFactor = 1;
         } else {
-            $unitId = (int) ($validated['unit_id'] ?? $product->baseUnit()?->id ?? 1);
+            $unitId = isset($validated['unit_id']) ? (int) $validated['unit_id'] : $product->baseUnit()?->id;
 
             if (isset($validated['unit_id']) && ! $product->units()->whereKey($unitId)->exists()) {
                 return $this->error('Satuan tidak valid untuk produk ini.', 422);
@@ -825,7 +825,7 @@ class PosApiController extends Controller
                         'price' => $sellPrice * $item['qty'],
                     ]);
                 } else {
-                    $unitId = (int) ($item['unit_id'] ?? $product->baseUnit()?->id ?? 1);
+                    $unitId = isset($item['unit_id']) ? (int) $item['unit_id'] : $product->baseUnit()?->id;
                     $pu = $product->units()->where('unit_id', $unitId)->first();
                     $conversionFactor = $pu?->pivot->conversion_factor ?? 1;
                     $sellPrice = $this->unitConversionService->getSellPrice($product, $unitId);

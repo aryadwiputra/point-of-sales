@@ -247,4 +247,25 @@ class ProductUnitTest extends TestCase
 
         $this->assertDatabaseMissing('carts', ['product_id' => $product->id]);
     }
+
+    public function test_web_pos_add_to_cart_for_product_without_unit_stores_null_unit(): void
+    {
+        $product = $this->createProduct(['stock' => 10]);
+
+        $this->actingAs($this->cashier);
+
+        app(CashierShiftService::class)->openShift($this->cashier, $this->cashier, 0, null, $this->pusat->id);
+
+        $this->post(route('transactions.addToCart'), [
+            'product_id' => $product->id,
+            'sell_price' => 10000,
+            'qty' => 2,
+        ])->assertRedirect();
+
+        $cart = Cart::where('product_id', $product->id)->firstOrFail();
+
+        $this->assertNull($cart->unit_id);
+        $this->assertSame(2, (int) $cart->qty);
+        $this->assertSame(20000, (int) $cart->price);
+    }
 }
