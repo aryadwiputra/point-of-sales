@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
+use App\Models\DineBill;
 use App\Models\DiscountApprovalLog;
 use App\Models\Outlet;
 use App\Models\Transaction;
 use App\Services\AuditLogService;
+use App\Services\DineBillService;
+use App\Services\DineSessionService;
 use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +18,9 @@ class DiscountApprovalController extends Controller
 {
     public function __construct(
         protected readonly AuditLogService $auditLogService,
-        protected readonly OutletAccessService $outletAccessService
+        protected readonly OutletAccessService $outletAccessService,
+        protected readonly DineBillService $billService,
+        protected readonly DineSessionService $sessionService,
     ) {}
 
     public function pending()
@@ -82,9 +87,9 @@ class DiscountApprovalController extends Controller
 
     protected function logAndUpdate(Transaction $transaction, string $status, ?string $notes = null): void
     {
-        \DB::transaction(function () use ($transaction, $status, $notes) {
-            // ponytail: approval only settles the approval state — payment stays tied to the actual method.
-            // grand_total already excludes the manual discount (LoyaltyService), so denying re-adds it.
+        $bill = DineBill::where('transaction_id', $transaction->id)->first();
+
+        \DB::transaction(function () use ($transaction, $status, $notes, $bill) {
             $paymentStatus = match ($transaction->payment_method) {
                 'cash' => 'paid',
                 'pay_later' => 'unpaid',
@@ -120,6 +125,29 @@ class DiscountApprovalController extends Controller
                     'responded_at' => now(),
                     'notes' => $notes,
                 ]);
+
+            if (! $bill) {
+                return;
+            }
+
+            if ($status === 'approved') {
+                $bill->update([
+                    'status' => DineBill::STATUS_SETTLED,
+                    'settled_at' => now(),
+                ]);
+                $this->billService->completeOrdersForBill($bill->fresh());
+                $this->sessionService->closeIfIdle($bill->session);
+            } else {
+                $bill->update([
+                    'status' => DineBill::STATUS_OPEN,
+                    'settled_at' => null,
+                    'transaction_id' => null,
+                    'discount_total' => 0,
+                    'tax_total' => 0,
+                    'grand_total' => 0,
+                ]);
+                $this->billService->recomputeTotals($bill->fresh());
+            }
         });
 
         $this->auditLogService->log(
