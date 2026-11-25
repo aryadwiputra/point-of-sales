@@ -35,7 +35,6 @@ export default function BarcodePrintModal({
             <html>
             <head>
                 <title>Print Barcode</title>
-                <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
                 <style>
                     @page {
                         size: A4;
@@ -65,19 +64,6 @@ export default function BarcodePrintModal({
             <body>
                 ${printContent.innerHTML}
                 <script>
-                    document.querySelectorAll('.barcode-svg').forEach(svg => {
-                        const code = svg.dataset.code;
-                        if (code) {
-                            JsBarcode(svg, code, {
-                                format: "CODE128",
-                                width: 2,
-                                height: 50,
-                                displayValue: true,
-                                fontSize: 12,
-                                margin: 5,
-                            });
-                        }
-                    });
                     setTimeout(() => {
                         window.print();
                         window.close();

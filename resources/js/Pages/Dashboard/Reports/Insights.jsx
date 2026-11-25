@@ -3,7 +3,7 @@ import InputSelect from "@/Components/Dashboard/InputSelect";
 import Table from "@/Components/Dashboard/Table";
 import { Head, router } from "@inertiajs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Chart from "chart.js/auto";
+import { loadChart } from "@/Utils/charts";
 import {
     IconChartBar,
     IconClock,
@@ -231,6 +231,8 @@ export default function Insights({
     const dayChartData = useMemo(() => salesByDay, [salesByDay]);
 
     useEffect(() => {
+        let cancelled = false;
+
         if (salesHourChart.current) {
             salesHourChart.current.destroy();
             salesHourChart.current = null;
@@ -239,7 +241,13 @@ export default function Insights({
             return;
         }
 
-        salesHourChart.current = new Chart(salesHourChartRef.current, {
+        const canvas = salesHourChartRef.current;
+
+        const init = async () => {
+        const Chart = await loadChart();
+        if (cancelled) return;
+
+        salesHourChart.current = new Chart(canvas, {
             type: "bar",
             data: {
                 labels: hourChartData.map((item) => item.label),
@@ -262,11 +270,20 @@ export default function Insights({
                 },
             },
         });
+        };
 
-        return () => salesHourChart.current?.destroy();
+        init();
+
+        return () => {
+            cancelled = true;
+            salesHourChart.current?.destroy();
+            salesHourChart.current = null;
+        };
     }, [hourChartData]);
 
     useEffect(() => {
+        let cancelled = false;
+
         if (salesDayChart.current) {
             salesDayChart.current.destroy();
             salesDayChart.current = null;
@@ -275,7 +292,13 @@ export default function Insights({
             return;
         }
 
-        salesDayChart.current = new Chart(salesDayChartRef.current, {
+        const canvas = salesDayChartRef.current;
+
+        const init = async () => {
+        const Chart = await loadChart();
+        if (cancelled) return;
+
+        salesDayChart.current = new Chart(canvas, {
             type: "line",
             data: {
                 labels: dayChartData.map((item) => item.label),
@@ -300,8 +323,15 @@ export default function Insights({
                 },
             },
         });
+        };
 
-        return () => salesDayChart.current?.destroy();
+        init();
+
+        return () => {
+            cancelled = true;
+            salesDayChart.current?.destroy();
+            salesDayChart.current = null;
+        };
     }, [dayChartData]);
 
     const handleChange = (field, value) =>

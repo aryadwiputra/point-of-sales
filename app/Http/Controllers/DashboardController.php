@@ -46,11 +46,17 @@ class DashboardController extends Controller
         $totalRevenue = $scopeTransactions(Transaction::query())->sum('grand_total');
         $totalProfit = $scopeProfits(Profit::query())->sum('total');
         $averageOrder = $scopeTransactions(Transaction::query())->avg('grand_total') ?? 0;
-        $todayTransactions = $scopeTransactions(Transaction::whereDate('created_at', Carbon::today()))->count();
+
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd = Carbon::today()->endOfDay();
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+
+        $todayTransactions = $scopeTransactions(Transaction::where('created_at', '>=', $todayStart)->where('created_at', '<=', $todayEnd))->count();
 
         // New: Today's Sales and Profit
-        $todaySales = $scopeTransactions(Transaction::whereDate('created_at', Carbon::today()))->sum('grand_total');
-        $todayProfit = $scopeProfits(Profit::whereDate('created_at', Carbon::today()))->sum('total');
+        $todaySales = $scopeTransactions(Transaction::where('created_at', '>=', $todayStart)->where('created_at', '<=', $todayEnd))->sum('grand_total');
+        $todayProfit = $scopeProfits(Profit::where('created_at', '>=', $todayStart)->where('created_at', '<=', $todayEnd))->sum('total');
 
         // New: Monthly Target (from settings)
         $monthlyTarget = Setting::getForOutlet(
@@ -58,8 +64,7 @@ class DashboardController extends Controller
             $outletAccessService->activeOutlet(request()),
             0
         );
-        $currentMonthSales = $scopeTransactions(Transaction::whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year))
+        $currentMonthSales = $scopeTransactions(Transaction::where('created_at', '>=', $monthStart)->where('created_at', '<=', $monthEnd))
             ->sum('grand_total');
 
         $revenueTrend = $scopeTransactions(Transaction::selectRaw('DATE(created_at) as date, SUM(grand_total) as total'))

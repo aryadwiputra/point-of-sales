@@ -1,8 +1,6 @@
 import { usePage } from "@inertiajs/react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
-import { driver } from "driver.js";
-import "driver.js/dist/driver.css";
 import { dashboardTour, posTour, productsTour, cashierShiftsTour, reportsTour } from "@/Utils/tours";
 
 const TOURS = {
@@ -16,6 +14,7 @@ const TOURS = {
 export function useTour(tourName) {
   const { auth } = usePage().props;
   const driverObj = useRef(null);
+  const mountedRef = useRef(true);
   const [isActive, setIsActive] = useState(false);
 
   const markCompleted = useCallback(() => {
@@ -25,7 +24,7 @@ export function useTour(tourName) {
     }).catch(() => {});
   }, [tourName]);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (driverObj.current) return;
 
     // Skip steps whose target is not rendered (conditional elements)
@@ -34,6 +33,13 @@ export function useTour(tourName) {
       (s) => !s.element || document.querySelector(s.element)
     );
     if (steps.length === 0) return;
+
+    const [{ driver }] = await Promise.all([
+      import("driver.js"),
+      import("driver.js/dist/driver.css"),
+    ]);
+
+    if (!mountedRef.current || driverObj.current) return;
 
     driverObj.current = driver({
       ...base,
@@ -58,6 +64,7 @@ export function useTour(tourName) {
 
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       if (driverObj.current) {
         driverObj.current.destroy();
         driverObj.current = null;
