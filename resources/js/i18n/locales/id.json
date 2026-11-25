@@ -254,6 +254,7 @@
             "crmPricing": "CRM & Harga",
             "reports": "Laporan",
             "dineIn": "Dine-In",
+            "kitchen": "Dapur",
             "operations": "Operasional",
             "userManagement": "Manajemen User",
             "settings": "Pengaturan"
@@ -286,6 +287,8 @@
             "dineAreas": "Area Dine-In",
             "dineTables": "Meja Dine-In",
             "dineOrders": "Pesanan Dine-In",
+            "kitchenBoard": "Dapur",
+            "kitchenStations": "Station Dapur",
             "salesReport": "Laporan Penjualan",
             "profitReport": "Laporan Keuntungan",
             "advancedInsights": "Advanced Insights",

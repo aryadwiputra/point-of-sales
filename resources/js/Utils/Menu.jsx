@@ -19,6 +19,7 @@ import {
     IconLayout2,
     IconBuildingStore,
     IconSchool,
+    IconSettings,
     IconShoppingCart,
     IconTable,
     IconUserBolt,
@@ -248,6 +249,23 @@ export default function Menu() {
                     href: route("dine-orders.index"),
                     icon: <IconToolsKitchen2 size={20} strokeWidth={1.5} />,
                     permissions: hasAnyPermission(["dine-orders-access"]),
+                },
+            ],
+        },
+        {
+            title: t("sidebar.sections.kitchen"),
+            details: [
+                {
+                    title: t("sidebar.items.kitchenBoard"),
+                    href: route("kitchen.index"),
+                    icon: <IconToolsKitchen2 size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["kitchen-access"]),
+                },
+                {
+                    title: t("sidebar.items.kitchenStations"),
+                    href: route("kitchen.stations.index"),
+                    icon: <IconSettings size={20} strokeWidth={1.5} />,
+                    permissions: hasAnyPermission(["kitchen-manage"]),
                 },
             ],
         },

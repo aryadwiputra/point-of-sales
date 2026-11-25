@@ -254,6 +254,7 @@
             "crmPricing": "CRM & Pricing",
             "reports": "Reports",
             "dineIn": "Dine-In",
+            "kitchen": "Kitchen",
             "operations": "Operations & Control",
             "userManagement": "User Management",
             "settings": "Settings"
@@ -286,6 +287,8 @@
             "dineAreas": "Dine-In Areas",
             "dineTables": "Dine-In Tables",
             "dineOrders": "Dine-In Orders",
+            "kitchenBoard": "Kitchen Board",
+            "kitchenStations": "Kitchen Stations",
             "salesReport": "Sales Report",
             "profitReport": "Profit Report",
             "advancedInsights": "Advanced Insights",
