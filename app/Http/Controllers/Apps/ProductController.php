@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Apps;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\ModifierGroup;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\AuditLogService;
+use App\Services\ModifierService;
 use App\Services\OutletAccessService;
 use App\Services\StockMutationService;
 use Illuminate\Http\Request;
@@ -21,7 +23,8 @@ class ProductController extends Controller
     public function __construct(
         private readonly StockMutationService $stockMutationService,
         private readonly AuditLogService $auditLogService,
-        private readonly OutletAccessService $outletAccessService
+        private readonly OutletAccessService $outletAccessService,
+        private readonly ModifierService $modifierService,
     ) {}
 
     /**
@@ -63,6 +66,7 @@ class ProductController extends Controller
             'categories' => $categories,
             'products' => $products,
             'units' => Unit::orderBy('code')->get(['id', 'code', 'symbol']),
+            'modifierGroups' => ModifierGroup::with('modifiers')->orderBy('name')->get(),
         ]);
     }
 
@@ -78,7 +82,7 @@ class ProductController extends Controller
          */
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-            'barcode' => 'required|unique:products,barcode',
+            'barcode' => 'nullable|string|max:255|unique:products,barcode',
             'sku' => 'required|unique:products,sku',
             'title' => 'required',
             'description' => 'nullable|string',
@@ -91,6 +95,11 @@ class ProductController extends Controller
             'max_stock' => 'nullable|integer|min:0',
             'tax_type' => 'nullable|in:exclusive,inclusive',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'track_stock' => 'nullable|boolean',
+            'modifier_groups' => 'nullable|array',
+            'modifier_groups.*' => 'integer|exists:modifier_groups,id',
+            'modifier_overrides' => 'nullable|array',
+            'modifier_overrides.*' => 'nullable|integer',
             ...$this->compositeRules(),
             ...$this->unitRules(),
         ]);
@@ -114,6 +123,7 @@ class ProductController extends Controller
             'tax_type' => $request->input('tax_type', 'exclusive'),
             'tax_rate' => $request->input('tax_rate', 11.00),
             'is_composite' => $request->boolean('is_composite'),
+            'track_stock' => $request->boolean('track_stock', true),
         ]);
 
         if ($request->boolean('is_composite')) {
@@ -138,6 +148,9 @@ class ProductController extends Controller
 
             $this->stockMutationService->recordInitialStock($product, $request->user()?->id, $warehouse?->id);
         }
+
+        $this->syncModifiers($request, $product);
+
         $this->auditLogService->log(
             event: 'product.created',
             module: 'products',
@@ -172,6 +185,9 @@ class ProductController extends Controller
             'categories' => $categories,
             'products' => $products,
             'units' => Unit::orderBy('code')->get(['id', 'code', 'symbol']),
+            'modifierGroups' => ModifierGroup::with('modifiers')->orderBy('name')->get(),
+            'productModifierGroups' => $product->modifierGroups()->pluck('modifier_groups.id'),
+            'productModifierOverrides' => $product->modifierOverrides()->pluck('price_delta', 'modifier_id'),
         ]);
     }
 
@@ -189,7 +205,7 @@ class ProductController extends Controller
          * validate
          */
         $request->validate([
-            'barcode' => 'required|unique:products,barcode,'.$product->id,
+            'barcode' => 'nullable|string|max:255|unique:products,barcode,'.$product->id,
             'sku' => 'required|unique:products,sku,'.$product->id,
             'title' => 'required',
             'description' => 'nullable|string',
@@ -200,6 +216,11 @@ class ProductController extends Controller
             'max_stock' => 'nullable|integer|min:0',
             'tax_type' => 'nullable|in:exclusive,inclusive',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'track_stock' => 'nullable|boolean',
+            'modifier_groups' => 'nullable|array',
+            'modifier_groups.*' => 'integer|exists:modifier_groups,id',
+            'modifier_overrides' => 'nullable|array',
+            'modifier_overrides.*' => 'nullable|integer',
             ...$this->compositeRules(),
             ...$this->unitRules(),
         ]);
@@ -237,6 +258,7 @@ class ProductController extends Controller
                 'tax_type' => $request->input('tax_type', 'exclusive'),
                 'tax_rate' => $request->input('tax_rate', 11.00),
                 'is_composite' => $request->boolean('is_composite'),
+                'track_stock' => $request->boolean('track_stock', true),
             ]);
 
             if ($request->boolean('is_composite')) {
@@ -244,6 +266,8 @@ class ProductController extends Controller
             } else {
                 $this->syncUnits($product, $request->input('units'));
             }
+
+            $this->syncModifiers($request, $product);
 
             $this->logProductUpdate($product, $before);
 
@@ -264,6 +288,7 @@ class ProductController extends Controller
             'tax_type' => $request->input('tax_type', 'exclusive'),
             'tax_rate' => $request->input('tax_rate', 11.00),
             'is_composite' => $request->boolean('is_composite'),
+            'track_stock' => $request->boolean('track_stock', true),
         ]);
 
         if ($request->boolean('is_composite')) {
@@ -271,6 +296,8 @@ class ProductController extends Controller
         } else {
             $this->syncUnits($product, $request->input('units'));
         }
+
+        $this->syncModifiers($request, $product);
 
         $this->logProductUpdate($product, $before);
 
@@ -428,6 +455,17 @@ class ProductController extends Controller
                     'sell_price' => $after['sell_price'],
                 ]
             );
+        }
+    }
+
+    private function syncModifiers(Request $request, Product $product): void
+    {
+        if ($request->has('modifier_groups')) {
+            $this->modifierService->syncProductGroups($product, $request->input('modifier_groups', []));
+        }
+
+        if ($request->has('modifier_overrides')) {
+            $this->modifierService->syncOverrides($product, $request->input('modifier_overrides', []));
         }
     }
 
