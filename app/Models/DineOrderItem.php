@@ -10,14 +10,26 @@ class DineOrderItem extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'unit_cost' => 0,
+        'tax_rate' => 0,
+    ];
+
     protected $fillable = [
         'dine_order_id',
+        'dine_bill_id',
         'product_id',
         'unit_id',
         'conversion_factor',
         'qty',
         'price',
+        'unit_cost',
+        'tax_type',
+        'tax_rate',
         'note',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ];
 
     protected function casts(): array
@@ -25,7 +37,10 @@ class DineOrderItem extends Model
         return [
             'qty' => 'integer',
             'price' => 'integer',
+            'unit_cost' => 'integer',
+            'tax_rate' => 'decimal:2',
             'conversion_factor' => 'decimal:4',
+            'voided_at' => 'datetime',
         ];
     }
 
@@ -55,5 +70,30 @@ class DineOrderItem extends Model
     public function modifiers()
     {
         return $this->hasMany(DineOrderItemModifier::class);
+    }
+
+    public function bill(): BelongsTo
+    {
+        return $this->belongsTo(DineBill::class, 'dine_bill_id');
+    }
+
+    public function batchAllocations()
+    {
+        return $this->hasMany(DineOrderItemBatchAllocation::class);
+    }
+
+    public function voidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->voided_at !== null;
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('voided_at');
     }
 }

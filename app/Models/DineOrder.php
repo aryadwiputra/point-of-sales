@@ -24,11 +24,17 @@ class DineOrder extends Model
 
     public const PAY_AT_COUNTER = 'pay_at_counter';
 
+    public const SOURCE_QR = 'qr';
+
+    public const SOURCE_STAFF = 'staff';
+
     protected $fillable = [
         'dine_table_id',
+        'dine_session_id',
         'customer_id',
         'access_token',
         'status',
+        'source',
         'notes',
         'payment_option',
         'payment_method',
@@ -63,6 +69,11 @@ class DineOrder extends Model
     public function table(): BelongsTo
     {
         return $this->belongsTo(DiningTable::class, 'dine_table_id');
+    }
+
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(DineSession::class, 'dine_session_id');
     }
 
     public function customer(): BelongsTo

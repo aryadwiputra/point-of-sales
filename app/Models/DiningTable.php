@@ -56,6 +56,11 @@ class DiningTable extends Model
         return $this->hasMany(DineOrder::class, 'dine_table_id');
     }
 
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(DineSession::class, 'dine_table_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
