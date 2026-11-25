@@ -16,6 +16,7 @@ use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
 use App\Http\Controllers\Apps\MemberController;
+use App\Http\Controllers\Apps\ModifierController;
 use App\Http\Controllers\Apps\OutletController;
 use App\Http\Controllers\Apps\PayableController;
 use App\Http\Controllers\Apps\PaymentSettingController;
@@ -430,6 +431,15 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::get('/dine-orders', [App\Http\Controllers\Apps\DineOrderController::class, 'index'])->middleware('permission:dine-orders-access')->name('dine-orders.index');
     Route::post('/dine-orders/{dineOrder}/accept', [App\Http\Controllers\Apps\DineOrderController::class, 'accept'])->middleware('permission:dine-orders-process')->name('dine-orders.accept');
     Route::post('/dine-orders/{dineOrder}/reject', [App\Http\Controllers\Apps\DineOrderController::class, 'reject'])->middleware('permission:dine-orders-process')->name('dine-orders.reject');
+
+    // modifier library
+    Route::get('/modifiers', [ModifierController::class, 'index'])->middleware('permission:modifiers-access')->name('modifiers.index');
+    Route::post('/modifiers/groups', [ModifierController::class, 'storeGroup'])->middleware('permission:modifiers-create')->name('modifiers.groups.store');
+    Route::patch('/modifiers/groups/{modifierGroup}', [ModifierController::class, 'updateGroup'])->middleware('permission:modifiers-edit')->name('modifiers.groups.update');
+    Route::delete('/modifiers/groups/{modifierGroup}', [ModifierController::class, 'destroyGroup'])->middleware('permission:modifiers-delete')->name('modifiers.groups.destroy');
+    Route::post('/modifiers/options', [ModifierController::class, 'storeOption'])->middleware('permission:modifiers-create')->name('modifiers.options.store');
+    Route::patch('/modifiers/options/{modifier}', [ModifierController::class, 'updateOption'])->middleware('permission:modifiers-edit')->name('modifiers.options.update');
+    Route::delete('/modifiers/options/{modifier}', [ModifierController::class, 'destroyOption'])->middleware('permission:modifiers-delete')->name('modifiers.options.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -182,6 +182,12 @@ class PermissionSeeder extends Seeder
         $create('dine-orders-access');
         $create('dine-orders-process');
 
+        // modifiers
+        $create('modifiers-access');
+        $create('modifiers-create');
+        $create('modifiers-edit');
+        $create('modifiers-delete');
+
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
