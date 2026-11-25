@@ -2,7 +2,7 @@ import DashboardLayout from "@/Layouts/DashboardLayout";
 import { Head, Link } from "@inertiajs/react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef } from "react";
-import Chart from "chart.js/auto";
+import { loadChart } from "@/Utils/charts";
 import SetupChecklist from "@/Components/Dashboard/SetupChecklist";
 import {
     IconBox,
@@ -220,24 +220,29 @@ export default function Dashboard({
 
     // Setup chart
     useEffect(() => {
-        if (!chartRef.current) return;
+        let cancelled = false;
 
         if (chartInstance.current) {
             chartInstance.current.destroy();
             chartInstance.current = null;
         }
 
-        if (!chartData.length) return;
+        if (!chartRef.current || !chartData.length) return;
 
+        const canvas = chartRef.current;
         const labels = chartData.map((item) => item.label);
         const totals = chartData.map((item) => item.total);
 
-        const ctx = chartRef.current.getContext("2d");
+        const ctx = canvas.getContext("2d");
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
         gradient.addColorStop(0, "rgba(99, 102, 241, 0.3)");
         gradient.addColorStop(1, "rgba(99, 102, 241, 0.01)");
 
-        chartInstance.current = new Chart(chartRef.current, {
+        const init = async () => {
+        const Chart = await loadChart();
+        if (cancelled) return;
+
+        chartInstance.current = new Chart(canvas, {
             type: "line",
             data: {
                 labels,
@@ -304,8 +309,15 @@ export default function Dashboard({
                 },
             },
         });
+        };
 
-        return () => chartInstance.current?.destroy();
+        init();
+
+        return () => {
+            cancelled = true;
+            chartInstance.current?.destroy();
+            chartInstance.current = null;
+        };
     }, [chartData]);
 
     return (

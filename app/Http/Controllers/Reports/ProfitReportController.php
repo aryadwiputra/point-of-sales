@@ -10,6 +10,7 @@ use App\Models\TransactionDetail;
 use App\Models\User;
 use App\Services\OutletAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class ProfitReportController extends Controller
@@ -53,21 +54,15 @@ class ProfitReportController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $transactionIds = (clone $baseQuery)->pluck('id');
-
-        $profitTotal = $transactionIds->isNotEmpty()
-            ? Profit::whereIn('transaction_id', $transactionIds)->sum('total')
-            : 0;
+        $profitTotal = Profit::whereIn('transaction_id', (clone $baseQuery)->select('id'))->sum('total');
 
         $revenueTotal = (clone $baseQuery)->sum('grand_total');
 
         $ordersCount = (clone $baseQuery)->count();
 
-        $itemsSold = $transactionIds->isNotEmpty()
-            ? TransactionDetail::whereIn('transaction_id', $transactionIds)->sum('qty')
-            : 0;
+        $itemsSold = TransactionDetail::whereIn('transaction_id', (clone $baseQuery)->select('id'))->sum('qty');
 
-        $bestTransaction = (clone $baseQuery)->get()->sortByDesc('total_profit')->first();
+        $bestTransaction = (clone $baseQuery)->orderByDesc('total_profit')->first();
 
         $summary = [
             'profit_total' => (int) $profitTotal,
@@ -96,8 +91,8 @@ class ProfitReportController extends Controller
             ->when($filters['invoice'] ?? null, fn ($q, $invoice) => $q->where('invoice', 'like', '%'.$invoice.'%'))
             ->when($filters['cashier_id'] ?? null, fn ($q, $cashier) => $q->where('cashier_id', $cashier))
             ->when($filters['customer_id'] ?? null, fn ($q, $customer) => $q->where('customer_id', $customer))
-            ->when($filters['start_date'] ?? null, fn ($q, $start) => $q->whereDate('created_at', '>=', $start))
-            ->when($filters['end_date'] ?? null, fn ($q, $end) => $q->whereDate('created_at', '<=', $end))
+            ->when($filters['start_date'] ?? null, fn ($q, $start) => $q->where('created_at', '>=', Carbon::parse($start)->startOfDay()))
+            ->when($filters['end_date'] ?? null, fn ($q, $end) => $q->where('created_at', '<=', Carbon::parse($end)->endOfDay()))
             ->when($filters['warehouse_id'] ?? null, fn ($q, $warehouse) => $q->where('warehouse_id', $warehouse));
     }
 }
