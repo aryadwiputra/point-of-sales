@@ -8,12 +8,12 @@ export default function LinkItem({
     access,
     title,
     sidebarOpen,
+    active = false,
     ...props
 }) {
-    const { url } = usePage();
     const { auth } = usePage().props;
 
-    const isActive = url.startsWith(href);
+    const isActive = active;
     const canAccess = isSuperAdmin(auth) || access === true;
 
     if (!canAccess) return null;

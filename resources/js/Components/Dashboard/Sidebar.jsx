@@ -4,11 +4,18 @@ import { IconLayoutGrid } from "@tabler/icons-react";
 import LinkItem from "@/Components/Dashboard/LinkItem";
 import LinkItemDropdown from "@/Components/Dashboard/LinkItemDropdown";
 import Menu from "@/Utils/Menu";
+import { resolveActiveHref } from "@/Utils/activeMenu";
 import { BrandMark } from "@/Components/Brand/Logo";
 
 export default function Sidebar({ sidebarOpen }) {
     const { appVersion } = usePage().props;
+    const { url } = usePage();
     const menuNavigation = Menu();
+
+    const menuItems = menuNavigation.flatMap((section) =>
+        section.details.flatMap((detail) => detail.subdetails ?? [detail])
+    );
+    const activeHref = resolveActiveHref(menuItems, url);
 
     return (
         <div
@@ -87,6 +94,7 @@ export default function Sidebar({ sidebarOpen }) {
                                             href={detail.href}
                                             access={detail.permissions}
                                             sidebarOpen={sidebarOpen}
+                                            active={detail.href === activeHref}
                                         />
                                     );
                                 })}
