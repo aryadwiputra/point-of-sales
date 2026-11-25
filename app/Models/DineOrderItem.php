@@ -51,4 +51,9 @@ class DineOrderItem extends Model
     {
         return $this->belongsTo(Unit::class);
     }
+
+    public function modifiers()
+    {
+        return $this->hasMany(DineOrderItemModifier::class);
+    }
 }

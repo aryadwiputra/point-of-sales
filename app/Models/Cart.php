@@ -10,7 +10,7 @@ class Cart extends Model
     use HasFactory;
 
     protected $fillable = [
-        'cashier_id', 'warehouse_id', 'product_id', 'unit_id', 'conversion_factor', 'qty', 'price', 'hold_id', 'hold_label', 'held_at',
+        'cashier_id', 'warehouse_id', 'product_id', 'unit_id', 'conversion_factor', 'qty', 'price', 'hold_id', 'hold_label', 'held_at', 'note', 'line_signature',
     ];
 
     protected $casts = [
@@ -31,6 +31,11 @@ class Cart extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    public function modifiers()
+    {
+        return $this->hasMany(CartModifier::class);
     }
 
     public function scopeActive($query)

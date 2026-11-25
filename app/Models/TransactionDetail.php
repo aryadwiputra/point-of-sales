@@ -30,6 +30,7 @@ class TransactionDetail extends Model
         'pricing_rule_kind',
         'pricing_group_key',
         'pricing_group_label',
+        'note',
     ];
 
     protected $casts = [
@@ -84,5 +85,10 @@ class TransactionDetail extends Model
     public function batchAllocations()
     {
         return $this->hasMany(TransactionDetailBatchAllocation::class);
+    }
+
+    public function modifiers()
+    {
+        return $this->hasMany(TransactionDetailModifier::class);
     }
 }

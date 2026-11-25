@@ -23,6 +23,7 @@ class Product extends Model
         'min_stock' => 'integer',
         'max_stock' => 'integer',
         'is_composite' => 'boolean',
+        'track_stock' => 'boolean',
     ];
 
     protected $fillable = [
@@ -40,6 +41,7 @@ class Product extends Model
         'min_stock',
         'max_stock',
         'is_composite',
+        'track_stock',
     ];
 
     public function category()
@@ -114,6 +116,24 @@ class Product extends Model
         return $this->hasMany(PricingRule::class);
     }
 
+    public function modifierGroups()
+    {
+        return $this->belongsToMany(ModifierGroup::class, 'product_modifier_groups')
+            ->withPivot(['sort_order', 'is_active'])
+            ->withTimestamps()
+            ->orderBy('product_modifier_groups.sort_order');
+    }
+
+    public function modifierOverrides()
+    {
+        return $this->hasMany(ProductModifierOverride::class);
+    }
+
+    public function tracksStock(): bool
+    {
+        return (bool) ($this->track_stock ?? true);
+    }
+
     public function stockTotal(): int
     {
         return (int) $this->warehouses()->sum('product_warehouse.stock');
@@ -121,7 +141,7 @@ class Product extends Model
 
     public function isLowStock(?int $warehouseId = null): bool
     {
-        if ($this->min_stock <= 0) {
+        if (! $this->tracksStock() || $this->min_stock <= 0) {
             return false;
         }
         $stock = $warehouseId
