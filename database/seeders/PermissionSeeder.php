@@ -184,6 +184,11 @@ class PermissionSeeder extends Seeder
         $create('dine-bills-access');
         $create('dine-bills-process');
 
+        // kitchen
+        $create('kitchen-access');
+        $create('kitchen-process');
+        $create('kitchen-manage');
+
         // modifiers
         $create('modifiers-access');
         $create('modifiers-create');

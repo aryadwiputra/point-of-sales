@@ -63,6 +63,7 @@ class AuthenticatedSessionController extends Controller
             'customers-access' => 'customers.index',
             'suppliers-access' => 'suppliers.index',
             'reports-access' => 'reports.sales.index',
+            'kitchen-access' => 'kitchen.index',
             'dashboard-access' => 'dashboard',
         ];
 
