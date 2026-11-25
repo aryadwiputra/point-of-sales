@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import POSLayout from "@/Layouts/POSLayout";
 import ProductGrid from "@/Components/POS/ProductGrid";
 import CartPanel from "@/Components/POS/CartPanel";
+import ModifierModal from "@/Components/POS/ModifierModal";
 import CustomerSelect from "@/Components/POS/CustomerSelect";
 import NumpadModal from "@/Components/POS/NumpadModal";
 import HeldTransactions, {
@@ -81,6 +82,7 @@ export default function Index({
     const [isSearching, setIsSearching] = useState(false);
     const [addingProductId, setAddingProductId] = useState(null);
     const [removingItemId, setRemovingItemId] = useState(null);
+    const [modifierTarget, setModifierTarget] = useState(null);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [pricingPreview, setPricingPreview] = useState(initialPricingPreview);
     const [isLoadingPricing, setIsLoadingPricing] = useState(false);
@@ -149,9 +151,13 @@ export default function Index({
             );
 
             if (product) {
-                if (product.stock > 0) {
-                    handleAddToCart(product);
-                    toast.success(`${product.title} ditambahkan (barcode)`);
+                if (product.track_stock === false || product.stock > 0) {
+                    if (product.has_modifiers) {
+                        handleSelectModifiers(product);
+                    } else {
+                        handleAddToCart(product);
+                        toast.success(`${product.title} ditambahkan (barcode)`);
+                    }
                 } else {
                     toast.error(`${product.title} stok habis`);
                 }
@@ -368,7 +374,7 @@ export default function Index({
     };
 
     // Handle add product to cart
-    const handleAddToCart = async (product, unit = null) => {
+    const handleAddToCart = async (product, unit = null, extras = {}) => {
         if (!product?.id) return;
 
         setAddingProductId(product.id);
@@ -380,6 +386,8 @@ export default function Index({
                 sell_price: unit ? unit.sell_price : product.sell_price,
                 qty: 1,
                 unit_id: unit ? unit.unit_id : undefined,
+                modifier_ids: extras.modifier_ids ?? [],
+                note: extras.note ?? null,
             },
             {
                 preserveScroll: true,
@@ -387,12 +395,61 @@ export default function Index({
                     toast.success(`${product.title}${unit ? ` (${unit.code})` : ""} ditambahkan`);
                     setAddingProductId(null);
                 },
-                onError: () => {
-                    toast.error("Gagal menambahkan produk");
+                onError: (errors) => {
+                    toast.error(errors?.message || "Gagal menambahkan produk");
                     setAddingProductId(null);
                 },
             }
         );
+    };
+
+    const handleSelectModifiers = (product, unit = null) => {
+        setModifierTarget({ product, unit, modifierIds: [], note: null });
+    };
+
+    const handleConfirmModifiers = ({ product, unit, modifierIds, note }) => {
+        handleAddToCart(product, unit, { modifier_ids: modifierIds, note });
+        setModifierTarget(null);
+    };
+
+    const handleEditModifiers = (item) => {
+        const fullProduct = products.find(
+            (candidate) => Number(candidate.id) === Number(item.product?.id)
+        );
+
+        if (!fullProduct) {
+            toast.error("Produk tidak ditemukan");
+            return;
+        }
+
+        const unit =
+            fullProduct.units?.find(
+                (candidate) =>
+                    !candidate.is_base &&
+                    Number(candidate.unit_id) === Number(item.unit_id)
+            ) || null;
+        const modifierIds = (item.modifiers || [])
+            .map((modifier) => Number(modifier.modifier_id))
+            .filter(Boolean);
+
+        setRemovingItemId(item.id);
+
+        router.delete(route("transactions.destroyCart", item.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setRemovingItemId(null);
+                setModifierTarget({
+                    product: fullProduct,
+                    unit,
+                    modifierIds,
+                    note: item.note || null,
+                });
+            },
+            onError: () => {
+                toast.error("Gagal mengubah item");
+                setRemovingItemId(null);
+            },
+        });
     };
 
     // Handle update cart quantity
@@ -1019,6 +1076,7 @@ export default function Index({
                         onSearchChange={setSearchQuery}
                         isSearching={isSearching}
                         onAddToCart={handleAddToCart}
+                        onSelectModifiers={handleSelectModifiers}
                         addingProductId={addingProductId}
                         searchInputRef={searchInputRef}
                     />
@@ -1140,6 +1198,44 @@ export default function Index({
                                                     {item.product?.title ||
                                                         "Produk"}
                                                 </p>
+                                                {(item.modifiers || []).map(
+                                                    (modifier, index) => (
+                                                        <p
+                                                            key={`${modifier.id ?? modifier.name}-${index}`}
+                                                            className="text-[10px] text-slate-500 dark:text-slate-400"
+                                                        >
+                                                            +{" "}
+                                                            {modifier.group_name
+                                                                ? `${modifier.group_name}: `
+                                                                : ""}
+                                                            {modifier.name}
+                                                            {Number(
+                                                                modifier.price_delta
+                                                            ) !== 0
+                                                                ? ` (${Number(modifier.price_delta) > 0 ? "+" : "-"}${formatPrice(Math.abs(Number(modifier.price_delta)))})`
+                                                                : ""}
+                                                        </p>
+                                                    )
+                                                )}
+                                                {item.note && (
+                                                    <p className="text-[10px] italic text-slate-500 dark:text-slate-400">
+                                                        Catatan: {item.note}
+                                                    </p>
+                                                )}
+                                                {(item.modifiers || []).length >
+                                                    0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleEditModifiers(
+                                                                item
+                                                            )
+                                                        }
+                                                        className="text-[10px] font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                                                    >
+                                                        Ubah
+                                                    </button>
+                                                )}
                                                 <div className="text-xs text-slate-500">
                                                     {pricingRule &&
                                                         effectiveUnitPrice <
@@ -2032,6 +2128,16 @@ export default function Index({
                 title="Jumlah Bayar"
                 initialValue={Number(cashInput) || 0}
                 isCurrency={true}
+            />
+
+            <ModifierModal
+                show={Boolean(modifierTarget)}
+                product={modifierTarget?.product}
+                unit={modifierTarget?.unit}
+                initialModifierIds={modifierTarget?.modifierIds}
+                initialNote={modifierTarget?.note}
+                onClose={() => setModifierTarget(null)}
+                onConfirm={handleConfirmModifiers}
             />
 
             {/* Keyboard Shortcuts Help */}

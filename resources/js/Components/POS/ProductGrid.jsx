@@ -10,9 +10,10 @@ const formatPrice = (value = 0) =>
     });
 
 // Single Product Card
-function ProductCard({ product, onAddToCart, isAdding }) {
-    const hasStock = product.stock > 0;
-    const lowStock = product.stock > 0 && product.stock <= 5;
+function ProductCard({ product, onAddToCart, onSelectModifiers, isAdding }) {
+    const tracksStock = product.track_stock !== false;
+    const hasStock = !tracksStock || Number(product.stock) > 0;
+    const lowStock = tracksStock && Number(product.stock) > 0 && Number(product.stock) <= 5;
     const promoBadge = product.pricing_badge;
     const promoPrice = Number(promoBadge?.promo_price || 0);
     const basePrice = Number(promoBadge?.base_price || product.sell_price || 0);
@@ -46,7 +47,14 @@ function ProductCard({ product, onAddToCart, isAdding }) {
             {/* Product Image — click adds base unit */}
             <button
                 type="button"
-                onClick={() => hasStock && onAddToCart(product, selectedUnit)}
+                onClick={() => {
+                    if (!hasStock || isAdding) return;
+                    if (product.has_modifiers && onSelectModifiers) {
+                        onSelectModifiers(product, selectedUnit);
+                        return;
+                    }
+                    onAddToCart(product, selectedUnit);
+                }}
                 disabled={!hasStock || isAdding}
                 className={`block text-left ${
                     hasStock ? "cursor-pointer" : "cursor-not-allowed"
@@ -228,6 +236,7 @@ export default function ProductGrid({
     onSearch,
     isSearching,
     onAddToCart,
+    onSelectModifiers,
     addingProductId,
     searchInputRef,
 }) {
@@ -294,6 +303,7 @@ export default function ProductGrid({
                                 key={product.id}
                                 product={product}
                                 onAddToCart={onAddToCart}
+                                onSelectModifiers={onSelectModifiers}
                                 isAdding={addingProductId === product.id}
                             />
                         ))}

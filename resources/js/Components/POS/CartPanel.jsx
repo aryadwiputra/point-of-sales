@@ -15,12 +15,11 @@ const formatPrice = (value = 0) =>
     });
 
 // Single Cart Item
-function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
+function CartItem({ item, onUpdateQty, onRemove, onEditModifiers, isRemoving }) {
     // Note: item.price from backend is already the total (sell_price * qty)
     const quantity = Number(item.qty || 0);
     const itemPrice = Number(item.price || 0);
-    const unitPrice =
-        Number(item.product?.sell_price || 0) || itemPrice / quantity || 0;
+    const unitPrice = quantity > 0 ? itemPrice / quantity : 0;
     const subtotal = itemPrice; // Already calculated total from backend
 
     return (
@@ -55,9 +54,40 @@ function CartItem({ item, onUpdateQty, onRemove, isRemoving }) {
                 <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
                     {item.product?.title || "Produk"}
                 </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+
+                {(item.modifiers || []).map((modifier, index) => (
+                    <p
+                        key={`${modifier.id ?? modifier.name}-${index}`}
+                        className="text-[11px] text-slate-500 dark:text-slate-400"
+                    >
+                        + {modifier.group_name ? `${modifier.group_name}: ` : ""}
+                        {modifier.name}
+                        {Number(modifier.price_delta) !== 0
+                            ? ` (${Number(modifier.price_delta) > 0 ? "+" : "-"}${formatPrice(Math.abs(Number(modifier.price_delta)))})`
+                            : ""}
+                    </p>
+                ))}
+
+                {item.note && (
+                    <p className="text-[11px] italic text-slate-500 dark:text-slate-400">
+                        Catatan: {item.note}
+                    </p>
+                )}
+
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                     {formatPrice(unitPrice)} × {item.qty}
                 </p>
+
+                {onEditModifiers && (item.modifiers || []).length > 0 && (
+                    <button
+                        type="button"
+                        onClick={() => onEditModifiers(item)}
+                        className="mt-1 text-[11px] font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                    >
+                        Ubah
+                    </button>
+                )}
+
                 <p className="text-sm font-semibold text-primary-600 dark:text-primary-400 mt-1">
                     {formatPrice(subtotal)}
                 </p>
@@ -125,6 +155,7 @@ export default function CartPanel({
     items = [],
     onUpdateQty,
     onRemove,
+    onEditModifiers,
     removingItemId,
     className = "",
 }) {
@@ -164,6 +195,7 @@ export default function CartPanel({
                             item={item}
                             onUpdateQty={onUpdateQty}
                             onRemove={onRemove}
+                            onEditModifiers={onEditModifiers}
                             isRemoving={removingItemId === item.id}
                         />
                     ))}
