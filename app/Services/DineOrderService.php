@@ -38,7 +38,7 @@ class DineOrderService
 
         DB::transaction(function () use ($order, $shift, $warehouseId, $cashierId) {
             // ponytail: lock the order row so accept cannot race with a second accept/reject
-            $order = DineOrder::with(['items.product.components', 'table.area.outlet'])
+            $order = DineOrder::with(['items.product.components', 'items.modifiers', 'table.area.outlet'])
                 ->whereKey($order->id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -85,7 +85,18 @@ class DineOrderService
                     'unit_price' => (int) $item->price,
                     'price' => $lineTotal,
                     'discount_total' => 0,
+                    'note' => $item->note,
                 ]);
+
+                $detail->modifiers()->createMany(
+                    $item->modifiers->map(fn ($modifier) => [
+                        'modifier_id' => $modifier->modifier_id,
+                        'modifier_group_id' => $modifier->modifier_group_id,
+                        'group_name' => $modifier->group_name,
+                        'name' => $modifier->name,
+                        'price_delta' => $modifier->price_delta,
+                    ])->all()
+                );
 
                 if ($product->is_composite) {
                     $totalBuyPrice = $product->components->sum(
@@ -133,7 +144,7 @@ class DineOrderService
                             userId: $userId,
                         );
                     }
-                } else {
+                } elseif ($product->tracksStock()) {
                     $baseQty = $item->baseQuantity();
 
                     $pw = ProductWarehouse::where('product_id', $product->id)

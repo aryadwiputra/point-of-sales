@@ -6,6 +6,7 @@ use App\Models\DineOrder;
 use App\Models\DiningTable;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Services\ModifierService;
 use App\Services\PricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -15,6 +16,7 @@ class DineOrderController extends Controller
 {
     public function __construct(
         private PricingService $pricingService,
+        private ModifierService $modifierService,
     ) {}
 
     public function store(Request $request, string $token)
@@ -28,6 +30,8 @@ class DineOrderController extends Controller
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.unit_id' => ['nullable', 'exists:units,id'],
             'items.*.note' => ['nullable', 'string', 'max:255'],
+            'items.*.modifier_ids' => ['nullable', 'array'],
+            'items.*.modifier_ids.*' => ['integer'],
             'notes' => ['nullable', 'string', 'max:500'],
             // ponytail: online payment (gateway + webhook) is not wired yet — enforce counter payment only
             'payment_option' => ['required', 'in:pay_at_counter'],
@@ -58,15 +62,19 @@ class DineOrderController extends Controller
                 : 1;
             $baseQty = (int) round($item['qty'] * (float) $conversionFactor);
 
+            $snapshot = $this->modifierService->selectionSnapshot($product, $item['modifier_ids'] ?? []);
+            $modifierDelta = $this->modifierService->deltaFor($snapshot);
+
             // Public orders are routed to the outlet's warehouse when accepted.
             $available = $this->availableStock($product, $outlet);
 
-            if ($available < $baseQty) {
+            // ponytail: a non-stocked menu item has no inventory gate; composites always consume their components
+            if (($product->is_composite || $product->tracksStock()) && $available < $baseQty) {
                 return back()->with('error', "Stok {$product->title} tidak mencukupi (tersedia: {$available}).");
             }
 
             $preview = $previews->get($product->id);
-            $price = (int) ($preview['effective_unit_price'] ?? $product->sell_price);
+            $price = (int) ($preview['effective_unit_price'] ?? $product->sell_price) + $modifierDelta;
             $subtotal += $price * $item['qty'];
             $orderItems[] = [
                 'product_id' => $item['product_id'],
@@ -75,6 +83,7 @@ class DineOrderController extends Controller
                 'qty' => $item['qty'],
                 'price' => $price,
                 'note' => $item['note'] ?? null,
+                'modifiers' => $snapshot,
             ];
         }
 
@@ -91,7 +100,14 @@ class DineOrderController extends Controller
         ]);
 
         foreach ($orderItems as $item) {
-            $order->items()->create($item);
+            $modifiers = $item['modifiers'];
+            unset($item['modifiers']);
+
+            $orderItem = $order->items()->create($item);
+
+            if ($modifiers !== []) {
+                $orderItem->modifiers()->createMany($modifiers);
+            }
         }
 
         return redirect()
