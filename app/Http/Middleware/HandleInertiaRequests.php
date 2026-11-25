@@ -93,6 +93,7 @@ class HandleInertiaRequests extends Middleware
                     fn ($join) => $join->on('warehouse_totals.product_id', '=', 'products.id')
                 )
                 ->where('min_stock', '>', 0)
+                ->where('products.track_stock', true)
                 ->where(function ($query) use ($includeLegacy) {
                     $query->whereColumn('warehouse_totals.warehouse_stock', '<=', 'min_stock');
                     if ($includeLegacy) {
