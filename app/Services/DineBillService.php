@@ -17,6 +17,7 @@ class DineBillService
         private readonly StockMutationService $stockMutationService,
         private readonly AuditLogService $auditLogService,
         private readonly DineSessionService $sessionService,
+        private readonly KitchenTicketService $kitchenTicketService,
     ) {}
 
     public function openBillForSession(DineSession $session, ?int $createdBy = null): DineBill
@@ -164,6 +165,8 @@ class DineBillService
                     'void_reason' => $reason,
                 ],
             );
+
+            $this->kitchenTicketService->cancelForDineOrderItem($lockedItem, $reason, $userId);
 
             $this->recomputeTotals($lockedBill);
             $this->voidIfEmpty($lockedBill);

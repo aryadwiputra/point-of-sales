@@ -16,6 +16,7 @@ class DineOrderService
         private readonly StockMutationService $stockMutationService,
         private readonly DineSessionService $sessionService,
         private readonly DineBillService $billService,
+        private readonly KitchenTicketService $kitchenTicketService,
     ) {}
 
     public function accept(DineOrder $order): void
@@ -78,6 +79,7 @@ class DineOrderService
             ]);
 
             $this->billService->recomputeTotals($bill);
+            $this->kitchenTicketService->createForDineOrder($order, $shift->warehouse?->outlet_id);
         });
     }
 

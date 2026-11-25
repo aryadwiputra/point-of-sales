@@ -21,6 +21,7 @@ class DineStaffOrderService
         private readonly DineSessionService $sessionService,
         private readonly DineBillService $billService,
         private readonly StockMutationService $stockMutationService,
+        private readonly KitchenTicketService $kitchenTicketService,
     ) {}
 
     public function submit(int $userId, DineBill $bill): DineOrder
@@ -139,6 +140,7 @@ class DineStaffOrderService
                 ->delete();
 
             $this->billService->recomputeTotals($bill);
+            $this->kitchenTicketService->createForDineOrder($order, $shift->warehouse?->outlet_id);
 
             return $order->fresh(['items']);
         });
