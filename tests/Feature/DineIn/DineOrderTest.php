@@ -162,7 +162,7 @@ class DineOrderTest extends TestCase
         $this->assertEquals('accepted', $order->fresh()->status);
     }
 
-    public function test_accept_records_transaction_profit_and_stock_mutation(): void
+    public function test_accept_creates_bill_without_transaction_or_profit(): void
     {
         $product = $this->createProduct(50);
         $this->actingAs($this->cashier);
@@ -177,22 +177,21 @@ class DineOrderTest extends TestCase
         $this->post(route('dine-orders.accept', $order))->assertSessionHasNoErrors();
 
         $order = $order->fresh();
-        $this->assertNotNull($order->transaction_id);
-
-        $transaction = Transaction::findOrFail($order->transaction_id);
-        $this->assertEquals(30000, $transaction->grand_total);
-        $this->assertEquals('unpaid', $transaction->payment_status);
-        $this->assertEquals('in_store', $transaction->order_type);
-        $this->assertEquals($this->warehouse->id, $transaction->warehouse_id);
-
-        $this->assertDatabaseHas('transaction_details', [
-            'transaction_id' => $transaction->id,
+        $this->assertNull($order->transaction_id);
+        $this->assertSame(0, Transaction::count());
+        $this->assertDatabaseHas('dine_bills', [
+            'dine_session_id' => $order->dine_session_id,
+            'status' => 'open',
+            'subtotal' => 30000,
+        ]);
+        $this->assertDatabaseHas('dine_order_items', [
+            'dine_order_id' => $order->id,
             'product_id' => $product->id,
             'qty' => 3,
-            'conversion_factor' => 1,
+            'unit_cost' => 5000,
+            'tax_type' => 'exclusive',
+            'tax_rate' => 0,
         ]);
-        $this->assertEquals(15000, (int) $transaction->profits()->sum('total'));
-
         $this->assertDatabaseHas('stock_mutations', [
             'product_id' => $product->id,
             'warehouse_id' => $this->warehouse->id,
@@ -243,8 +242,10 @@ class DineOrderTest extends TestCase
             'stock_after' => 38,
         ]);
 
-        $transaction = Transaction::findOrFail($order->fresh()->transaction_id);
-        $this->assertEquals(12, (int) $transaction->details()->first()->conversion_factor);
+        $item = $order->fresh()->items()->first();
+        $this->assertSame(12.0, (float) $item->conversion_factor);
+        $this->assertSame(12, $item->baseQuantity());
+        $this->assertSame(0, Transaction::count());
     }
 
     public function test_accept_rejects_insufficient_stock_atomically(): void

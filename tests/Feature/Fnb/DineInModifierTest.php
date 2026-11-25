@@ -8,6 +8,7 @@ use App\Models\DiningTable;
 use App\Models\Modifier;
 use App\Models\ModifierGroup;
 use App\Models\Product;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\CashierShiftService;
@@ -131,15 +132,17 @@ class DineInModifierTest extends TestCase
 
         app(DineOrderService::class)->accept($order);
 
-        $this->assertDatabaseHas('transaction_details', [
-            'product_id' => $this->product->id,
-            'note' => 'Less ice',
-            'unit_price' => 23000,
-        ]);
-        $this->assertDatabaseHas('transaction_detail_modifiers', [
-            'group_name' => 'Ukuran',
-            'name' => 'Large',
-            'price_delta' => 5000,
+        $order = $order->fresh(['items.modifiers']);
+        $item = $order->items()->first();
+
+        $this->assertSame(0, Transaction::count());
+        $this->assertNotNull($item->dine_bill_id);
+        $this->assertCount(1, $item->modifiers);
+        $this->assertSame(5000, (int) $item->modifiers->first()->price_delta);
+        $this->assertDatabaseHas('dine_bills', [
+            'dine_session_id' => $order->dine_session_id,
+            'status' => 'open',
+            'subtotal' => 23000,
         ]);
 
         $this->assertSame(100, (int) $this->product->fresh()->stock);
