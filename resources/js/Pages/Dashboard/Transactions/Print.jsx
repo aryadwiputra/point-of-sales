@@ -100,7 +100,7 @@ export default function Print({ transaction }) {
 
     const store = useMemo(
         () => ({
-            name: storeProfile?.name || "Toko Anda",
+            name: storeProfile?.name || "Dikasir",
             logo: storeProfile?.logo || null,
             address: storeProfile?.address || "",
             phone: storeProfile?.phone || "",

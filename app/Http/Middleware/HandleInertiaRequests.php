@@ -210,7 +210,7 @@ class HandleInertiaRequests extends Middleware
         }
 
         $storeProfile = [
-            'name' => 'Toko Anda',
+            'name' => 'Dikasir',
             'logo' => null,
             'address' => '',
             'phone' => '',
@@ -230,7 +230,7 @@ class HandleInertiaRequests extends Middleware
             }
 
             $storeProfile = [
-                'name' => Setting::getForOutlet('store_name', $outlet, 'Toko Anda'),
+                'name' => Setting::getForOutlet('store_name', $outlet, 'Dikasir'),
                 'logo' => $logo,
                 'address' => Setting::getForOutlet('store_address', $outlet, ''),
                 'phone' => Setting::getForOutlet('store_phone', $outlet, ''),
