@@ -21,7 +21,7 @@ import {
 // Role Card Component
 function RoleCard({ role, onEdit, onDelete, canUpdate, canDelete }) {
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-all">
+        <div className="flex h-full flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-lg transition-all">
             {/* Header */}
             <div className="p-5 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3">
@@ -40,7 +40,7 @@ function RoleCard({ role, onEdit, onDelete, canUpdate, canDelete }) {
             </div>
 
             {/* Permissions */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50">
+            <div className="flex-1 p-4 bg-slate-50 dark:bg-slate-800/50">
                 <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto scrollbar-thin">
                     {role.permissions.slice(0, 8).map((permission, index) => (
                         <span
