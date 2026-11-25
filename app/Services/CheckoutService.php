@@ -36,7 +36,7 @@ class CheckoutService
                 lockForUpdate: true,
             );
 
-            $carts = Cart::with('product')
+            $carts = Cart::with(['product', 'modifiers'])
                 ->where('cashier_id', $ctx->userId)
                 ->active()
                 ->when($ctx->onlyCartIds, fn ($q, $ids) => $q->whereIn('id', $ids))
@@ -183,6 +183,7 @@ class CheckoutService
                 'unit_id' => $cart->unit_id,
                 'conversion_factor' => $cart->conversion_factor,
                 'qty' => $cart->qty,
+                'note' => $cart->note,
                 'base_unit_price' => $baseUnitPrice,
                 'unit_price' => $unitPrice,
                 'price' => $lineTotal,
@@ -193,6 +194,16 @@ class CheckoutService
                 'pricing_group_key' => data_get($pricingItem, 'pricing_group_key'),
                 'pricing_group_label' => data_get($pricingItem, 'pricing_group_label'),
             ]);
+
+            $detail->modifiers()->createMany(
+                $cart->modifiers->map(fn ($modifier) => [
+                    'modifier_id' => $modifier->modifier_id,
+                    'modifier_group_id' => $modifier->modifier_group_id,
+                    'group_name' => $modifier->group_name,
+                    'name' => $modifier->name,
+                    'price_delta' => $modifier->price_delta,
+                ])->all()
+            );
 
             $product = Product::find($cart->product_id);
 
@@ -249,7 +260,7 @@ class CheckoutService
                         userId: $userId,
                     );
                 }
-            } else {
+            } elseif ($product->tracksStock()) {
                 $baseQty = (int) round($cart->qty * (float) ($cart->conversion_factor ?? 1));
 
                 $pw = $warehouseId
