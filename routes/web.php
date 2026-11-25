@@ -17,6 +17,7 @@ use App\Http\Controllers\Apps\DineTableController;
 use App\Http\Controllers\Apps\DiscountApprovalController;
 use App\Http\Controllers\Apps\GoodsReceivingController;
 use App\Http\Controllers\Apps\ImportExportController;
+use App\Http\Controllers\Apps\KitchenController;
 use App\Http\Controllers\Apps\MemberController;
 use App\Http\Controllers\Apps\ModifierController;
 use App\Http\Controllers\Apps\OutletController;
@@ -460,6 +461,15 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     Route::post('/dine-bills/{dineBill}/settle', [DineBillController::class, 'settle'])
         ->middleware('permission:dine-bills-process')
         ->name('dine-bills.settle');
+
+    // kitchen display
+    Route::get('/kitchen', [KitchenController::class, 'index'])->middleware('permission:kitchen-access')->name('kitchen.index');
+    Route::get('/kitchen/board', [KitchenController::class, 'board'])->middleware('permission:kitchen-access')->name('kitchen.board');
+    Route::patch('/kitchen/items/{kitchenTicketItem}/status', [KitchenController::class, 'updateItemStatus'])->middleware('permission:kitchen-process')->name('kitchen.items.status');
+    Route::post('/kitchen/tickets/{kitchenTicket}/cooking', [KitchenController::class, 'ticketCooking'])->middleware('permission:kitchen-process')->name('kitchen.tickets.cooking');
+    Route::post('/kitchen/tickets/{kitchenTicket}/ready', [KitchenController::class, 'ticketReady'])->middleware('permission:kitchen-process')->name('kitchen.tickets.ready');
+    Route::post('/kitchen/tickets/{kitchenTicket}/clear', [KitchenController::class, 'clearTicket'])->middleware('permission:kitchen-process')->name('kitchen.tickets.clear');
+    Route::post('/kitchen/settings', [KitchenController::class, 'updateSettings'])->middleware('permission:kitchen-manage')->name('kitchen.settings');
 
     // modifier library
     Route::get('/modifiers', [ModifierController::class, 'index'])->middleware('permission:modifiers-access')->name('modifiers.index');
