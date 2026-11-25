@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { usePage } from "@inertiajs/react";
 import { IconLayoutGrid } from "@tabler/icons-react";
 import LinkItem from "@/Components/Dashboard/LinkItem";
@@ -7,10 +7,19 @@ import Menu from "@/Utils/Menu";
 import { resolveActiveHref } from "@/Utils/activeMenu";
 import { BrandMark } from "@/Components/Brand/Logo";
 
+let lastSidebarScrollTop = 0;
+
 export default function Sidebar({ sidebarOpen }) {
     const { appVersion } = usePage().props;
     const { url } = usePage();
     const menuNavigation = Menu();
+    const navRef = useRef(null);
+
+    useLayoutEffect(() => {
+        if (navRef.current) {
+            navRef.current.scrollTop = lastSidebarScrollTop;
+        }
+    }, []);
 
     const menuItems = menuNavigation.flatMap((section) =>
         section.details.flatMap((detail) => detail.subdetails ?? [detail])
@@ -44,7 +53,13 @@ export default function Sidebar({ sidebarOpen }) {
             </div>
 
             {/* Navigation */}
-            <nav className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto py-3">
+            <nav
+                ref={navRef}
+                onScroll={(event) => {
+                    lastSidebarScrollTop = event.currentTarget.scrollTop;
+                }}
+                className="dashboard-scrollbar min-h-0 flex-1 overflow-y-auto py-3"
+            >
                 {menuNavigation.map((section, index) => {
                     const hasPermission = section.details.some(
                         (detail) => detail.permissions === true
