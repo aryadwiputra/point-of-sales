@@ -21,17 +21,18 @@ use App\Services\BatchService;
 use App\Services\CashierShiftService;
 use App\Services\CheckoutService;
 use App\Services\LoyaltyService;
+use App\Services\ModifierService;
 use App\Services\OutletAccessService;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\PriceListService;
 use App\Services\PricingService;
 use App\Services\TransactionTenderService;
 use App\Services\UnitConversionService;
+use App\Support\CartLineSignature;
 use App\Support\Checkout\CheckoutContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -48,6 +49,7 @@ class TransactionController extends Controller
         protected readonly TransactionTenderService $tenderService,
         protected readonly OutletAccessService $outletAccessService,
         protected readonly CheckoutService $checkoutService,
+        protected readonly ModifierService $modifierService,
     ) {}
 
     /**
@@ -64,7 +66,7 @@ class TransactionController extends Controller
         $outlet = $activeShift?->warehouse?->outlet;
 
         // Get active cart items (not held)
-        $carts = Cart::with('product')
+        $carts = Cart::with(['product', 'modifiers'])
             ->where('cashier_id', $userId)
             ->active()
             ->latest()
@@ -97,13 +99,16 @@ class TransactionController extends Controller
         $customers = Customer::latest()->get();
 
         // get products with stock > 0 in active warehouse
-        $products = Product::with(['category:id,name', 'units'])
-            ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id')
+        $products = Product::with(['category:id,name', 'units', 'modifierGroups.modifiers', 'modifierOverrides'])
+            ->select('id', 'barcode', 'title', 'description', 'image', 'buy_price', 'sell_price', 'stock', 'category_id', 'is_composite', 'track_stock')
             ->when($warehouseId, function ($q) use ($warehouseId) {
-                $q->whereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
-                    ->where('product_warehouse.stock', '>', 0));
+                $q->where(function ($sub) use ($warehouseId) {
+                    $sub->where('track_stock', false)
+                        ->orWhereHas('warehouses', fn ($w) => $w->where('product_warehouse.warehouse_id', $warehouseId)
+                            ->where('product_warehouse.stock', '>', 0));
+                });
             }, function ($q) {
-                $q->where('stock', '>', 0);
+                $q->where(fn ($sub) => $sub->where('track_stock', false)->orWhere('stock', '>', 0));
             })
             ->orderBy('title')
             ->get();
@@ -129,6 +134,20 @@ class TransactionController extends Controller
                     'base_price' => $pricing['base_unit_price'],
                     'kind' => $pricing['pricing_rule']['kind'],
                 ] : null,
+                'has_modifiers' => $this->modifierService->attachableGroups($product)->isNotEmpty(),
+                'modifier_groups' => $this->modifierService->attachableGroups($product)->map(fn ($group) => [
+                    'id' => $group->id,
+                    'name' => $group->name,
+                    'selection_type' => $group->selection_type,
+                    'min_select' => (int) $group->min_select,
+                    'max_select' => $group->max_select !== null ? (int) $group->max_select : null,
+                    'options' => $group->modifiers->map(fn ($modifier) => [
+                        'id' => $modifier->id,
+                        'name' => $modifier->name,
+                        'price_delta' => (int) $modifier->effective_price_delta,
+                        'is_default' => (bool) $modifier->is_default,
+                    ])->values(),
+                ])->values(),
             ];
         });
 
@@ -255,6 +274,9 @@ class TransactionController extends Controller
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'qty' => ['required', 'numeric', 'min:0.01'],
             'unit_id' => ['nullable', 'integer'],
+            'modifier_ids' => ['nullable', 'array'],
+            'modifier_ids.*' => ['integer'],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $activeShift = $this->cashierShiftService->getActiveShiftForUser(auth()->user()->id);
@@ -265,6 +287,12 @@ class TransactionController extends Controller
         if (! $product) {
             return redirect()->back()->with('error', 'Product not found.');
         }
+
+        $modifierIds = $validated['modifier_ids'] ?? [];
+        $snapshot = $this->modifierService->selectionSnapshot($product, $modifierIds);
+        $modifierDelta = $this->modifierService->deltaFor($snapshot);
+        $note = $validated['note'] ?? null;
+        $lineSignature = CartLineSignature::make(array_column($snapshot, 'modifier_id'), $note);
 
         // ponytail: composite branch skips unit logic; null unit_id is fine for composite carts
         $unitId = null;
@@ -291,14 +319,17 @@ class TransactionController extends Controller
             }
 
             $unitConversion = app(UnitConversionService::class);
-            $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
 
-            $availableStock = $warehouseId
-                ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
-                : (int) $product->stock;
+            if ($product->tracksStock()) {
+                $baseQty = $unitConversion->toBaseUnit($product, $unitId, $validated['qty']);
 
-            if ($availableStock < $baseQty) {
-                return redirect()->back()->with('error', 'Stok tidak mencukupi.');
+                $availableStock = $warehouseId
+                    ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+                    : (int) $product->stock;
+
+                if ($availableStock < $baseQty) {
+                    return redirect()->back()->with('error', 'Stok tidak mencukupi.');
+                }
             }
 
             $sellPrice = $unitConversion->getSellPrice($product, $unitId);
@@ -309,26 +340,34 @@ class TransactionController extends Controller
             $conversionFactor = 1;
         }
 
-        $cart = Cart::with('product')
+        $unitPrice = $sellPrice + $modifierDelta;
+
+        $cart = Cart::with(['product', 'modifiers'])
             ->where('product_id', $validated['product_id'])
             ->where('cashier_id', auth()->user()->id)
+            ->where('unit_id', $unitId)
+            ->where('line_signature', $lineSignature)
             ->active()
             ->first();
 
         if ($cart) {
             $cart->increment('qty', $validated['qty']);
-            $cart->price = $sellPrice * $cart->qty;
+            $cart->price = $unitPrice * $cart->qty;
             $cart->save();
         } else {
-            Cart::create([
+            $cart = Cart::create([
                 'cashier_id' => auth()->user()->id,
                 'warehouse_id' => $warehouseId,
                 'product_id' => $validated['product_id'],
                 'unit_id' => $unitId,
                 'conversion_factor' => $conversionFactor,
                 'qty' => $validated['qty'],
-                'price' => $sellPrice * $validated['qty'],
+                'price' => $unitPrice * $validated['qty'],
+                'note' => $note,
+                'line_signature' => $lineSignature,
             ]);
+
+            $cart->modifiers()->createMany($snapshot);
         }
 
         return redirect()->route('transactions.index')->with('success', 'Product Added Successfully!.');
@@ -395,32 +434,38 @@ class TransactionController extends Controller
             ], 404);
         }
 
+        $cart->loadMissing('modifiers');
+
+        $modifierDelta = (int) $cart->modifiers->sum('price_delta');
+
         if ($product->is_composite) {
             $product->load('components');
         }
 
-        // Check stock availability (convert display qty to base qty for the cart's unit)
-        $unitConversion = app(UnitConversionService::class);
-        $baseQty = $product->is_composite
-            ? (int) $request->qty
-            : $unitConversion->toBaseUnit($product, $cart->unit_id, $request->qty);
+        if ($product->is_composite || $product->tracksStock()) {
+            $unitConversion = app(UnitConversionService::class);
+            $baseQty = $product->is_composite
+                ? (int) $request->qty
+                : $unitConversion->toBaseUnit($product, $cart->unit_id, $request->qty);
 
-        $availableStock = $warehouseId
-            ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
-            : (int) $product->stock;
+            $availableStock = $warehouseId
+                ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
+                : (int) $product->stock;
 
-        if ($availableStock < $baseQty) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Stok tidak mencukupi. Tersedia: '.$availableStock,
-            ], 422);
+            if ($availableStock < $baseQty) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stok tidak mencukupi. Tersedia: '.$availableStock,
+                ], 422);
+            }
         }
 
-        // Update quantity and price (derive price from DB, not from request/global sell_price)
+        $baseUnitPrice = $product->is_composite
+            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty)
+            : app(UnitConversionService::class)->getSellPrice($product, $cart->unit_id);
+
         $cart->qty = $request->qty;
-        $cart->price = $product->is_composite
-            ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty) * $request->qty
-            : $unitConversion->getSellPrice($product, $cart->unit_id) * $request->qty;
+        $cart->price = ($baseUnitPrice + $modifierDelta) * $request->qty;
         $cart->save();
 
         return back()->with('success', 'Quantity updated successfully');
