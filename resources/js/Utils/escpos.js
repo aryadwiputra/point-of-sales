@@ -31,7 +31,7 @@ function buildReceiptBytes(data, paperSize = "80mm") {
     };
 
     emphasize(true);
-    center(data.store_name || "TOKO");
+    center(data.store_name || "Dikasir");
     emphasize(false);
     if (data.store_address) center(data.store_address.slice(0, width));
     if (data.store_phone) center(`Telp: ${data.store_phone}`);

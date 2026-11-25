@@ -18,6 +18,7 @@ import {
     IconQuestionMark,
 } from "@tabler/icons-react";
 import Notification from "@/Components/Dashboard/Notification";
+import { BrandMark } from "@/Components/Brand/Logo";
 import { useTour } from "@/Hooks/useTour";
 import i18n from "@/i18n";
 import {
@@ -26,7 +27,7 @@ import {
 } from "@/Utils/offlineDb";
 
 export default function POSLayout({ children }) {
-    const { auth, storeProfile, activeCashierShift, appVersion } = usePage().props;
+    const { auth, activeCashierShift, appVersion } = usePage().props;
     const { darkMode, themeSwitcher } = useTheme();
     const { start: startTour, isActive: tourActive } = useTour("pos");
     const [pendingSyncCount, setPendingSyncCount] = useState(0);
@@ -117,22 +118,10 @@ export default function POSLayout({ children }) {
                     </button>
 
                     {/* Logo */}
-                    <Link href={route("dashboard")} className="flex items-center gap-2">
-                        <div className="w-9 h-9 flex items-center justify-center overflow-hidden">
-                            {storeProfile?.logo ? (
-                                <img
-                                    src={storeProfile.logo}
-                                    alt={storeProfile?.name || "Store"}
-                                    className="w-full h-full object-contain"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-primary-600 text-white font-bold text-sm">
-                                    {(storeProfile?.name || "K").charAt(0)}
-                                </div>
-                            )}
-                        </div>
+                    <Link href={route("dashboard")} className="flex items-center gap-2.5">
+                        <BrandMark size={28} />
                         <span className="hidden sm:block text-lg font-bold text-slate-800 dark:text-white">
-                            {storeProfile?.name || "KASIR"}
+                            Dikasir
                         </span>
                     </Link>
 
