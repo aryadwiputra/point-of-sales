@@ -283,7 +283,7 @@ class TransactionController extends Controller
             // Composite price = sum component prices
             $sellPrice = (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty);
         } else {
-            $unitId = (int) (($validated['unit_id'] ?? null) ?: $product->baseUnit()?->id ?: 1);
+            $unitId = isset($validated['unit_id']) ? (int) $validated['unit_id'] : $product->baseUnit()?->id;
 
             // Reject an explicitly provided unit that does not belong to this product
             if (! empty($validated['unit_id'] ?? null) && ! $product->units()->whereKey($unitId)->exists()) {
@@ -403,7 +403,7 @@ class TransactionController extends Controller
         $unitConversion = app(UnitConversionService::class);
         $baseQty = $product->is_composite
             ? (int) $request->qty
-            : $unitConversion->toBaseUnit($product, (int) $cart->unit_id, $request->qty);
+            : $unitConversion->toBaseUnit($product, $cart->unit_id, $request->qty);
 
         $availableStock = $warehouseId
             ? (int) ($product->warehouses()->where('warehouse_id', $warehouseId)->first()?->pivot->stock ?? 0)
@@ -420,7 +420,7 @@ class TransactionController extends Controller
         $cart->qty = $request->qty;
         $cart->price = $product->is_composite
             ? (int) $product->components->sum(fn ($c) => $c->sell_price * (float) $c->pivot->qty) * $request->qty
-            : $unitConversion->getSellPrice($product, (int) $cart->unit_id) * $request->qty;
+            : $unitConversion->getSellPrice($product, $cart->unit_id) * $request->qty;
         $cart->save();
 
         return back()->with('success', 'Quantity updated successfully');
