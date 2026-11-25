@@ -5,6 +5,7 @@ import Button from "@/Components/Dashboard/Button";
 import Input from "@/Components/Dashboard/Input";
 import Textarea from "@/Components/Dashboard/TextArea";
 import InputSelect from "@/Components/Dashboard/InputSelect";
+import ModifierSelector from "@/Components/Dashboard/ModifierSelector";
 import toast from "react-hot-toast";
 import {
     IconPackage,
@@ -18,10 +19,10 @@ import {
     IconRulerMeasure,
 } from "@tabler/icons-react";
 
-export default function Create({ categories, products, units = [] }) {
+export default function Create({ categories, products, units = [], modifierGroups = [] }) {
     const { errors } = usePage().props;
 
-    const { data, setData, post, processing } = useForm({
+    const { data, setData, post, processing, transform } = useForm({
         image: "",
         barcode: "",
         sku: "",
@@ -38,6 +39,9 @@ export default function Create({ categories, products, units = [] }) {
         is_composite: false,
         components: [],
         units: [],
+        track_stock: true,
+        modifier_groups: [],
+        modifier_overrides: {},
     });
 
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -145,16 +149,33 @@ export default function Create({ categories, products, units = [] }) {
         }
     };
 
+    const handleModifierOverride = (modifierId, value) => {
+        setData((current) => {
+            const next = { ...current.modifier_overrides };
+
+            if (value === "") {
+                delete next[modifierId];
+            } else {
+                next[modifierId] = parseInt(value) || 0;
+            }
+
+            return { ...current, modifier_overrides: next };
+        });
+    };
+
     // ponytail: zero-out stock/sell_price for composite; collapse if Inertia ever accepts pre-send transforms
     const submitCompositeAware = (e) => {
         e.preventDefault();
-        if (data.is_composite) {
-            setData("sell_price", 0);
-            setData("stock", 0);
-        }
+
+        transform((current) => ({
+            ...current,
+            sell_price: current.is_composite ? 0 : current.sell_price,
+            stock: current.is_composite ? 0 : current.stock,
+        }));
+
         post(route("products.store"), {
-            onSuccess: () => toast.success("Produk berhasil ditambahkan"),
-            onError: () => toast.error("Gagal menyimpan produk"),
+            onSuccess: () => toast.success("Produk berhasil ditambahkan."),
+            onError: () => toast.error("Gagal menambahkan produk."),
         });
     };
 
@@ -246,6 +267,9 @@ export default function Create({ categories, products, units = [] }) {
                                     errors={errors.barcode}
                                     placeholder="Masukkan kode produk"
                                 />
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Opsional untuk menu F&B yang tidak memakai barcode.
+                                </p>
                                 <Input
                                     type="text"
                                     label="SKU"
@@ -303,6 +327,22 @@ export default function Create({ categories, products, units = [] }) {
                                     paket)
                                 </span>
                             </label>
+                            <label className="flex items-start gap-3 cursor-pointer mt-4">
+                                <input
+                                    type="checkbox"
+                                    checked={data.track_stock}
+                                    onChange={(e) => setData("track_stock", e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary-500 focus:ring-primary-500"
+                                />
+                                <span>
+                                    <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        Lacak stok
+                                    </span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400">
+                                        Matikan untuk menu F&B yang tidak perlu dihitung stoknya.
+                                    </span>
+                                </span>
+                            </label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <Input
                                     type="number"
@@ -333,7 +373,7 @@ export default function Create({ categories, products, units = [] }) {
                                     type="number"
                                     label="Stok"
                                     value={data.is_composite ? "" : data.stock}
-                                    disabled={data.is_composite}
+                                    disabled={data.is_composite || !data.track_stock}
                                     onChange={(e) =>
                                         setData("stock", e.target.value)
                                     }
@@ -469,6 +509,27 @@ export default function Create({ categories, products, units = [] }) {
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                            <div className="mb-4">
+                                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                                    Modifier
+                                </h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Pilih grup opsi yang tersedia untuk produk ini. Harga khusus menimpa
+                                    harga global opsi.
+                                </p>
+                            </div>
+
+                            <ModifierSelector
+                                groups={modifierGroups}
+                                selectedGroups={data.modifier_groups}
+                                overrides={data.modifier_overrides}
+                                onChangeGroups={(groups) => setData("modifier_groups", groups)}
+                                onChangeOverride={handleModifierOverride}
+                                error={errors.modifier_groups}
+                            />
                         </div>
 
                         {/* Units */}

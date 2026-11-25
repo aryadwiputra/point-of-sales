@@ -4,6 +4,7 @@ import { Head, useForm, usePage, Link } from "@inertiajs/react";
 import Input from "@/Components/Dashboard/Input";
 import Textarea from "@/Components/Dashboard/TextArea";
 import InputSelect from "@/Components/Dashboard/InputSelect";
+import ModifierSelector from "@/Components/Dashboard/ModifierSelector";
 import toast from "react-hot-toast";
 import {
     IconPackage,
@@ -18,7 +19,15 @@ import {
 } from "@tabler/icons-react";
 import { getProductImageUrl } from "@/Utils/imageUrl";
 
-export default function Edit({ categories, product, products = [], units = [] }) {
+export default function Edit({
+    categories,
+    product,
+    products = [],
+    units = [],
+    modifierGroups = [],
+    productModifierGroups = [],
+    productModifierOverrides = {},
+}) {
     const { errors } = usePage().props;
 
     const { data, setData, post, processing } = useForm({
@@ -47,6 +56,9 @@ export default function Edit({ categories, product, products = [], units = [] })
             barcode: u.pivot?.barcode ?? "",
         })),
         _method: "PUT",
+        track_stock: product.track_stock ?? true,
+        modifier_groups: productModifierGroups || [],
+        modifier_overrides: productModifierOverrides || {},
     });
 
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -165,6 +177,20 @@ export default function Edit({ categories, product, products = [], units = [] })
         }
     };
 
+    const handleModifierOverride = (modifierId, value) => {
+        setData((current) => {
+            const next = { ...current.modifier_overrides };
+
+            if (value === "") {
+                delete next[modifierId];
+            } else {
+                next[modifierId] = parseInt(value) || 0;
+            }
+
+            return { ...current, modifier_overrides: next };
+        });
+    };
+
     // ponytail: zero-out stock/sell_price for composite; collapse if Inertia ever accepts pre-send transforms
     const submitCompositeAware = (e) => {
         e.preventDefault();
@@ -264,6 +290,9 @@ export default function Edit({ categories, product, products = [], units = [] })
                                     errors={errors.barcode}
                                     placeholder="Kode produk"
                                 />
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Opsional untuk menu F&B yang tidak memakai barcode.
+                                </p>
                                 <Input
                                     type="text"
                                     label="SKU"
@@ -475,6 +504,22 @@ export default function Edit({ categories, product, products = [], units = [] })
                                     <IconPackages size={16} />
                                     Produk Komposit (bundling /
                                     paket)
+                                </span>
+                            </label>
+                            <label className="flex items-start gap-3 cursor-pointer mt-4">
+                                <input
+                                    type="checkbox"
+                                    checked={data.track_stock}
+                                    onChange={(e) => setData("track_stock", e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-primary-500 focus:ring-primary-500"
+                                />
+                                <span>
+                                    <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
+                                        Lacak stok
+                                    </span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400">
+                                        Matikan untuk menu F&B yang tidak perlu dihitung stoknya.
+                                    </span>
                                 </span>
                             </label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -768,6 +813,27 @@ export default function Edit({ categories, product, products = [], units = [] })
                                         )}
                                 </div>
                             )}
+                        </div>
+
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                            <div className="mb-4">
+                                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                                    Modifier
+                                </h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Pilih grup opsi yang tersedia untuk produk ini. Harga khusus menimpa
+                                    harga global opsi.
+                                </p>
+                            </div>
+
+                            <ModifierSelector
+                                groups={modifierGroups}
+                                selectedGroups={data.modifier_groups}
+                                overrides={data.modifier_overrides}
+                                onChangeGroups={(groups) => setData("modifier_groups", groups)}
+                                onChangeOverride={handleModifierOverride}
+                                error={errors.modifier_groups}
+                            />
                         </div>
 
                         <div className="flex justify-end gap-3">
